@@ -1,0 +1,17 @@
+Similar to the merkle tree, we want to store pages of stems and leaves, and we want to give the user the option to either store in ram or on the hard drive.
+So we should set up a supervision tree similar to the one in trie, with "dump" as a dependency.
+looks like the "trie" file will be left mostly unchanged as well.
+{delete, key, root} is porbably unused. we do everything with batches.
+
+* get leaf and stem modules working with the new format.
+
+* make a simple example of a 2-step proof.
+
+* rewrite of store.erl . we should update the pedersen commitment at each node, by subtracting the old value and adding the new one. Look for opportunities to simplify the jacobian format of the points. 
+
+* get.erl needs to be re-implemented for a wider path size, and to not include extra info with the proof. Just store an index and the root hash, not the entire list.
+
+* verify.erl should be written to use multi-proofs of ipa. We need a way to calculate the new verkle root from just this proof, assuming we had no other database.
+
+
+
