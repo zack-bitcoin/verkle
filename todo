@@ -1,9 +1,10 @@
-Similar to the merkle tree, we want to store pages of stems and leaves, and we want to give the user the option to either store in ram or on the hard drive.
-So we should set up a supervision tree similar to the one in trie, with "dump" as a dependency.
-looks like the "trie" file will be left mostly unchanged as well.
-{delete, key, root} is porbably unused. we do everything with batches.
-
 * get leaf and stem modules working with the new format.
+- add the pedersen commitment to each stem. update the size of the data stored. 
+- update stem hash to be the hash of the commitment.
+- update add/5 to change the commitment.
+
+
+* check that when we hash a leaf or stem, the data is the correct length. don't serialize a bunch of extra zeros unnecessarily.
 
 * make a simple example of a 2-step proof.
 

@@ -1,5 +1,6 @@
 -module(verify).
 -export([proof/4, update_proof/3, update_proofs/2]).
+-include("constants.hrl").
 
 -spec proof(stem:hash(), leaf:leaf(), get:proof(), cfg:cfg()) -> boolean().
 
@@ -14,7 +15,7 @@ update_proof(L, Proof, CFG) ->
     Proof2.
 
 update_internal(_, _, [], _) -> [];
-update_internal([<<N:4>> | M], LH, Proof, CFG) ->
+update_internal([<<N:?nindex>> | M], LH, Proof, CFG) ->
     P1 = hd(Proof),
     %Hash = element(N+1, P1),
     P2 = setelement(N+1, P1, LH),
@@ -52,7 +53,7 @@ merge_find_helper(P, D) ->
 
 update_proofs2(_, _, [], D, _, Proof) -> 
     {D, lists:reverse(Proof)};
-update_proofs2([<<N:4>>|M], LH, Proof, D, CFG, Proof2) -> 
+update_proofs2([<<N:?nindex>>|M], LH, Proof, D, CFG, Proof2) -> 
     P1 = hd(Proof),
     P = merge_find_helper(P1, D),
     P2 = setelement(N+1, P, LH),
@@ -74,13 +75,13 @@ proof(RootHash, L, Proof, CFG) ->
     end.
 
 -spec proof_internal(leaf:path(), leaf:leaf(), get:proof(), cfg:cfg()) -> boolean().
-proof_internal([<<N:4>> | M], Leaf, P, CFG) when length(P) == 1->
+proof_internal([<<N:?nindex>> | M], Leaf, P, CFG) when length(P) == 1->
     P1 = hd(P),
     Hash = element(N+1, P1),
     V = leaf:value(Leaf),
     LH = leaf:hash(Leaf, CFG),
     Hash == LH;
-proof_internal([<<N:4>>| Path ], Leaf, [P1, P2 | Proof], CFG) ->
+proof_internal([<<N:?nindex>>| Path ], Leaf, [P1, P2 | Proof], CFG) ->
     %if leaf is empty, and P2 is a leaf, then we do a different test.
     %pass if hash(leaf) is in P1, and N does _not_ point to leaf P2.
     LB = leaf:is_serialized_leaf(P2, CFG),
@@ -91,7 +92,7 @@ proof_internal([<<N:4>>| Path ], Leaf, [P1, P2 | Proof], CFG) ->
 	    LH = leaf:hash(Leaf2, CFG),
 	    is_in(LH, tuple_to_list(P1)) 
 		and not(get:same_end(leaf:path(Leaf2, CFG), 
-				     [<<N:4>>|Path], 
+				     [<<N:?nindex>>|Path], 
 				     CFG));
 	true ->
 	    Hash = element(N+1, P1),

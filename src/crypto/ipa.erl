@@ -1,6 +1,6 @@
 -module(ipa).
 -export([make_ipa/6, verify_ipa/6,
-         hash/1, commit/3, eq/3, 
+         commit/3, eq/3, 
          basis/2,
          test/1]).
 %inner product arguments using pedersen commitments.
@@ -65,11 +65,9 @@ simplify_v(X) ->
     %simplifies jacobian points to make the denomenator of the projective points = 1.
     secp256k1:simplify_Zs_batch(X).
 
-hash(X) when is_binary(X) ->
-    crypto:hash(sha256, X).
 point_to_entropy(J = {_, _, _}) ->
     {X, Y} = secp256k1:to_affine(J),
-    <<Z:256>> = hash(<<X:256, Y:256>>),
+    <<Z:256>> = hash:doit(<<X:256, Y:256>>),
     Z.
     
 make_ipa(A, B, G, H, Q, E) ->

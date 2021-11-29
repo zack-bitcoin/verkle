@@ -8,43 +8,18 @@
 	 make/3, make/2, update/3, onify2/2,
 	 put_batch/2, serialize/2,
 	 empty_trie/2]).
--export_type([stem/0,types/0,empty_t/0,stem_t/0,leaf_t/0,pointers/0,empty_p/0,hashes/0,hash/0,empty_hash/0,stem_p/0,nibble/0]).
--record(stem, { types = empty_tuple() :: types()
-	      , pointers = empty_tuple() :: pointers()
-	      , hashes :: hashes()
+-include("constants.hrl").
+%-export_type([stem/0,types/0,empty_t/0,stem_t/0,leaf_t/0,pointers/0,empty_p/0,hashes/0,hash/0,empty_hash/0,stem_p/0,nibble/0]).
+-record(stem, { types = empty_tuple()
+	      , pointers = empty_tuple()
+	      , hashes
 	      }).
--opaque stem() :: #stem{}.
--type types() :: {t(),t(),t(),t(),
-		  t(),t(),t(),t(),
-		  t(),t(),t(),t(),
-		  t(),t(),t(),t()}.
--type t() :: type().
--type type() :: empty_t() | stem_t() | leaf_t().
--type empty_t() :: 0.
--type stem_t() :: 1.
--type leaf_t() :: 2.
--type pointers() :: {p(),p(),p(),p(),
-		     p(),p(),p(),p(),
-		     p(),p(),p(),p(),
-		     p(),p(),p(),p()}.
--type p() :: pointer().
--type pointer() :: empty_p() | stem_p() | leaf:leaf_p().
--type empty_p() :: 0.
--type hashes() :: {h(),h(),h(),h(),
-		   h(),h(),h(),h(),
-		   h(),h(),h(),h(),
-		   h(),h(),h(),h()}.
--type h() :: hash().
--type hash() :: hash(cfg:hash_size()).
--type hash(_CfgHashSizeBytes) :: non_empty_binary(). % non-empty because configured hash size positive
--type empty_hash() :: hash().
--opaque stem_p() :: non_neg_integer().
--type nibble() :: 0..15.
--type non_empty_binary() :: <<_:8, _:_*8>>.
-empty_tuple() -> {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}.
--spec add(stem(), nibble(), leaf_t(), leaf:leaf_p(), hash()) -> stem();
-	 (stem(), nibble(), stem_t(), stem_p(), hash()) -> stem();
-	 (stem(), nibble(), empty_t(), empty_p(), empty_hash()) -> stem().
+empty_tuple() -> 
+    X = many(0, ?nwidth),
+    list_to_tuple(X).
+many(_, 0) -> [];
+many(X, N) when (N > 0) -> 
+    [X|many(X, N-1)].
 add(S, N, T, P, H) ->
     M = N+1,
     Ty = S#stem.types,
@@ -54,7 +29,6 @@ add(S, N, T, P, H) ->
     P2 = setelement(M, Po, P),
     H2 = setelement(M, Ha, H),
     #stem{types = T2, pointers = P2, hashes = H2}.
--spec new_empty(cfg:cfg()) -> stem().
 new_empty(CFG) -> #stem{hashes = empty_hashes(CFG)}.
 recover(M, T, P, H, Hashes, CFG) ->
     Types = onify2(Hashes, CFG),
@@ -88,19 +62,14 @@ new(M, T, P, H, CFG) ->
     %T is the type, P is the pointer, H is the Hash
     S = new_empty(CFG),
     add(S, M, T, P, H).
--spec pointers(stem()) -> pointers().
 pointers(R) -> R#stem.pointers.
 update_pointers(Stem, NP) ->
     Stem#stem{pointers = NP}.
--spec types(stem()) -> types().
 types(R) -> R#stem.types.
--spec hashes(stem()) -> hashes().
 hashes(R) -> R#stem.hashes.
--spec pointer(1..16, stem()) -> pointer().
 pointer(N, R) ->
     T = pointers(R),
     element(N, T).
--spec type(1..16, stem()) -> type().
 type(N, R) ->
     T = types(R),
     element(N, T).
@@ -111,7 +80,7 @@ serialize(S, CFG) ->
     T = S#stem.types,
     X = serialize(P, H, T, Path, 1),
     X.
-serialize(_, _, _, _, N) when N>16 -> <<>>;
+serialize(_, _, _, _, N) when N>?nwidth -> <<>>;
 serialize(P, H, T, Path, N) -> 
     P1 = element(N, P),
     H1 = element(N, H),
@@ -123,9 +92,9 @@ deserialize(B, CFG) ->
     %deserialize(1,X,X,cfg:path(CFG)*8,hash:hash_depth()*8,X, B).
     HS = cfg:hash_size(CFG),
     deserialize(1,X,X,cfg:path(CFG)*8,HS*8,X, B).
-deserialize(17, T,P,_,_,H, <<>>) -> 
+deserialize(?nwidth + 1, T,P,_,_,H, <<>>) -> 
     #stem{types = T, pointers = P, hashes = H};
-deserialize(N, T0,P0,Path,HashDepth,H0,X) when N < 17 ->
+deserialize(N, T0,P0,Path,HashDepth,H0,X) when N < (?nwidth + 1) ->
     <<T:2, P:Path, H:HashDepth, D/bitstring>> = X,
     T1 = setelement(N, T0, T),
     P1 = setelement(N, P0, P),
@@ -135,22 +104,17 @@ empty_hashes(CFG) ->
     HS = cfg:hash_size(CFG),
     %X = hash:hash_depth()*8,
     X = HS * 8,
-    {<<0:X>>,<<0:X>>,<<0:X>>,<<0:X>>,
-     <<0:X>>,<<0:X>>,<<0:X>>,<<0:X>>,
-     <<0:X>>,<<0:X>>,<<0:X>>,<<0:X>>,
-     <<0:X>>,<<0:X>>,<<0:X>>,<<0:X>>}.
+    Y = many(<<0:X>>, ?nwidth),
+    list_to_tuple(Y).
 
--spec hash(Hashes, cfg:cfg()) -> hash() when
-      Hashes :: SerializedStem | hashes() | stem(),
-      SerializedStem :: binary().
 hash(S, CFG) when is_binary(S) ->
     hash(deserialize(S, CFG), CFG);
-hash(S, CFG) when is_tuple(S) and (size(S) == 16)->    
+hash(S, CFG) when is_tuple(S) and (size(S) == ?nwidth)->    
     hash2(1, S, <<>>, CFG);
 hash(S, CFG) ->    
     H = S#stem.hashes,
     hash2(1, H, <<>>, CFG).
-hash2(17, _, X, CFG) -> 
+hash2(?nwidth + 1, _, X, CFG) -> 
     HS = cfg:hash_size(CFG),
     hash:doit(X, HS);
 hash2(N, H, X, CFG) ->
@@ -158,7 +122,6 @@ hash2(N, H, X, CFG) ->
     HS = cfg:hash_size(CFG),
     HS = size(A),
     hash2(N+1, H, <<A/binary, X/binary>>, CFG).
--spec put(stem(), cfg:cfg()) -> stem_p().
 update(Location, Stem, CFG) ->
     dump:update(Location, serialize(Stem, CFG), ids:stem(CFG)).
 put(Stem, CFG) ->
@@ -169,7 +132,6 @@ put_batch(Leaves, CFG) ->
 serialize_stems([], _) -> [];
 serialize_stems([{N, L}| T], CFG) ->
     [{N, serialize(L, CFG)}|serialize_stems(T, CFG)].
--spec get(stem_p(), cfg:cfg()) -> stem().
 get(Pointer, CFG) -> 
     true = Pointer > 0,
     S = dump:get(Pointer, ids:stem(CFG)),
@@ -179,17 +141,20 @@ empty_trie(Root, CFG) ->
     update_pointers(Stem, empty_tuple()).
     
 test() ->
-    P = {6,5,4,3,7,8,9,4,5,3,2,6,7,8,3,4},
-    T = {0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+    P = list_to_tuple(many(5, ?nwidth)),
+    T = list_to_tuple(many(1, ?nwidth)),
+    %P = {6,5,4,3,7,8,9,4,5,3,2,6,7,8,3,4},
+    %T = {0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
     %CFG = cfg:new(1, 9, 2, trie), %path value id meta hash_size
+    verkle_app:start(normal, []),
     CFG = trie:cfg(trie01),
 %{cfg,5,2,trie01,2,32} path, value, id, meta, hash_size
 %596 total, average 37.25
     H = empty_hashes(CFG),
     S = #stem{types = T, pointers = P, hashes = H},
     S2 = serialize(S, CFG),
-    io:fwrite(integer_to_list(size(S2))),
     S = deserialize(S2, CFG),
+    io:fwrite(S),
     Hash = hash(S, CFG),
     add(S, 3, 1, 5, Hash),
     success.

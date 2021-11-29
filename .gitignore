@@ -3,6 +3,7 @@
 *.iml
 _build
 /rel/
+/ebin/
 *.db
 *~
 .#*
@@ -24,3 +25,4 @@ deps/*
 rebar.lock
 .DS_Store
 sys.config.tmpl
+*.beam

@@ -1,1 +1,3 @@
--define(width, 256).%children per node
+
+-define(nwidth, 8).%children per node
+-define(nindex, 3).%should be log2(width)

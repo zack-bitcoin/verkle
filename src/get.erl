@@ -1,6 +1,7 @@
 -module(get).
 -export([get/3, same_end/3, test/0]).
 -export_type([proof/0]).
+-include("constants.hrl").
 
 -type proof() :: [stem:hashes(), ...]. % the last element is the 16-hashes-tuple contained in the root
 
@@ -15,7 +16,7 @@ get(Path, Root, CFG) ->
 	{empty, Proof} -> {H, empty, Proof};
 	{A, Proof} -> {H, A, Proof}
     end.       
-get2([<<N:4>> | Path], Stem, Proof, CFG) ->
+get2([<<N:?nindex>> | Path], Stem, Proof, CFG) ->
     NextType = stem:type(N+1, Stem),
     PN = stem:pointer(N+1, Stem),
     if

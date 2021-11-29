@@ -1,6 +1,7 @@
 -module(store).
 -export([store/3, restore/5, get_branch/5, store_branch/6, batch/3]).
 -export_type([branch/0, nonempty_branch/0]).
+-include("constants.hrl").
 
 -type branch() :: [stem:stem()]. % first element is most distant from root i.e. closest to leaf (if any)
 -type nonempty_branch() :: [stem:stem(), ...].
@@ -52,7 +53,7 @@ proof2branch([H|T], _, _, Hash, _, CFG) when is_binary(H) ->
     Pointer = leaf:put(L, CFG),
     proof2branch(T, 2, Pointer, Hash, Path, CFG);
 proof2branch([H|T], Type, Pointer, Hash, Path, CFG) -> 
-    [<<Nibble:4>> | NewPath] = Path,
+    [<<Nibble:?nindex>> | NewPath] = Path,
     S = stem:recover(Nibble, Type, Pointer, Hash, H, CFG),
     NewPointer = stem:put(S, CFG),
     NewHash = stem:hash(S, CFG),
@@ -173,7 +174,7 @@ batch4([B|Branches], M, N, Out) ->
     end.
 batch3(Stem, _, []) -> Stem;
 batch3(Stem, N, [{Pointer, Hash, Path, _, Type}|T]) ->
-    <<A:4>> = lists:nth(N, Path),
+    <<A:?nindex>> = lists:nth(N, Path),
     S2 = stem:add(Stem, A, Type, Pointer, Hash),
     batch3(S2, N, T).
     %we will look at pairs at the same time, and delete stuff from the older of the two. That way we still have everything when we move on to the next pair.
@@ -197,7 +198,7 @@ pivot_split(PKey, [H|T], Below, Above, CFG) ->
 		 false -> {Below, [H|Above]}
 	     end,
     pivot_split(PKey, T, C, D, CFG).
-compare_keys([<<A:4>>|AT], [<<B:4>>|BT]) ->
+compare_keys([<<A:?nindex>>|AT], [<<B:?nindex>>|BT]) ->
     if
 	A > B -> true;
 	B > A -> false;
@@ -237,9 +238,9 @@ store_batch_helper_ram([H|T], CFG, BD, Root, Pointer, L) ->
 	       case GB of
 		  {_, _, _} -> store_batch_helper_ram(T, CFG, BD, Root, Pointer, L); %if you are deleting something that doesn't exist, then you don't have to do anything.
 		  Branch0 ->
-		          X = cfg:hash_size(CFG)*8,
-		          EmptyHash = <<0:X>>,
-		          store_batch_helper_ram(T, CFG, [{0, <<0:X>>, Path, Branch0, 0}|BD], Root, Pointer, L)
+                       X = cfg:hash_size(CFG)*8,
+                       %EmptyHash = <<0:X>>,
+                       store_batch_helper_ram(T, CFG, [{0, <<0:X>>, Path, Branch0, 0}|BD], Root, Pointer, L)
 			      end;
        _ ->
 	       %NLP = leaf:put(H, CFG),
@@ -269,7 +270,7 @@ store_batch_helper([H|T], CFG, BD, Root) ->
 		{_, _, _} -> store_batch_helper(T, CFG, BD, Root); %if you are deleting something that doesn't exist, then you don't have to do anything.
 		Branch0 ->
 		    X = cfg:hash_size(CFG)*8,
-		    EmptyHash = <<0:X>>,
+		    %EmptyHash = <<0:X>>,
 		    store_batch_helper(T, CFG, [{0, <<0:X>>, Path, Branch0, 0}|BD], Root)
 	    end;
 	_ ->
@@ -316,7 +317,7 @@ store(Leaf, Root, CFG) ->
 get_branch(Path, N, Parent, Trail, CFG) ->
     %gather the branch as it currently looks.
     M = N+1,
-    <<A:4>> = lists:nth(M, Path), % TODO this could be turned into hd (head)
+    <<A:?nindex>> = lists:nth(M, Path), % TODO this could be turned into hd (head)
     R = stem:get(Parent, CFG),
     Pointer = stem:pointer(A+1, R),
     RP = [R|Trail],
@@ -341,7 +342,7 @@ store_branch([], Path, _, Pointer, _, CFG) ->
 
 store_branch([B|Branch], Path, Type, Pointer, Hash, CFG) ->
     S = length(Branch),
-    <<A:4>> = lists:nth(S+1,Path),
+    <<A:?nindex>> = lists:nth(S+1,Path),
     S1 = stem:add(B, A, Type, Pointer, Hash),
     Loc = stem:put(S1, CFG),
     SH = stem:hash(S1, CFG),
@@ -350,7 +351,7 @@ store_branch([B|Branch], Path, Type, Pointer, Hash, CFG) ->
 			{ConvergenceLength::path_nibble_index(),
 			 NextNibbleInPath2::stem:nibble()}.
 path_match(P1, P2) -> path_match(P1, P2, 0).
-path_match([<<A:4>> | P1], [<<B:4>> | P2], N) ->
+path_match([<<A:?nindex>> | P1], [<<B:?nindex>> | P2], N) ->
     if
 	A == B -> path_match(P1, P2, N+1);
 	true -> {N, B}
