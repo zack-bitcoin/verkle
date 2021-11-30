@@ -44,7 +44,8 @@ emul(X, Y, E) when is_integer(Y) ->
 eadd_all(V, E) ->
     lists:foldl(fun(A, B) -> 
                         eadd(A, B, E) end,
-                infinity, V).
+                %infinity, V).
+                {0,0}, V).
 
 %polynomial operations
 add([], [], _) -> [];

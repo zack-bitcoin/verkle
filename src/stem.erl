@@ -1,40 +1,54 @@
 %The purpose of this file is to define stems as a data structure in ram, and give some simple functions to operate on them.
 
 -module(stem).
--export([test/0,get/2,put/2,type/2,hash/2,pointers/1,
-	 types/1,hashes/1,pointer/2,new/5,add/5,
-	 new_empty/1,recover/6, empty_hashes/1, 
+-export([test/0,get/2,put/2,type/2,hash/1,pointers/1,
+	 types/1,hashes/1,pointer/2,new/7,add/7,
+	 new_empty/1,recover/8, empty_hashes/1, 
 	 update_pointers/2, empty_tuple/0,
 	 make/3, make/2, update/3, onify2/2,
 	 put_batch/2, serialize/2,
+         root/1,
 	 empty_trie/2]).
 -include("constants.hrl").
 %-export_type([stem/0,types/0,empty_t/0,stem_t/0,leaf_t/0,pointers/0,empty_p/0,hashes/0,hash/0,empty_hash/0,stem_p/0,nibble/0]).
 -record(stem, { types = empty_tuple()
-	      , pointers = empty_tuple()
-	      , hashes
+                , pointers = empty_tuple()
+                , hashes
+                , root = secp256k1:jacob_zero()
 	      }).
+root(X) ->
+    X#stem.root.
 empty_tuple() -> 
     X = many(0, ?nwidth),
     list_to_tuple(X).
 many(_, 0) -> [];
 many(X, N) when (N > 0) -> 
     [X|many(X, N-1)].
-add(S, N, T, P, H) ->
+add(S, N, T, P, <<H:256>>, Gs, E) ->
+    %Gs are the generator points for the pedersen commits.
+    #stem{
+     types = Ty,
+     pointers = Po,
+     hashes = Ha,
+     root = Root
+    } = S,
     M = N+1,
-    Ty = S#stem.types,
-    Po = S#stem.pointers,
-    Ha = S#stem.hashes,
+    <<Old:256>> = element(M, Ha),
+    %for generator M, subtract Old and add H.
+    G = lists:nth(M, Gs),
+    Diff = secp256k1:jacob_mul(G, H-Old, E),
+    Root2 = secp256k1:jacob_add(Root, Diff, E),
     T2 = setelement(M, Ty, T),
     P2 = setelement(M, Po, P),
-    H2 = setelement(M, Ha, H),
-    #stem{types = T2, pointers = P2, hashes = H2}.
+    H2 = setelement(M, Ha, <<H:256>>),
+    #stem{types = T2, pointers = P2, 
+          hashes = H2, root = Root2}.
 new_empty(CFG) -> #stem{hashes = empty_hashes(CFG)}.
-recover(M, T, P, H, Hashes, CFG) ->
+recover(M, T, P, H, Hashes, CFG, Gs, E) ->
     Types = onify2(Hashes, CFG),
     %Types = list_to_tuple(onify(tuple_to_list(Hashes), CFG)),
     S = #stem{hashes = Hashes, types = Types},
-    add(S, M, T, P, H).
+    add(S, M, T, P, H, Gs, E).
 onify2(H, CFG) ->
     list_to_tuple(onify(tuple_to_list(H), CFG)).
 onify([], _) -> [];
@@ -57,11 +71,11 @@ make(Types, Pointers, Hashes) ->
     #stem{types = Types,
 	  pointers = Pointers,
 	  hashes = Hashes}.
-new(M, T, P, H, CFG) ->
+new(N, T, P, H, CFG, Gs, E) ->
     %N is the nibble being pointed to.
     %T is the type, P is the pointer, H is the Hash
     S = new_empty(CFG),
-    add(S, M, T, P, H).
+    add(S, N, T, P, H, Gs, E).
 pointers(R) -> R#stem.pointers.
 update_pointers(Stem, NP) ->
     Stem#stem{pointers = NP}.
@@ -75,11 +89,15 @@ type(N, R) ->
     element(N, T).
 serialize(S, CFG) ->
     Path = cfg:path(CFG)*8,
-    P = S#stem.pointers,
-    H = S#stem.hashes,
-    T = S#stem.types,
+    #stem{
+           pointers = P,
+           hashes = H,
+           types = T,
+           root = Root
+         } = S,
+    {R1, R2} = secp256k1:to_affine(Root),
     X = serialize(P, H, T, Path, 1),
-    X.
+    <<R1:256, R2:256, X/binary>>.
 serialize(_, _, _, _, N) when N>?nwidth -> <<>>;
 serialize(P, H, T, Path, N) -> 
     P1 = element(N, P),
@@ -87,11 +105,19 @@ serialize(P, H, T, Path, N) ->
     T1 = element(N, T),
     D = serialize(P, H, T, Path, N+1),
     << T1:2, P1:Path, H1/binary, D/bitstring >>.
-deserialize(B, CFG) -> 
+deserialize(<<R1:256, R2:256, B/binary>>, CFG) -> 
     X = empty_tuple(),
     %deserialize(1,X,X,cfg:path(CFG)*8,hash:hash_depth()*8,X, B).
     HS = cfg:hash_size(CFG),
-    deserialize(1,X,X,cfg:path(CFG)*8,HS*8,X, B).
+    Y = deserialize(1,X,X,cfg:path(CFG)*8,
+                    HS*8,X, B),
+    R = 
+        case {R1, R2} of
+            {0,0} -> secp256k1:jacob_zero();
+            _ -> secp256k1:to_jacob({R1, R2})
+        end,
+            
+    Y#stem{root = R}.
 deserialize(?nwidth + 1, T,P,_,_,H, <<>>) -> 
     #stem{types = T, pointers = P, hashes = H};
 deserialize(N, T0,P0,Path,HashDepth,H0,X) when N < (?nwidth + 1) ->
@@ -107,9 +133,14 @@ empty_hashes(CFG) ->
     Y = many(<<0:X>>, ?nwidth),
     list_to_tuple(Y).
 
+hash(S) ->
+    P = S#stem.root,
+    <<(secp256k1:hash_point(P)):256>>.
+
 hash(S, CFG) when is_binary(S) ->
     hash(deserialize(S, CFG), CFG);
-hash(S, CFG) when is_tuple(S) and (size(S) == ?nwidth)->    
+hash(S, CFG) when 
+      is_tuple(S) and (size(S) == ?nwidth)->    
     hash2(1, S, <<>>, CFG);
 hash(S, CFG) ->    
     H = S#stem.hashes,
@@ -153,9 +184,15 @@ test() ->
     H = empty_hashes(CFG),
     S = #stem{types = T, pointers = P, hashes = H},
     S2 = serialize(S, CFG),
-    S = deserialize(S2, CFG),
-    io:fwrite(S),
-    Hash = hash(S, CFG),
-    add(S, 3, 1, 5, Hash),
+    Sb = deserialize(S2, CFG),
+    DB = ?p,
+    %io:fwrite({size(?p)}),%9
+    %io:fwrite({S#stem.root, Sb#stem.root}),
+    true = secp256k1:jacob_equal(
+             S#stem.root, Sb#stem.root, 
+             DB#p.e),
+    Hash = hash:doit(<<>>),
+    Stem2 = add(S, 3, 1, 5, Hash, DB#p.g, DB#p.e),
+    hash(Stem2),
     success.
     

@@ -2,13 +2,16 @@
 -export([test/0, test/2]).
 
 -define(ID, trie01).
+-include("constants.hrl").
 
 test() ->
+    verkle_app:start(normal, []),
     CFG = trie:cfg(?ID),
     %V = [1,2,3,4,5,7,8,9,10,11,12,13,14,16,17],
-    V = [1,2,3,5,7,8,9,10,11,12,13,14,16,17,18],
+    %V = [1,2,3,5,7,8,9,10,11,12,13,14,16,17,18],
     %V = [5, 6, 12, 13],
     %V = [18],
+    V = [101],
     test_helper(V, CFG).
 test_helper([], _) -> success;
 test_helper([N|T], CFG) -> 
@@ -18,6 +21,34 @@ test_helper([N|T], CFG) ->
     success = test(N, CFG),
     test_helper(T, CFG).
 
+test(101, CFG) ->
+    %a simple 2-step proof.
+    DB = ?p,
+    Domain = ?p#p.domain,
+    E = DB#p.e,
+    Gs = DB#p.g,
+    L = leaf:new(300, <<27:16>>, 0, CFG),
+    <<LH:256>> = leaf:hash(L, CFG),
+    S1 = stem:new(3, 1, 1, <<LH:256>>, CFG, Gs, E),
+    <<S1H:256>> = stem:hash(S1),
+    S2 = stem:new(0, 1, 1, <<S1H:256>>, CFG, Gs, E),
+    %A is commited data, z is the slot number.
+    As = [[0,0,0,LH], 
+          [S1H,0,0,0]],
+    Ys = [LH, S1H],
+    Zs = [4, 1],
+    Base = secp256k1:order(E),
+    Ys = lists:zipwith(
+           fun(F, Z) ->
+                   poly:eval_e(Z, F, Domain, Base)
+           end, As, Zs),
+    Commits = [stem:root(S1), stem:root(S2)],
+    Proof = multiproof:prove(As, Zs, Commits, ?p),
+
+    true = multiproof:verify(Proof, Zs, Ys, ?p),
+    %make a batch of the 2 ipa proofs to connect the leaf to the root.
+    %{L, S1, S2};
+    success;
 test(1, CFG) ->
     leaf:new(1, empty, 0, CFG),
     Nib1 = 4,

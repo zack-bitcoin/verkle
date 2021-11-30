@@ -81,8 +81,13 @@ hash(L, CFG) ->
 	empty -> <<0:HS>>;
 	V ->
 	    P = cfg:path(CFG) * 8,%8 times bigger than necessary. :(
-	    HS2 = cfg:hash_size(CFG),
-	    hash:doit(<<(L#leaf.key):P, V/binary>>, HS2)
+	    %HS2 = cfg:hash_size(CFG),
+	    %Data = <<(L#leaf.key):P, V/binary>>,
+            %io:fwrite("\n"),
+            %io:fwrite(integer_to_list(size(Data))),
+            %io:fwrite("\n"),
+            %io:fwrite({Data}),
+	    hash:doit(<<(L#leaf.key):P, V/binary>>)
     end.
 test() ->
     verkle_app:start(normal, []),
@@ -91,8 +96,9 @@ test() ->
     %io:fwrite(CFG),
     X = new(1, <<0:16>>, 0, CFG),
     SX = serialize(X, CFG),
-    io:fwrite(integer_to_list(size(SX))),%26
+    %io:fwrite(integer_to_list(size(SX))),%26
     X = deserialize(serialize(X, CFG), CFG),
     true = is_serialized_leaf(SX, CFG),
+    hash(X, CFG),
     success.
     

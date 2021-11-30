@@ -8,6 +8,7 @@
          to_jacob/1, to_affine/1, to_affine_batch/1,
          jacob_mul/3, jacob_add/3, jacob_zero/0,
          jacob_equal/3, jacob_negate/2, jacob_sub/3,
+         hash_point/1,
 
          multi_exponent/3, simplify_Zs_batch/1,
 
@@ -60,6 +61,15 @@ det_pow(A, N) when ((N rem 2) == 0) ->
 det_pow(A, N) -> 
     A*det_pow(A, N-1).
 
+hash_point({X, Y}) ->
+    <<Z:256>> = hash:doit(<<X:256, Y:256>>),
+    Z;
+hash_point(J = {_, _, _}) ->
+    P = to_affine(J),
+    hash_point(P).
+    
+    
+
 make() ->
     %FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFE FFFFFC2F
 %2256 - 232 - 29 - 28 - 27 - 26 - 24 - 1
@@ -81,7 +91,8 @@ make() ->
 
 to_jacob({X, Y}) ->
     {X, Y, 1}.
-to_affine({_, _, 0}) -> infinity;
+%to_affine({_, _, 0}) -> infinity;
+to_affine({_, _, 0}) -> {0,0};
 to_affine(P = {_, _, Z}) ->
     Z2 = ff:inverse(mod(Z, ?prime), ?prime),
     to_affine(P, Z2).
@@ -214,8 +225,10 @@ jacob_double({X1, Y1, Z1}, _Curve) ->
     Z3 = ?mul(2, ?mul(Y1, Z1)),
     {X3, Y3, Z3}.
     
-addition(infinity, P2, _) -> P2;
-addition(P1, infinity, _) -> P1;
+%addition(infinity, P2, _) -> P2;
+addition({0,0}, P2, _) -> P2;
+%addition(P1, infinity, _) -> P1;
+addition(P1, {0,0}, _) -> P1;
 addition(P1, P2, E) ->
     {X1, Y1} = P1,
     {X2, Y2} = P2,
@@ -225,7 +238,8 @@ addition(P1, P2, E) ->
          } = E,
     if
         (X1 == X2) and (not(Y1 == Y2)) ->
-            infinity;
+            %infinity;
+            {0,0};
         true ->
             M = if
                     ((P1 == P2) 
@@ -303,8 +317,8 @@ split_scalar_endo(K, E) ->
               K2neg -> Base - K2;
               true -> K2
           end,
-    K1b < ?pow_2_128,
-    K2b < ?pow_2_128,
+    true = (K1b < ?pow_2_128),
+    true = (K2b < ?pow_2_128),
     {K1neg, K1b, K2neg, K2b}.
 
 endo_loop(_, 0, K1p, 0, K2p, _) -> 
@@ -347,7 +361,8 @@ endo_mul(P, X, E) ->
 %multiplication(infinity, _, _) ->
 %    infinity;
 multiplication(P1, 0, E) ->
-    infinity;
+    %infinity;
+    {0,0};
 multiplication(P1, X, E) 
   when ((X rem 2) == 0) ->
     multiplication(

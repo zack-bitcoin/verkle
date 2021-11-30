@@ -28,9 +28,6 @@ fv_mul(S, Bs) ->
     %multiplying a scalar vector by a scalar.
     lists:map(fun(X) -> ?mul(X, S) end,
               Bs).
-%lists:zipwith(
-%      fun(A, B) -> ?mul(A, B) end,
-%      As, Bs).
 
 commit(V, G, E) ->
     %pedersen commitment
@@ -57,18 +54,19 @@ v_add(As, Bs, E) ->
       end, As, Bs).
 v_mul(A, Bs, E) ->
     %this is like, half way to a commitment. it does the multiplications, but doesn't add up the points at the end.
-    lists:map(
-      fun(B) ->
-              mul(A, B, E)
-      end, Bs).
+    R = lists:map(
+          fun(B) ->
+                  mul(A, B, E)
+          end, Bs),
+    %simplify_v(R).
+    R.
+
 simplify_v(X) ->
     %simplifies jacobian points to make the denomenator of the projective points = 1.
     secp256k1:simplify_Zs_batch(X).
 
-point_to_entropy(J = {_, _, _}) ->
-    {X, Y} = secp256k1:to_affine(J),
-    <<Z:256>> = hash:doit(<<X:256, Y:256>>),
-    Z.
+point_to_entropy(J) ->
+    secp256k1:hash_point(J).
     
 make_ipa(A, B, G, H, Q, E) ->
     AG = commit(A, G, E),
@@ -106,8 +104,10 @@ make_ipa2(C1, A, G, B, H, Q, E, Cs, X, Xi) ->
     C12 = add(mul(X,  Cl, E),
              mul(Xi, Cr, E), E),
     C2 = add(C1, C12, E),
-    G2 = v_add(Gl, v_mul(Xi, Gr, E), E),
-    H2 = v_add(Hl, v_mul(X, Hr, E), E),
+    %G2 = v_add(Gl, v_mul(Xi, Gr, E), E),
+    %H2 = v_add(Hl, v_mul(X, Hr, E), E),
+    G2 = v_add(Gl, simplify_v(v_mul(Xi, Gr, E)), E),
+    H2 = v_add(Hl, simplify_v(v_mul(X, Hr, E)), E),
     make_ipa2(C2, A2, G2, B2, 
               H2, Q, E, [Cl, Cr|Cs], X, Xi).
 
@@ -128,7 +128,13 @@ foldh_mul(X, Xi, [L, R|C], E) ->
     [mul(X, L, E), mul(Xi, R, E)|
      foldh_mul(X, Xi, C, E)].
 fold_cs(X, Xi, Cs, E) ->
-    Cs3 = foldh_mul(X, Xi, Cs, E),
+    Cs30 = foldh_mul(X, Xi, Cs, E),
+    Cs3 = if
+              (length(Cs30) > 15) ->  
+                  %simplify_v(Cs30);
+                  Cs30;
+              true -> Cs30
+          end,
     lists:foldl(fun(A, B) ->
                         add(A, B, E)
                 end, secp256k1:jacob_zero(), 
@@ -142,8 +148,6 @@ compress({AG, AB, Cs, AN, BN}) ->
         secp256k1:compress(
           [AG|Cs]),
     {AG2, AB, Cs2, AN, BN}.
-%    Cs2 = lists:map(fun(X) -> ?comp(X) end, Cs),
-%    {?comp(AG), AB, Cs2, AN, BN, ?comp(CN)}.
 decompress({AG, AB, Cs, AN, BN}) ->
     Cs2 = lists:map(fun(X) -> ?deco(X) end, Cs),
     {?deco(AG), AB, Cs2, AN, BN}.
@@ -152,7 +156,6 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
            B, G, H, Q, E) ->
     %we may need to decompress the proof at this point.
     [AG|Cs] = simplify_v([AG0|Cs0]),
-    %[CN, AG|Cs] = [CN0, AG0|Cs0],
     C1 = hd(lists:reverse(Cs)),
     C1b = add(add(AG, commit(B, H, E), E), 
              mul(AB, Q, E), E),
@@ -170,7 +173,9 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
                           E),
                       mul(?mul(AN, BN), Q, E),
                       E),
+            %T1 = erlang:timestamp(),
             CNb = fold_cs(X, Xi, Cs, E),
+            %T2 = erlang:timestamp(),
             eq(CNa, CNb, E)
     end.
 

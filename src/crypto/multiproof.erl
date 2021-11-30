@@ -3,7 +3,7 @@
          compress/1, decompress/1,
          make_parameters_jacob/2, 
          primitive_nth_root/2,
-         prove_jacob/4, verify_jacob/4
+         prove/4, verify/4
         ]).
 
 %multiproofs for pedersen IPA.
@@ -54,11 +54,10 @@ primitive_nth_root(N, E) ->
 calc_G_e(R, As, Ys, Zs, Domain, DA, Base) ->
     GP = lists:zipwith3(
            fun(A, Y, Z) ->
-                   X = poly:sub(
-                         A, %subtract Y from every element in A.
-                         poly:c2e([Y], Domain, Base), 
-                         Base),
-                   %io:fwrite({DA, Z, Domain}),
+                   X = lists:map(
+                         fun(C) -> 
+                                 ff:sub(C, Y, Base)
+                         end, A),
                    poly:div_e(
                      X,
                      Domain,
@@ -66,7 +65,6 @@ calc_G_e(R, As, Ys, Zs, Domain, DA, Base) ->
                      Z,
                      Base)
            end, As, Ys, Zs),
-    %io:fwrite({GP}),
     calc_G_e_helper(1, R, GP, Base).
 calc_G_e_helper(_, _, [], _) -> [];
 calc_G_e_helper(RA, R, [P|T], Base) -> 
@@ -134,15 +132,19 @@ calc_H_e(R, RA, T, As, Zs, Base) ->
     end.
              
 calc_R([], [], [], B) -> 
-    <<R:256>> = ipa:hash(B),
+    <<R:256>> = hash:doit(B),
     R;
 calc_R([{C1, C2}|CT], [Z|ZT], [Y|YT], B) -> 
-    B2 = <<B/binary, Z:256, Y:256, 
-           C1:256, C2:256>>,
+    %io:fwrite({C1, C2, Z, Y, B}),
+    B2 = <<B/binary, 
+           Z:256, 
+           Y:256, 
+           C1:256, 
+           C2:256>>,
     calc_R(CT, ZT, YT, B2).
 calc_T({C1, C2}, R) ->
     B = <<C1:256, C2:256, R:256>>,
-    <<R2:256>> = ipa:hash(B),
+    <<R2:256>> = hash:doit(B),
     R2.
 
 -define(deco(X), secp256k1:decompress(X)).
@@ -160,7 +162,7 @@ decompress({C2, Csa2, Cipa}) ->
     
     
 
-prove_jacob(As, %committed data
+prove(As, %committed data
       Zs, %the slot in each commit we are reading from. A list as long as As. Made up of elements that are in the domain.
       Commits_e,
       #p{g = Gs, h = Hs, q = Q, e = E, da = DA,
@@ -192,7 +194,7 @@ prove_jacob(As, %committed data
 %    io:fwrite(integer_to_list(timer:now_diff(Timestamp2, Timestamp1))),
 %    io:fwrite("\n"),
     {CommitG_e, Commits_e, IPA}.
-verify_jacob({CommitG, Commits, Open_G_E}, Zs, Ys, 
+verify({CommitG, Commits, Open_G_E}, Zs, Ys, 
        #p{g = Gs, h = Hs, q = Q, e = E,
          domain = Domain, da = DA, a = PA}) ->
     %io:fwrite({CommitG0, Commits0, Cs0}),
@@ -275,7 +277,7 @@ test(2) ->
      Root, 
      Root64};
 test(7) ->
-    Many = 500,
+    Many = 5,
     io:fwrite("many is "),
     io:fwrite(integer_to_list(Many)),
     io:fwrite("\n"),
@@ -315,7 +317,7 @@ test(7) ->
     Commits = secp256k1:simplify_Zs_batch(
                 Commits0),
     io:fwrite("make proof\n"),
-    Proof = prove_jacob(As, Zs, Commits, P),
+    Proof = prove(As, Zs, Commits, P),
     {P1, Ps1, Open = {_,_,Ps2,_,_}} = Proof,
     [P1b|Ps2b] = secp256k1:simplify_Zs_batch(
                    [P1|Ps2]),
@@ -323,8 +325,9 @@ test(7) ->
     Proof2 = {P1b, Ps1, Open2},
     T2 = erlang:timestamp(),
     io:fwrite("verify proof\n"),
-    true = verify_jacob(Proof2, Zs, Ys, P),
+    true = verify(Proof2, Zs, Ys, P),
     T3 = erlang:timestamp(),
+    true = verify(Proof, Zs, Ys, P),
     {prove, timer:now_diff(T2, T1),
       verify, timer:now_diff(T3, T2)}.
     
