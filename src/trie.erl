@@ -1,7 +1,10 @@
 -module(trie).
 -behaviour(gen_server).
--export([start_link/1,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2, root_hash/2,cfg/1,get/3,put/5,put_batch/3,delete/3,%garbage/2,garbage_leaves/2,
-	 get_all/2,new_trie/2, restore/5,restore/7, 
+-export([start_link/1,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2, 
+         root_hash/2,cfg/1,get/3,put/5,
+         put_batch/3,delete/3,%garbage/2,garbage_leaves/2,
+	 get_all/2,new_trie/2, 
+         restore/5,restore/7, 
 	 empty/1, 
 	 quick_save/1, %the copy of the ets currently in ram, it uses this to update the copy stored on the hard drive.
 	 reload_ets/1, %grabs the copy of the ets from the hard drive, loads it into ram
@@ -91,7 +94,8 @@ handle_call({restore, Key, Value, Meta, Hash, Proof, Root}, _From, CFG) ->
 handle_call({put, Key, Value, Meta, Root}, _From, CFG) -> 
     valid_key(Key),
     Leaf = leaf:new(Key, Value, Meta, CFG),
-    {_, NewRoot, _} = store:store(Leaf, Root, CFG),
+    %{_, NewRoot, _} = store:store(Leaf, Root, CFG),
+    {_, NewRoot} = store:store(Leaf, Root, CFG),
     {reply, NewRoot, CFG};
 handle_call({put_batch, Leaves, Root}, _From, CFG) ->
     {Hash, NewRoot} = store:batch(Leaves, Root, CFG),
@@ -151,11 +155,8 @@ quick_save(ID) ->
     gen_server:call({global, ids:main_id(ID)}, quick_save).
 empty(ID) when is_atom(ID) ->
     gen_server:call({global, ids:main_id(ID)}, empty).
--spec root_hash(atom(), stem:stem_p()) -> stem:hash().
 root_hash(ID, RootPointer) when (is_atom(ID) and is_integer(RootPointer))->
     gen_server:call({global, ids:main_id(ID)}, {root_hash, RootPointer}).
--spec put(leaf:key(), leaf:value(), leaf:meta(), stem:stem_p(), atom()) ->
-		 stem:stem_p().
 restore(Leaf, Hash, Path, Root, ID) ->
     restore(leaf:key(Leaf), leaf:value(Leaf), leaf:meta(Leaf),
 	    Hash, Path, Root, ID).
@@ -163,20 +164,26 @@ restore(Key, Value, Meta, Hash, Path, Root, ID) ->
     gen_server:call({global, ids:main_id(ID)}, {restore, Key, Value, Meta, Hash, Path, Root}).
 put_batch([], Root, _) -> Root;
 put_batch(Leaves, Root, ID) -> 
-    gen_server:call({global, ids:main_id(ID)}, {put_batch, Leaves, Root}).
+    gen_server:call({global, ids:main_id(ID)}, 
+                    {put_batch, Leaves, Root}).
 put(Key, Value, Meta, Root, ID) ->
-    gen_server:call({global, ids:main_id(ID)}, {put, Key, Value, Meta, Root}).
--spec get(leaf:key(), stem:stem_p(), atom()) ->
-		 {stem:hash(), empty | leaf:leaf(), get:proof()}.
-get(Key, Root, ID) -> gen_server:call({global, ids:main_id(ID)}, {get, Key, Root}).
--spec get_all(stem:stem_p(), atom()) -> [leaf:leaf()].
-get_all(Root, ID) -> gen_server:call({global, ids:main_id(ID)}, {get_all, Root}).
--spec delete(leaf:key(), stem:stem_p(), atom()) -> stem:stem_p().
-delete(Key, Root, ID) -> gen_server:call({global, ids:main_id(ID)}, {delete, Key, Root}).
+    gen_server:call({global, ids:main_id(ID)}, 
+                    {put, Key, Value, Meta, Root}).
+get(Key, Root, ID) -> 
+    gen_server:call({global, ids:main_id(ID)}, 
+                    {get, Key, Root}).
+get_all(Root, ID) -> 
+    gen_server:call({global, ids:main_id(ID)}, 
+                    {get_all, Root}).
+delete(Key, Root, ID) -> 
+    gen_server:call({global, ids:main_id(ID)}, 
+                    {delete, Key, Root}).
 garbage(NewRoot, OldRoot, ID) ->%removes new
-    gen_server:call({global, ids:main_id(ID)}, {garbage, NewRoot, OldRoot}).
+    gen_server:call({global, ids:main_id(ID)}, 
+                    {garbage, NewRoot, OldRoot}).
 prune(OldRoot, NewRoot, ID) ->%removes old
-    gen_server:call({global, ids:main_id(ID)}, {prune, OldRoot, NewRoot}).
+    gen_server:call({global, ids:main_id(ID)}, 
+                    {prune, OldRoot, NewRoot}).
 
 get_all_internal(Root, CFG) ->
     S = stem:get(Root, CFG),

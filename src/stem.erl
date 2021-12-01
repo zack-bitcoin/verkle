@@ -2,8 +2,8 @@
 
 -module(stem).
 -export([test/0,get/2,put/2,type/2,hash/1,pointers/1,
-	 types/1,hashes/1,pointer/2,new/7,add/7,
-	 new_empty/1,recover/8, empty_hashes/1, 
+	 types/1,hashes/1,pointer/2,new/5,add/5,
+	 new_empty/1,recover/6, empty_hashes/1, 
 	 update_pointers/2, empty_tuple/0,
 	 make/3, make/2, update/3, onify2/2,
 	 put_batch/2, serialize/2,
@@ -24,7 +24,7 @@ empty_tuple() ->
 many(_, 0) -> [];
 many(X, N) when (N > 0) -> 
     [X|many(X, N-1)].
-add(S, N, T, P, <<H:256>>, Gs, E) ->
+add(S, N, T, P, <<H:256>>) ->
     %Gs are the generator points for the pedersen commits.
     #stem{
      types = Ty,
@@ -32,6 +32,8 @@ add(S, N, T, P, <<H:256>>, Gs, E) ->
      hashes = Ha,
      root = Root
     } = S,
+    Gs = ?p#p.g,
+    E = ?p#p.e,
     M = N+1,
     <<Old:256>> = element(M, Ha),
     %for generator M, subtract Old and add H.
@@ -44,11 +46,11 @@ add(S, N, T, P, <<H:256>>, Gs, E) ->
     #stem{types = T2, pointers = P2, 
           hashes = H2, root = Root2}.
 new_empty(CFG) -> #stem{hashes = empty_hashes(CFG)}.
-recover(M, T, P, H, Hashes, CFG, Gs, E) ->
+recover(M, T, P, H, Hashes, CFG) ->
     Types = onify2(Hashes, CFG),
     %Types = list_to_tuple(onify(tuple_to_list(Hashes), CFG)),
     S = #stem{hashes = Hashes, types = Types},
-    add(S, M, T, P, H, Gs, E).
+    add(S, M, T, P, H).
 onify2(H, CFG) ->
     list_to_tuple(onify(tuple_to_list(H), CFG)).
 onify([], _) -> [];
@@ -71,11 +73,11 @@ make(Types, Pointers, Hashes) ->
     #stem{types = Types,
 	  pointers = Pointers,
 	  hashes = Hashes}.
-new(N, T, P, H, CFG, Gs, E) ->
+new(N, T, P, H, CFG) ->
     %N is the nibble being pointed to.
     %T is the type, P is the pointer, H is the Hash
     S = new_empty(CFG),
-    add(S, N, T, P, H, Gs, E).
+    add(S, N, T, P, H).
 pointers(R) -> R#stem.pointers.
 update_pointers(Stem, NP) ->
     Stem#stem{pointers = NP}.
@@ -137,22 +139,6 @@ hash(S) ->
     P = S#stem.root,
     <<(secp256k1:hash_point(P)):256>>.
 
-hash(S, CFG) when is_binary(S) ->
-    hash(deserialize(S, CFG), CFG);
-hash(S, CFG) when 
-      is_tuple(S) and (size(S) == ?nwidth)->    
-    hash2(1, S, <<>>, CFG);
-hash(S, CFG) ->    
-    H = S#stem.hashes,
-    hash2(1, H, <<>>, CFG).
-hash2(?nwidth + 1, _, X, CFG) -> 
-    HS = cfg:hash_size(CFG),
-    hash:doit(X, HS);
-hash2(N, H, X, CFG) ->
-    A = element(N, H),
-    HS = cfg:hash_size(CFG),
-    HS = size(A),
-    hash2(N+1, H, <<A/binary, X/binary>>, CFG).
 update(Location, Stem, CFG) ->
     dump:update(Location, serialize(Stem, CFG), ids:stem(CFG)).
 put(Stem, CFG) ->
@@ -170,6 +156,17 @@ get(Pointer, CFG) ->
 empty_trie(Root, CFG) ->
     Stem = get(Root, CFG),
     update_pointers(Stem, empty_tuple()).
+
+equal(S, T) ->
+    [R2, R3] = secp256k1:simplify_Zs_batch(
+                 [S#stem.root, T#stem.root]),
+    S2 = S#stem{
+           root = R2
+          },
+    T2 = T#stem{
+           root = R3
+          },
+    S2 == T2.
     
 test() ->
     P = list_to_tuple(many(5, ?nwidth)),
@@ -185,14 +182,18 @@ test() ->
     S = #stem{types = T, pointers = P, hashes = H},
     S2 = serialize(S, CFG),
     Sb = deserialize(S2, CFG),
-    DB = ?p,
     %io:fwrite({size(?p)}),%9
     %io:fwrite({S#stem.root, Sb#stem.root}),
+    true = equal(S, Sb),
     true = secp256k1:jacob_equal(
              S#stem.root, Sb#stem.root, 
-             DB#p.e),
+             ?p#p.e),
     Hash = hash:doit(<<>>),
-    Stem2 = add(S, 3, 1, 5, Hash, DB#p.g, DB#p.e),
+    Stem2 = add(S, 3, 1, 5, Hash),
     hash(Stem2),
+    %testing reading and writing to the hard drive.
+    Pointer = stem:put(Stem2, CFG),
+    Stem2b = get(Pointer, CFG),
+    true = equal(Stem2b, Stem2),
     success.
     

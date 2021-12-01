@@ -1,12 +1,5 @@
-* get leaf and stem modules working with the new format.
-- add the pedersen commitment to each stem. update the size of the data stored. 
-- update stem hash to be the hash of the commitment.
-- update add/5 to change the commitment.
+the ram and hd versions have lots of duplicate code. it would be nice to clean that up a bit, so we don't need to change so many things for the merkle->verkle update.
 
-
-* check that when we hash a leaf or stem, the data is the correct length. don't serialize a bunch of extra zeros unnecessarily.
-
-* make a simple example of a 2-step proof.
 
 * rewrite of store.erl . we should update the pedersen commitment at each node, by subtracting the old value and adding the new one. Look for opportunities to simplify the jacobian format of the points. 
 

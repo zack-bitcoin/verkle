@@ -15,6 +15,7 @@ start(normal, []) ->
     KeyLength = ?nwidth div ?nindex,%in bytes
     Amount = 1000000,
     Mode = ram,
+    %Mode = hd,
     Meta = 2,
     HashSize = 32,
     verkle_sup:start_link(KeyLength, Size, ID, Amount, Meta, HashSize, Mode, "").

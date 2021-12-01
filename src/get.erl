@@ -1,17 +1,11 @@
 -module(get).
 -export([get/3, same_end/3, test/0]).
--export_type([proof/0]).
 -include("constants.hrl").
 
--type proof() :: [stem:hashes(), ...]. % the last element is the 16-hashes-tuple contained in the root
-
--spec get(leaf:path(), stem:stem_p(), cfg:cfg()) ->
-		 {RootHash::stem:hash(), Value, proof()}
-		     when Value :: empty | leaf:leaf().
 get(Path, Root, CFG) ->
     S = stem:get(Root, CFG),
-    H = stem:hash(S, CFG),
-    case get2(Path, S, [stem:hashes(S)], CFG) of
+    H = stem:hash(S),
+    case get2(Path, S, [stem:root(S)], CFG) of
 	{unknown, Proof} -> {H, unknown, Proof};
 	{empty, Proof} -> {H, empty, Proof};
 	{A, Proof} -> {H, A, Proof}
@@ -26,7 +20,7 @@ get2([<<N:?nindex>> | Path], Stem, Proof, CFG) ->
 	PN == 0 -> {unknown, Proof};
 	NextType == 1 -> %another stem
 	    Next = stem:get(PN, CFG),
-	    get2(Path, Next, [stem:hashes(Next)|Proof], CFG);
+	    get2(Path, Next, [stem:root(Next)|Proof], CFG);
 	NextType == 2 -> %leaf
 	    Leaf2 = leaf:get(PN, CFG),
 	    LPath = leaf:path(Leaf2, CFG),

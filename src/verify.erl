@@ -19,7 +19,8 @@ update_internal([<<N:?nindex>> | M], LH, Proof, CFG) ->
     P1 = hd(Proof),
     %Hash = element(N+1, P1),
     P2 = setelement(N+1, P1, LH),
-    NH = stem:hash(P2, CFG),
+    io:fwrite({P2}),
+    NH = stem:hash(P2),
     [P2|update_internal(M, NH, tl(Proof), CFG)].
 
 update_proofs(X, CFG) ->
@@ -59,13 +60,13 @@ update_proofs2([<<N:?nindex>>|M], LH, Proof, D, CFG, Proof2) ->
     P2 = setelement(N+1, P, LH),
     D2 = dict:store(P1, P2, D),
     D3 = dict:store(P, P2, D),
-    NH = stem:hash(P2, CFG),
+    NH = stem:hash(P2),
     update_proofs2(M, NH, tl(Proof), D3, CFG, [P2|Proof2]).
 
 proof(RootHash, L, Proof, CFG) ->
     [H|F] = lists:reverse(Proof),
     %[H|F] = Proof,
-    SH = stem:hash(H, CFG),
+    SH = stem:hash(H),
     if
 	SH == RootHash ->
 	    proof_internal(leaf:path(L, CFG), L, [H|F], CFG);
@@ -96,7 +97,7 @@ proof_internal([<<N:?nindex>>| Path ], Leaf, [P1, P2 | Proof], CFG) ->
 				     CFG));
 	true ->
 	    Hash = element(N+1, P1),
-	    case stem:hash(P2, CFG) of
+	    case stem:hash(P2) of
 		Hash -> proof_internal(Path, Leaf, [P2 | Proof], CFG);
 		X ->
 		    io:fwrite("false 3\n"),

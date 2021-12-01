@@ -40,6 +40,7 @@ pis([], _, _) -> [];
 pis([H|T], A, B) -> 
     X = mul(H, A, B),
     [X|pis(T, X, B)].
+batch_inverse([], _) -> [];
 batch_inverse(Vs, Base) ->
     [All|V2] = lists:reverse(pis(Vs, 1, Base)),%[v16, v15, v14, v13, v12, v1]
     AllI = inverse(All, Base),%i16

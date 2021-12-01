@@ -11,7 +11,7 @@ test() ->
     %V = [1,2,3,5,7,8,9,10,11,12,13,14,16,17,18],
     %V = [5, 6, 12, 13],
     %V = [18],
-    V = [101],
+    V = [101, 17, 18],
     test_helper(V, CFG).
 test_helper([], _) -> success;
 test_helper([N|T], CFG) -> 
@@ -29,13 +29,12 @@ test(101, CFG) ->
     Gs = DB#p.g,
     L = leaf:new(300, <<27:16>>, 0, CFG),
     <<LH:256>> = leaf:hash(L, CFG),
-    S1 = stem:new(3, 1, 1, <<LH:256>>, CFG, Gs, E),
+    S1 = stem:new(3, 1, 1, <<LH:256>>, CFG),
     <<S1H:256>> = stem:hash(S1),
-    S2 = stem:new(0, 1, 1, <<S1H:256>>, CFG, Gs, E),
-    %A is commited data, z is the slot number.
+    S2 = stem:new(0, 1, 1, <<S1H:256>>, CFG),
+    %A is commited data, z is the slot number we are reading from.
     As = [[0,0,0,LH], 
           [S1H,0,0,0]],
-    Ys = [LH, S1H],
     Zs = [4, 1],
     Base = secp256k1:order(E),
     Ys = lists:zipwith(
@@ -43,11 +42,10 @@ test(101, CFG) ->
                    poly:eval_e(Z, F, Domain, Base)
            end, As, Zs),
     Commits = [stem:root(S1), stem:root(S2)],
+    S1H = secp256k1:hash_point(stem:root(S1)),
+    Ys = [LH, S1H],
     Proof = multiproof:prove(As, Zs, Commits, ?p),
-
     true = multiproof:verify(Proof, Zs, Ys, ?p),
-    %make a batch of the 2 ipa proofs to connect the leaf to the root.
-    %{L, S1, S2};
     success;
 test(1, CFG) ->
     leaf:new(1, empty, 0, CFG),
@@ -475,38 +473,38 @@ test(17, CFG) ->
     New = trie:put_batch(Leaves2, Old, trie01),
     %insert a batch to get oldroot old,
     %insert a batch to get new
-    Ls = trie:garbage(New, Old, trie01),
+    %Ls = trie:garbage(New, Old, trie01),
     %Ls = prune2:stem(New, Old, trie:cfg(trie01)),
-    io:fwrite("garbage removed these "),
-    io:fwrite(packer:pack(Ls)),
-    io:fwrite("\n"),
-    io:fwrite(packer:pack(element(2, trie:get(1, Old, trie01)))),
+    %io:fwrite("garbage removed these "),
+    %io:fwrite(packer:pack(Ls)),
+    %io:fwrite("\n"),
+    %io:fwrite(packer:pack(element(2, trie:get(1, Old, trie01)))),
     Final = trie:put_batch(Leaves3, Old, trie01),
-    io:fwrite(packer:pack(element(2, trie:get(1, Final, trie01)))),
-    io:fwrite("\n"),
-    io:fwrite("final pointer "),
-    io:fwrite(integer_to_list(Final)),
-    io:fwrite("\n"),
+    %io:fwrite(packer:pack(element(2, trie:get(1, Final, trie01)))),
+    %io:fwrite("\n"),
+    %io:fwrite("final pointer "),
+    %io:fwrite(integer_to_list(Final)),
+    %io:fwrite("\n"),
     %make sure we can still look up stuff from New.
     success;
 test(18, CFG) ->
     %Proof2 = verify:update_proof(Leaf2, Proof, CFG),
     Loc = 1,
-    Times = 1000,
+    Times = 10,
     NewLoc = test3a(Times, Times, Loc),
     %test3b(Times, NewLoc, CFG),
     {Hash4, Value4, Proof4} = trie:get(4, NewLoc, ?ID),
     {Hash5, Value5, Proof5} = trie:get(5, NewLoc, ?ID),
     Leaf = leaf:new(5, <<0, 1>>, 0, CFG),
     Proof2 = verify:update_proof(Leaf, Proof5, CFG),
-    NewRoot = stem:hash(hd(lists:reverse(Proof2)), CFG),
+    NewRoot = stem:hash(hd(lists:reverse(Proof2))),
     true = verify:proof(NewRoot, Leaf, Proof2, CFG),
 
     [Proof3|_] = verify:update_proofs(
 		[{Leaf, Proof5}|
 		 [{leaf:new(4, <<0, 1>>, 0, CFG), 
 		   Proof4}|[]]], CFG),
-    NewRoot2 = stem:hash(hd(lists:reverse(Proof3)), CFG),
+    NewRoot2 = stem:hash(hd(lists:reverse(Proof3))),
     true = verify:proof(NewRoot2, Leaf, Proof3, CFG),
 
     success.
