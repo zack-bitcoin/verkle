@@ -492,22 +492,28 @@ test(18, CFG) ->
     Loc = 1,
     Times = 10,
     NewLoc = test3a(Times, Times, Loc),
-    %test3b(Times, NewLoc, CFG),
-    {Hash4, Value4, Proof4} = trie:get(4, NewLoc, ?ID),
-    {Hash5, Value5, Proof5} = trie:get(5, NewLoc, ?ID),
-    Leaf = leaf:new(5, <<0, 1>>, 0, CFG),
-    Proof2 = verify:update_proof(Leaf, Proof5, CFG),
-    NewRoot = stem:hash(hd(lists:reverse(Proof2))),
-    true = verify:proof(NewRoot, Leaf, Proof2, CFG),
-
-    [Proof3|_] = verify:update_proofs(
-		[{Leaf, Proof5}|
-		 [{leaf:new(4, <<0, 1>>, 0, CFG), 
-		   Proof4}|[]]], CFG),
-    NewRoot2 = stem:hash(hd(lists:reverse(Proof3))),
-    true = verify:proof(NewRoot2, Leaf, Proof3, CFG),
-
+    RootHash = stem:hash(stem:get(NewLoc)),
+    {Leaves, Proof} = get:batch([1, 2, 5], NewLoc, CFG),
+    true = verify:proof(RootHash, Leaves, Proof, CFG),
+    %io:fwrite(Proof),
     success.
+    %test3b(Times, NewLoc, CFG),
+    %{Hash4, Value4, Proof4} = trie:get(4, NewLoc, ?ID),
+    %{Hash5, Leaf, Proof5} = trie:get(5, NewLoc, ?ID),
+    %io:fwrite({Value5}),
+    %Leaf = leaf:new(5, Value5, 0, CFG),
+    %Proof2 = verify:update_proof(Leaf, Proof5, CFG),
+    %NewRoot = stem:hash(hd(lists:reverse(Proof2))),
+    %true = verify:proof(Hash5, Leaf, Proof5, CFG),
+
+    %[Proof3|_] = verify:update_proofs(
+	%	[{Leaf, Proof5}|
+	%	 [{leaf:new(4, <<0, 1>>, 0, CFG), 
+	%	   Proof4}|[]]], CFG),
+    %NewRoot2 = stem:hash(hd(lists:reverse(Proof3))),
+    %true = verify:proof(NewRoot2, Leaf, Proof3, CFG),
+
+    %success.
     
     
     

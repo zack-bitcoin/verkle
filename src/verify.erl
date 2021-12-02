@@ -63,10 +63,35 @@ update_proofs2([<<N:?nindex>>|M], LH, Proof, D, CFG, Proof2) ->
     NH = stem:hash(P2),
     update_proofs2(M, NH, tl(Proof), D3, CFG, [P2|Proof2]).
 
+proof(RootHash, Leaves, Proof = {_, Commits, _}, CFG) ->
+
+    %multiproof:verify(Proof = {CommitG, Commits, Open_G_E}, Zs, Ys, ?p)
+    %Zs are elements of the domain where we look up stuff.
+    %Ys are values stored in pedersen commits. either hashes of leaves, or hashes of stems.
+    Paths = lists:map(fun(L) -> leaf:path(L, CFG),
+                      end, Leaves),
+    Tree = get:paths2tree(Paths),
+    Zs0 = flatten(Tree, []),
+    Zs = get:index2domain(Zs0, ?p#p.domain),
+
+    %need to show that roothash is the hash of 
+    Commits = lists:reverse(Commits0),
+    RH2 = stem:hash_point(hd(Commits)),
+    if
+        (RootHash == RH2) ->%check that the proof connects to this root hash.
+            proof_loop(leaf:path(Leaf, CFG),
+                       Leaf, Commits, CFG);
+        true ->
+	    io:fwrite("false 1\n"),
+	    false
+    end.
+proof_loop([<<N:?nindex>> | R], Leaf, P, CFG) 
+    
+
 proof(RootHash, L, Proof, CFG) ->
     [H|F] = lists:reverse(Proof),
     %[H|F] = Proof,
-    SH = stem:hash(H),
+    SH = stem:hash_point(H),
     if
 	SH == RootHash ->
 	    proof_internal(leaf:path(L, CFG), L, [H|F], CFG);
@@ -96,12 +121,13 @@ proof_internal([<<N:?nindex>>| Path ], Leaf, [P1, P2 | Proof], CFG) ->
 				     [<<N:?nindex>>|Path], 
 				     CFG));
 	true ->
-	    Hash = element(N+1, P1),
-	    case stem:hash(P2) of
+	    %Hash = element(N+1, P1),
+            Hash = 
+	    case stem:hash_point(P2) of
 		Hash -> proof_internal(Path, Leaf, [P2 | Proof], CFG);
 		X ->
 		    io:fwrite("false 3\n"),
-		    %io:fwrite({X, Hash, [P1, P2|Proof]}),
+		    io:fwrite({X, Hash, [P1, P2|Proof]}),
 		    false
 	    end
     end;

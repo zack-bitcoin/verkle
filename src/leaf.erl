@@ -4,10 +4,6 @@
 	is_serialized_leaf/2, test/0]).
 -include("constants.hrl").
 %-export_type([leaf/0,key/0,value/0,meta/0,leaf_p/0,path/0]).
--record(leaf, { key
-	      , value
-	      , meta %meta is data we want to remember that doesn't get hashed into the merkle tree.
-	      }).
 is_serialized_leaf(X, CFG) ->
     P = cfg:path(CFG),
     M = cfg:meta(CFG),

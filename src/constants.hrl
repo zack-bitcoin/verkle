@@ -1,4 +1,9 @@
 
+-record(leaf, { key
+	      , value
+	      , meta %meta is data we want to remember that doesn't get hashed into the merkle tree.
+	      }).
+              
 -define(nwidth, 4).%children per node
 -define(nindex, 2).%should be log2(width)
 

@@ -1,6 +1,10 @@
 Verkle Tree
 ===========
 
+This software is not ready to be used.
+It does not yet work as a database.
+See the todo list for what needs to be done still.
+
 a verkle tree database based on pedersen commitments over the secp256k1 elliptic curve.
 Written in pure erlang.
 

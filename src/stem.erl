@@ -1,7 +1,9 @@
 %The purpose of this file is to define stems as a data structure in ram, and give some simple functions to operate on them.
 
 -module(stem).
--export([test/0,get/2,put/2,type/2,hash/1,pointers/1,
+-export([test/0,get/2,put/2,type/2,
+         hash/1,hash_point/1,
+         pointers/1,
 	 types/1,hashes/1,pointer/2,new/5,add/5,
 	 new_empty/1,recover/6, empty_hashes/1, 
 	 update_pointers/2, empty_tuple/0,
@@ -137,6 +139,8 @@ empty_hashes(CFG) ->
 
 hash(S) ->
     P = S#stem.root,
+    hash_point(P).
+hash_point(P) ->
     <<(secp256k1:hash_point(P)):256>>.
 
 update(Location, Stem, CFG) ->
