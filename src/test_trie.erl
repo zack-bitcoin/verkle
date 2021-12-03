@@ -492,9 +492,14 @@ test(18, CFG) ->
     Loc = 1,
     Times = 10,
     NewLoc = test3a(Times, Times, Loc),
-    RootHash = stem:hash(stem:get(NewLoc)),
-    {Leaves, Proof} = get:batch([1, 2, 5], NewLoc, CFG),
-    true = verify:proof(RootHash, Leaves, Proof, CFG),
+    %io:fwrite("before root hash\n"),
+    %Root = stem:root(stem:get(NewLoc, CFG)),
+    {Tree, Proof} = 
+        get:batch([3,5,1], NewLoc, CFG),
+        %get:batch([1], NewLoc, CFG),
+    io:fwrite("before verify\n"),
+    %io:fwrite({Root, Tree}),
+    true = verify:proof(Tree, Proof, CFG),
     %io:fwrite(Proof),
     success.
     %test3b(Times, NewLoc, CFG),

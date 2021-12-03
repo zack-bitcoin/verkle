@@ -2,6 +2,7 @@
 -export([
 batch/3, index2domain/2, paths2tree/1,
 %get/3, same_end/3, 
+split3parts/4, index2domain/2,
 test/0]).
 -include("constants.hrl").
 
@@ -23,15 +24,33 @@ batch(Keys, Root, CFG) ->
     %Tree example [[1,[[4,3,2], [1,1,[[1], [2]]]]], [2,1,1,1]],
     %list of lists means or. list of integers means and.
     Tree2 = points_values(Tree, RootStem, CFG),
+
+    %io:fwrite(Tree2),
     %Tree example [[{point, 1, Hashes},[[{point, 4, hashes}], [{point, 1, hashes},{point, 1, hashes},[[{point, 1, hashes}], [2]]]]], [{2, point}]],
     Lookups = flatten(Tree2, []),
-    Leaves = get_leaves(Tree2, []),
-    {Commits, Zs0, As0} = split3parts(Lookups, [], [], []),
+    %io:fwrite({Lookups}),
+    %Leaves = get_leaves(Tree2, []),
+    %Structure = structure(Tree2, 0),
+    %io:fwrite({Leaves, Structure, Tree2}),
+    {Zs0, Commits, As0} = split3parts(Lookups, [], [], []),
     Zs = index2domain(Zs0, ?p#p.domain),
+    %io:fwrite({Zs}),
     As = binary2int(As0),
+    %io:fwrite({length(As), length(Zs), length(Commits)}),
     %io:fwrite({hd(As), hd(Zs), hd(Commits)}),
     Proof = multiproof:prove(As, Zs, Commits, ?p),
-    {Leaves, Proof}.
+    Tree3 = remove_hashes(Tree2),%still has lots of repeats.
+    %[[{1, p1}, [{0, p2}, l1], [{1, p2}, l2]]
+    % [{3, p1}, {0, p3} l3]]
+    %io:fwrite({Tree3, RootStem}),
+    %io:fwrite({Tree3}),
+    Tree4 = withdraw_points(Tree3),
+    %io:fwrite({Tree4}),
+    %{p1 [{1, p2},
+    %{p1, [{1, p2}, [{0, l1}, {1, l2}]],
+    %     [{3, p3}, [{0, l3}]]}
+    %io:fwrite({Tree3}),
+    {Tree4, Proof}.
     %multiproof:prove(stem:hashes, slot in each commit to read from, commits, ?p)
                       
     %batch2(Paths, [P], CFG).
@@ -42,21 +61,74 @@ binary2int([Tup|R]) when is_tuple(Tup) ->
     [L|binary2int(R)];
 binary2int([<<H:256>>|T]) -> 
     [H|binary2int(T)].
+
+    %remove duplicate elliptic points in the tree structure by moving where they are written more towards the root of the tree.
+withdraw_points(X = [[{_, R}|_]|_]) ->
+    [R|withdraw_points2(X)];
+withdraw_points(X = [{_, R}|_]) ->
+    [R|withdraw_points3(X)].
+withdraw_points2(Xs) ->
+    lists:map(fun withdraw_points3/1,
+              Xs).
+withdraw_points3(X = [{I, _}, 
+                      {I2, P = {_, _, _}}
+                      |T]) ->
+    [_|Y] = X,
+    [{I, P}|withdraw_points3(Y)];
+withdraw_points3(X = [{I, _}, 
+                      [{I2, P = {_, _, _}}|T1]
+                      |T2]) ->
+    [_|Xs] = X,
+    [{I, P}|withdraw_points2(Xs)];
+withdraw_points3(X = [{I, _}, L = {_, B}]) 
+  when is_binary(B) ->
+    [{I, L}].
+
+                      
+                      
+
     
+   
+remove_hashes(X = {A, B, C}) -> {A, B};
+remove_hashes([H|T]) -> 
+    [remove_hashes(H)|
+     remove_hashes(T)];
+remove_hashes(X) -> X.
     
-flatten(X = {Point, Index, Hashes}, T) -> [X|T];
+%flatten(X = {Point, Index, Hashes}, T) -> [X|T];
+flatten(X = {Index, Point, Hashes}, T) -> [X|T];
 flatten([H|T], R) -> 
     R2 = flatten(H, []),
     flatten(T, R ++ R2);
-flatten([_|T], R) -> flatten(T, R);
+%flatten([_|T], R) -> flatten(T, R);
 flatten(_, R) -> R.
-get_leaves(L, R) when is_record(L, leaf) ->
+get_leaves(L = {A, B}, R) ->
     [L|R];
-get_leaves([H|T], R) ->
+get_leaves([H|T], R) ->%when is_list(H) ->
     R2 = get_leaves(H, []),
     get_leaves(T, R ++ R2);
-get_leaves([_|T], R) -> get_leaves(T, R);
+%get_leaves([_|T], R) -> get_leaves(T, R);
 get_leaves(_, R) -> R.
+%structure([H|T], N) when is_list(H) ->
+%    structure(H, N) ++ structure(T, N);
+%structure([L|T], N) when is_record(L, leaf) ->
+%    [N] ++structure(T, N);
+%structure([{_, _, _}|T], N) ->
+%    structure(T, N+1);
+%structure([[]|T], N) ->
+%    structure(T, N);
+%structure([], _) -> [].
+
+
+
+%structure([_|T], N) ->
+%    structure(T, N+1);
+%structure(_, N) -> [].
+
+
+    
+    
+
 split3parts([], A, B, C) -> {A, B, C};
 split3parts([{X, Y, Z}|T], A, B, C) -> 
     split3parts(T, [X|A], [Y|B], [Z|C]).
@@ -97,7 +169,7 @@ points_values([Loc|R], Root, CFG)
     P = stem:pointer(Loc+1, Root),
     EllipticPoint = stem:root(Root),
     Hashes = stem:hashes(Root),
-    V = {EllipticPoint, Loc, Hashes},
+    V = {Loc, EllipticPoint, Hashes},
     case Type of
         0 -> %empty
             [V];
@@ -105,7 +177,8 @@ points_values([Loc|R], Root, CFG)
             [V|points_values(R, stem:get(P, CFG), 
                              CFG)];
         2 -> %leaf
-            [V, leaf:get(P, CFG)]
+            L = leaf:get(P, CFG),
+            [V, {leaf:key(L), leaf:value(L)}]
     end;
 points_values([H|T], Root, CFG) ->
     [points_values(H, Root, CFG)|
