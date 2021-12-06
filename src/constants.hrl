@@ -1,4 +1,11 @@
 
+-define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
+-define(sub(A, B), ((A - B + ?order) rem ?order)).%assumes B less than ?order
+-define(neg(A), ((?order - A) rem ?order)).%assumes A less than ?order
+-define(add(A, B), ((A + B) rem ?order)).
+-define(mul(A, B), ((A * B) rem ?order)).
+
+
 -record(leaf, { key
 	      , value
 	      , meta = 0 %meta is data we want to remember that doesn't get hashed into the merkle tree.

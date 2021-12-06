@@ -499,13 +499,13 @@ test(18, CFG) ->
                   #leaf{key = Times + 1 - N, value = <<N:16>>}
           %end, Many),
           end, range(1, Times+1)),
-    %io:fwrite("load up the linear database\n"),
-    %NewLoc = test3a(Times, Times, Loc),
+    io:fwrite("load up the linear database\n"),
+    NewLoc2 = test3a(Times, Times, Loc),
     io:fwrite("load up the batch database\n"),
-    NewLoc = 
+    {NewLoc, stem, _} = 
         store:batch(Leaves, Loc, CFG),
-    %io:fwrite({stem:get(NewLoc, CFG),
-    %           stem:get(NewLoc2, CFG)}),
+    io:fwrite({stem:get(NewLoc, CFG),
+               stem:get(NewLoc2, CFG)}),
     F = fun(N) -> stem:get(element(2, ((stem:get(N, CFG))#stem.pointers)), CFG) end,
     F2 = fun(N) -> leaf:get(element(3, ((stem:get(N, CFG))#stem.pointers)), CFG) end,
     
