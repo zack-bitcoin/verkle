@@ -1,5 +1,5 @@
 -module(verify).
--export([proof/3, update_proof/3, update_proofs/2]).
+-export([proof/3, update_proof/3, update_proofs/2, unfold/4]).
 -include("constants.hrl").
 
 
@@ -62,7 +62,8 @@ update_proofs2([<<N:?nindex>>|M], LH, Proof, D, CFG, Proof2) ->
     NH = stem:hash(P2),
     update_proofs2(M, NH, tl(Proof), D3, CFG, [P2|Proof2]).
 
-proof(Tree, Proof = {CommitG, Commits0, Open}, CFG) ->
+%proof(Tree, Proof = {CommitG, Commits0, Open}, CFG) ->
+proof(Root0, {Tree, CommitG, Open}, CFG) ->
 
     %multiproof:verify(Proof = {CommitG, Commits, Open_G_E}, Zs, Ys, ?p)
     %Zs are elements of the domain where we look up stuff.
@@ -71,23 +72,46 @@ proof(Tree, Proof = {CommitG, Commits0, Open}, CFG) ->
     
     %[root, [{1, p1}, [{0, L1},{1, L2}], [{3, p2},{0,L3}]]]
     [Root|Rest] = Tree,
-    Tree2 = unfold(Root, Rest, [], CFG),
+    B = secp256k1:jacob_equal(Root0, Root, ?p#p.e),
+    if
+        not(B) -> false;
+        true ->
+            Tree2 = unfold(Root, Rest, [], CFG),
     %[{elliptic, index, hash}, ...]
-    %io:fwrite({Tree2}),
-    {Commits, Zs0, Ys} = 
-        get:split3parts(Tree2, [],[],[]),
-    Zs = get:index2domain(Zs0, ?p#p.domain),
-    Ys2 = lists:map(fun(<<X:256>>) -> X end,
+            %io:fwrite({Rest}),%[[{1, 35}, [{0, l1}],[{1,l5}]], [{2, 10},{0,l2}, {3, 17},{0, l3}]]
+            %error is in "l2}, {3,", there should be a list seperation here.
+            {Commits, Zs0, Ys} = 
+                get:split3parts(Tree2, [],[],[]),
+            Zs = get:index2domain(
+                   Zs0, ?p#p.domain),
+            %io:fwrite({Zs}),%[1,4,1,3,2,1,2]
+            %io:fwrite({Commits}),%[17,10,10,88,35,35,88]
+            %should be [17,88,10,88,35,35,88]
+            Ys2 = lists:map(
+                    fun(<<X:256>>) -> X end,
                     Ys),
-    Commits0 = Commits,
-    true = multiproof:verify({CommitG, Commits, Open}, Zs, Ys2, ?p),
+            B2 = multiproof:verify(
+                   {CommitG, Commits, Open}, 
+                   Zs, Ys2, ?p),
+            if
+                not(B) -> false;
+                true ->
+                    {true, leaves(Rest)}
+                    %get all the leaves
+                        %ok
+            end
+    end.
     
     %[p2, root, p1, p1, root] %commitments
     %[0,  3,    1,  0,  1]  %indices
     %[L3, p2,   L2, L1, p1] %unhashed ys
-    true.
 
     %[{1, p1}, [{0, L1},{1, L2}], [{3, p2},{0,L3}]]
+leaves({_, X = {_, B}}) when is_binary(B) -> [X];
+leaves([H|T]) ->
+    leaves(H) ++ leaves(T);
+leaves(_) ->  [].
+
 unfold(Root, {Index, X = {Key, B}}, T, CFG) %leaf case
   when is_binary(B) ->
     Leaf = #leaf{key = Key, value = B},

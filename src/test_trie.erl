@@ -10,8 +10,8 @@ test() ->
     %V = [1,2,3,4,5,7,8,9,10,11,12,13,14,16,17],
     %V = [1,2,3,5,7,8,9,10,11,12,13,14,16,17,18],
     %V = [5, 6, 12, 13],
-    %V = [18],
-    V = [101, 17, 18],
+    V = [18],
+    %V = [101, 17,18],
     test_helper(V, CFG).
 test_helper([], _) -> success;
 test_helper([N|T], CFG) -> 
@@ -464,7 +464,7 @@ test(17, CFG) ->
     Leaves1 = [leaf:new(1, La, 0, CFG),
 	      leaf:new(2, La, 0, CFG),
 	      %leaf:new(33, La, 0, CFG),
-	      leaf:new(17, La, 0, CFG)],
+	      leaf:new(5, La, 0, CFG)],
     Leaves2 = [leaf:new(1, Lb, 0, CFG),
 	      leaf:new(3, Lb, 0, CFG)],
     Leaves3 = [leaf:new(1, La, 0, CFG),
@@ -490,18 +490,51 @@ test(17, CFG) ->
 test(18, CFG) ->
     %Proof2 = verify:update_proof(Leaf2, Proof, CFG),
     Loc = 1,
-    Times = 10,
-    NewLoc = test3a(Times, Times, Loc),
+    Times = 1000,
+    %Many = range(1, min(100, Times)),
+    Many = [1,2],
+    Leaves = 
+        lists:map(
+          fun(N) -> 
+                  #leaf{key = Times + 1 - N, value = <<N:16>>}
+          %end, Many),
+          end, range(1, Times+1)),
+    %io:fwrite("load up the linear database\n"),
+    %NewLoc = test3a(Times, Times, Loc),
+    io:fwrite("load up the batch database\n"),
+    NewLoc = 
+        store:batch(Leaves, Loc, CFG),
+    %io:fwrite({stem:get(NewLoc, CFG),
+    %           stem:get(NewLoc2, CFG)}),
+    F = fun(N) -> stem:get(element(2, ((stem:get(N, CFG))#stem.pointers)), CFG) end,
+    F2 = fun(N) -> leaf:get(element(3, ((stem:get(N, CFG))#stem.pointers)), CFG) end,
+    
+%    io:fwrite({stem:get(NewLoc, CFG),
+%               stem:get(NewLoc2, CFG),
+%               F(NewLoc), F(NewLoc2)}),
+    %element(1, (stem:get(NewLoc, CFG))#stem.pointers,
+    %(stem:get(NewLoc2, CFG))#stem.pointers,
+    %io:fwrite({Root, NewLoc}),
+
+    %io:fwrite({Loc, NewLoc, NewLoc2}),
     %io:fwrite("before root hash\n"),
-    %Root = stem:root(stem:get(NewLoc, CFG)),
-    {Tree, Proof} = 
-        get:batch([3,5,1], NewLoc, CFG),
+    %Many = [1,2,3,5],
+    io:fwrite("make proof\n"),
+    Proof = 
+        get:batch(Many, NewLoc, CFG),
         %get:batch([1], NewLoc, CFG),
-    io:fwrite("before verify\n"),
+    io:fwrite("verify proof\n"),
     %io:fwrite({Root, Tree}),
-    true = verify:proof(Tree, Proof, CFG),
+    Root = stem:root(stem:get(NewLoc, CFG)),
+    {true, Leaves2} = 
+        verify:proof(Root, Proof, CFG),
+    %io:fwrite({length(Leaves2), length(Leaves)}),
+    %io:fwrite({Proof, Many, Leaves2}),
+    true = (length(Leaves2) == length(Many)),
+    %io:fwrite(Leaves),
+    %io:fwrite(Leaves),
     %io:fwrite(Proof),
-    success.
+    success;
     %test3b(Times, NewLoc, CFG),
     %{Hash4, Value4, Proof4} = trie:get(4, NewLoc, ?ID),
     %{Hash5, Leaf, Proof5} = trie:get(5, NewLoc, ?ID),
@@ -519,7 +552,16 @@ test(18, CFG) ->
     %true = verify:proof(NewRoot2, Leaf, Proof3, CFG),
 
     %success.
-    
+test(19, CFG) ->
+    %basic checks of the leaves and stems database.
+    Times = 5,
+    Leaves = 
+        lists:map(
+          fun(N) -> 
+                  #leaf{key = Times + 1 - N, value = <<N:16>>}
+          %end, Many),
+          end, range(1, Times+1)),
+    ok.
     
     
     
@@ -553,3 +595,6 @@ test3b(N, Loc, CFG) ->  %check that everything is in the trie
     true = verify:proof(Hash, Value, Proof, CFG), 
     test3b(N-1, Loc, CFG).
 
+range(A, B) when (A < B) ->
+    [A|range(A+1, B)];
+range(A, A) -> [].

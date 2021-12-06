@@ -1,7 +1,12 @@
 
 -record(leaf, { key
 	      , value
-	      , meta %meta is data we want to remember that doesn't get hashed into the merkle tree.
+	      , meta = 0 %meta is data we want to remember that doesn't get hashed into the merkle tree.
+	      }).
+-record(stem, { types
+                , pointers
+                , hashes
+                , root
 	      }).
               
 -define(nwidth, 4).%children per node

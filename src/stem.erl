@@ -13,11 +13,6 @@
 	 empty_trie/2]).
 -include("constants.hrl").
 %-export_type([stem/0,types/0,empty_t/0,stem_t/0,leaf_t/0,pointers/0,empty_p/0,hashes/0,hash/0,empty_hash/0,stem_p/0,nibble/0]).
--record(stem, { types = empty_tuple()
-                , pointers = empty_tuple()
-                , hashes
-                , root = secp256k1:jacob_zero()
-	      }).
 root(X) ->
     X#stem.root.
 empty_tuple() -> 
@@ -47,7 +42,11 @@ add(S, N, T, P, <<H:256>>) ->
     H2 = setelement(M, Ha, <<H:256>>),
     #stem{types = T2, pointers = P2, 
           hashes = H2, root = Root2}.
-new_empty(CFG) -> #stem{hashes = empty_hashes(CFG)}.
+new_empty(CFG) -> 
+    #stem{hashes = empty_hashes(CFG),
+         types = empty_tuple(),
+         pointers = empty_tuple(),
+         root = secp256k1:jacob_zero()}.
 recover(M, T, P, H, Hashes, CFG) ->
     Types = onify2(Hashes, CFG),
     %Types = list_to_tuple(onify(tuple_to_list(Hashes), CFG)),

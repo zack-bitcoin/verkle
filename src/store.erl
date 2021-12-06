@@ -16,8 +16,207 @@ max_list([X]) -> X;
 max_list([A|[B|T]]) ->
     max_list([max(A, B)|T]).
 store(Leaf, Root, CFG) ->
-    batch([Leaf], Root, CFG).
-batch(Leaves, Root, CFG) ->
+    batch_old([Leaf], Root, CFG).
+
+batch(Leaves0, RP, CFG) ->
+    Leaves = sort_by_path(Leaves0, CFG),
+    RootStem = stem:get(RP, CFG),
+    Keys = lists:map(fun(L) -> L#leaf.key end,
+                     Leaves),
+    Paths = get:keys2paths(Keys, CFG),
+    Tree = get:paths2tree(Paths),
+    Tree2 = get:points_values(Tree, RootStem, CFG),
+    Tree3 = get:withdraw_points(Tree2),
+    %io:fwrite(Tree3),
+    %io:fwrite({Leaves, Tree2}),
+    %io:fwrite({Tree3}),
+
+    Tree4 = insert_leaves(
+              Leaves, Paths, Tree3, CFG),
+    %io:fwrite({Leaves, Tree4}),
+    %io:fwrite(Tree4),
+    %simplify all the elliptic points.
+    Ellips = strip_elliptic_points(Tree4),
+    Ellips2 = secp256k1:simplify_Zs_batch(Ellips),
+    %io:fwrite({Tree4, Ellips2}),
+    {[], Tree5} = restore_elliptic_points(
+                   Ellips2, Tree4),
+    %io:fwrite(Tree5),
+    {_, FinalRoot} = 
+        hd_write(Tree5, CFG),
+    FinalRoot.
+
+write_pointers(S, []) -> S;
+write_pointers(S, [{Index, Pointer}|T]) -> 
+    Pointers = S#stem.pointers,
+    Pointers2 = setelement(
+                  Index+1, Pointers, Pointer),
+    S2 = S#stem{pointers = Pointers2},
+    write_pointers(S2, T).
+
+hd_write([{Index, S = #stem{}},H|T], CFG) 
+  when is_list(H) ->
+    %OR
+    %returns {Index, pointer}
+    T2 = [H|T],
+    L = lists:map(
+          fun(X) -> 
+                  %io:fwrite(X)
+                  hd_write(X, CFG) 
+          end, T2),
+    %L = hd_write([H|T], CFG),
+    S2 = write_pointers(S, L),
+    %io:fwrite(S2),
+    {Index, stem:put(S2, CFG)};
+hd_write([{Index, S = #stem{}},H|T], CFG) ->
+    %AND
+    {I2, Pointer1} = hd_write([H|T], CFG),
+    S2 = write_pointers(S, [{I2, Pointer1}]),
+    {Index, stem:put(S2, CFG)};
+hd_write([{Index, L = #leaf{}}], CFG) ->
+    {Index, leaf:put(L, CFG)};
+hd_write({Index, L = #leaf{}}, CFG) ->
+    {Index, leaf:put(L, CFG)};
+hd_write(X, _) ->
+    io:fwrite("hd write failure \n"),
+    io:fwrite({X}),
+    ok.
+
+
+
+restore_elliptic_points([], X) -> {[], X};
+restore_elliptic_points(
+  [H|T], [{I, S = #stem{root=OldRoot}}|R]) -> 
+    
+    %sanity check
+    true = secp256k1:jacob_equal(
+             OldRoot, H, ?p#p.e),
+
+    {Ells, Tree2} = restore_elliptic_points(T, R),
+    {Ells, [{I, S#stem{root = H}}|
+            Tree2]};
+restore_elliptic_points(Ps, [H|T]) -> 
+    {P1, H2} = restore_elliptic_points(Ps, H),
+    {P2, T2} = restore_elliptic_points(P1, T),
+    {P2, [H2|T2]};
+restore_elliptic_points(
+  Ps, [X|R]) -> 
+    {P1, Tree} = restore_elliptic_points(Ps, R),
+    {P1, [X|Tree]};
+restore_elliptic_points(Ps, X) -> 
+    {Ps, X}.
+
+strip_elliptic_points([]) -> [];
+strip_elliptic_points({_, #stem{root = E}}) -> [E];
+strip_elliptic_points([H|T]) -> 
+    strip_elliptic_points(H) ++
+        strip_elliptic_points(T);
+strip_elliptic_points(_) -> [].
+
+insert_leaves([], [], Tree, _) -> Tree;
+insert_leaves([L|Leaves], [P|Paths], Tree, CFG) ->
+    %leaves [{leaf, 1, <<1, 2>>, 0}|...]
+    %tree [[{1, stem1}],[{2, stem2}]]
+    %in tree, list of lists is OR, list of pairs is AND.
+    %paths are lists of indices [[1,0,0,0],[2,0,0,0],[1,1,0,0]]
+    Tree2 = insert_leaf(L, P, 0, Tree, CFG),
+    insert_leaves(Leaves, Paths, Tree2, CFG).
+
+insert_leaf(Leaf, [], D, Tree, _) ->
+    io:fwrite({"infinite match bug", D, Leaf, Tree});
+insert_leaf(
+  Leaf, [I1|_], 0, 
+  Tree = {I2, S = #stem{types = Ty}}, CFG) ->
+    %This version of insert_leaf is only used for inserting data into an empty tree.
+    0 = element(I1+1, Ty),%this is the last piece of data in the proof, if we can't store it here, then the proof is insufficient.
+    LeafHash = leaf:hash(Leaf, CFG),
+    S2 = stem:add(S, I1, 2,%id for a leaf
+                  -1, %this will be a pointer to the leaf location eventually, once we write this batch to the hard drive.
+                  LeafHash),
+    [{I2, S2},
+     {I1, Leaf}];
+insert_leaf(
+  Leaf, [I|IT], D,
+  Tree = [{I2, S = #stem{types = Ty}}, 
+          N = {I, _}|T],
+  CFG) when not(is_list(N)) ->
+    %true = (length([I|IT]) == (8 - D)),
+    %going deeper into the only path.
+    %notice there are 2 `I`s in the input.
+    Tree2 = insert_leaf(Leaf, IT, D+1, [N|T], CFG),
+    StemHash = stem:hash(element(2, hd(Tree2))),
+    S2 = stem:add(S, I, 1, -1, StemHash),
+    [{I2, S2}|Tree2];
+insert_leaf(
+  Leaf, [I|_], _,
+  Tree = [{I3, S = #stem{}}, N = {I2, _}|T],
+  CFG) ->
+    %inserting OR statement.
+    LeafHash = leaf:hash(Leaf, CFG),
+    S2 = stem:add(S, I, 2, -1, LeafHash),
+    if %small to big.
+        (I < I2) -> 
+            [{I3, S2}, [{I, Leaf}], [N|T]];
+        (I > I2) -> 
+            [{I3, S2}, [N|T], [{I, Leaf}]]
+    end;
+insert_leaf(
+  Leaf, [I|IT], D,
+  Tree = [{I2, S = #stem{types = Ty}}|Children],
+  CFG) ->
+    %expanding OR statement.
+    %true = is_list(hd(Children)),
+    %true = (length([I|IT]) == (8 - D)),
+    Type = element(I+1, Ty),
+    {S2, Children2} = insert_leaf_OR(Leaf, S, [I|IT], D, Children, [], CFG),
+    [{I2, S2}|Children2];
+
+        
+insert_leaf(
+  Leaf, [I3|IT], D,
+  Tree = [{I, L2 = #leaf{}}], CFG) ->
+    %making a new stem.
+    Path2 = leaf:path(L2, CFG),
+    P3 = lists:map(fun(<<X:?nindex>>) -> X end,
+                   Path2),
+    true = (length([I|IT]) == (8 - D)),
+    {_, [I2|_]} = lists:split(D, P3),
+    LeafHash2 = leaf:hash(L2, CFG),
+    S0 = stem:new_empty(CFG),
+    S2 = stem:add(S0, I2, 2, -1, LeafHash2),
+    insert_leaf(%should always be followed by insert leaf 2
+      Leaf, [I3|IT], D,
+      [{I, S2}, {I2,  L2}], CFG).
+    
+
+insert_leaf_OR(Leaf, S, [I|IT], _, [], A, CFG) ->
+    %this leaf is the only option.
+    LeafHash = leaf:hash(Leaf, CFG),
+    S2 = stem:add(S, I, 2, -1, LeafHash),
+    {S2, lists:reverse([[{I, Leaf}]|A])};
+insert_leaf_OR(
+  Leaf, S, [I|IT], D, [[{I, X}|T1]|T2], A, CFG) ->
+    true = (length([I|IT]) == (8 - D)),
+    Tree = insert_leaf(Leaf, IT, D+1, [{I, X}|T1], CFG),%should always be followed by insert leaf 4.
+    [{_, RS}|_] = Tree,
+    StemHash = stem:hash(RS),
+    S2 = stem:add(S, I, 1, -1, StemHash),
+    Tree2 = (lists:reverse(A))++ [Tree] ++ T2,
+    {S2, Tree2};
+insert_leaf_OR(
+  Leaf, S, [I|IT], D, [Z = [{I2, _}|_]|T2], A, CFG)
+  when (I2 < I) ->
+    true = (length([I|IT]) == (8 - D)),
+     insert_leaf_OR(Leaf, S, [I|IT], 
+                    D, T2, [Z|A], CFG);
+insert_leaf_OR(
+  Leaf, S,[I|IT], _, [[{I2, X}|T1]|T2], A, CFG) ->
+    LeafHash = leaf:hash(Leaf, CFG),
+    S2 = stem:add(S, I, 2, -1, LeafHash),
+    T3 = lists:reverse([[{I, Leaf}]|A]) ++ [[{I2, X}|T1]],
+    {S2, T3 ++ T2}.
+
+batch_old(Leaves, Root, CFG) ->
     %first we should sort the leaves by path. This way if any of the proofs can be combined, they will be adjacent in the list. So we can combine all the proofs by comparing pairs of adjacent proofs.
     Leaves2 = sort_by_path(Leaves, CFG),
     case cfg:mode(CFG) of

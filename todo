@@ -1,11 +1,7 @@
-the ram and hd versions have lots of duplicate code. it would be nice to clean that up a bit, so we don't need to change so many things for the merkle->verkle update.
+there is a problem with storing batchs of leaves. test_trie:test(18, _).
 
 
-* rewrite of store.erl . we should update the pedersen commitment at each node, by subtracting the old value and adding the new one. Look for opportunities to simplify the jacobian format of the points. 
 
-* get.erl needs to be re-implemented for a wider path size, and to not include extra info with the proof. Just store an index and the root hash, not the entire list.
-
-* verify.erl should be written to use multi-proofs of ipa. We need a way to calculate the new verkle root from just this proof, assuming we had no other database.
 
 
 
