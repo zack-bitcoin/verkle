@@ -31,7 +31,7 @@ I loaded 5000 elements into the database. I made a proof of all 5000 of them, an
 
 Loading took 6.7 seconds.
 
-Making the proof with 1 cpu took 15.1 seconds.
+Making the proof with 1 cpu took 7.2 seconds.
 
 Verifying took 3.7 seconds.
 

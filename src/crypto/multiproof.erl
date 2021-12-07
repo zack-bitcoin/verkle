@@ -16,6 +16,9 @@
 
 -define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
 -define(mul(A, B), ((A * B) rem ?order)).
+-define(sub(A, B), ((A - B + ?order) rem ?order)).%assumes B less than ?order
+-define(neg(A), ((?order - A) rem ?order)).%assumes A less than ?order
+-define(add(A, B), ((A + B) rem ?order)).
 
 make_parameters_range(Many, E) ->
     D = range(1, Many+1),
@@ -54,20 +57,25 @@ primitive_nth_root(N, E) ->
     end.
 
 calc_G_e(R, As, Ys, Zs, Domain, DA, Base) ->
+    io:fwrite("calc G e 0\n"),
+    DivEAll = parameters:div_e(),
     GP = lists:zipwith3(
            fun(A, Y, Z) ->
                    X = lists:map(
                          fun(C) -> 
-                                 ff:sub(C, Y, Base)
+                                 ?sub(C, Y)
                          end, A),
-                   poly:div_e(
+                   poly:div_e(%we can batch this division before the polynomial gets involved.
                      X,
                      Domain,
                      DA,
                      Z,
-                     Base)
+                     DivEAll)
            end, As, Ys, Zs),
-    calc_G_e_helper(1, R, GP, Base).
+    io:fwrite("calc G e 1\n"),
+    Result = calc_G_e_helper(1, R, GP, Base),
+    io:fwrite("calc G e 2\n"),
+    Result.
 calc_G_e_helper(_, _, [], _) -> [];
 calc_G_e_helper(RA, R, [P|T], Base) -> 
     X = poly:mul_scalar(RA, P, Base),

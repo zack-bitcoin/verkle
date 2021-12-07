@@ -5,16 +5,19 @@
    [calc_DA/2, calc_A/2, 
     c2e/3, %lagrange_polynomials/2, 
     sub/3, div_e/5, mul_scalar/3, add/2, 
-    eval_e/4, eval_outside/6, eval_outside_v/5]).
+    eval_e/4, eval_outside/6, eval_outside_v/5,
+    all_div_e_parameters/1
+   ]).
 
 %library for dealing with polynomials over integers mod a prime.
 
 %finite field operations
--define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
--define(sub(A, B), ((A - B + ?order) rem ?order)).%assumes B less than ?order
--define(neg(A), ((?order - A) rem ?order)).%assumes A less than ?order
--define(add(A, B), ((A + B) rem ?order)).
--define(mul(A, B), ((A * B) rem ?order)).
+%-define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
+%-define(sub(A, B), ((A - B + ?order) rem ?order)).%assumes B less than ?order
+%-define(neg(A), ((?order - A) rem ?order)).%assumes A less than ?order
+%-define(add(A, B), ((A + B) rem ?order)).
+%-define(mul(A, B), ((A * B) rem ?order)).
+-include("../constants.hrl").
 
 symetric_view([], _) -> [];
 symetric_view([H|T], Y) ->
@@ -76,20 +79,21 @@ mul_c([A|AT], B, Base) ->
         mul_c(AT, [0|B], Base),
         Base).
 
-%evaluation format
-%assumes that the division is possible without a remainder.
-%if B contains no zero, it is easy:
-%unused_div_e([], [], _Base) -> [];
-%unused_div_e([A|AT], [B|BT], Base) ->
-%    [ff:divide(A, B, Base)|
-%     unused_div_e(AT, BT, Base)].
+all_div_e_parameters(P) ->
+    L = lists:map(
+          fun(M) ->
+                  io:fwrite("generating parameter "),
+                  io:fwrite(integer_to_list(M)),
+                  io:fwrite("\n"),
+                  div_e_parameters(
+                    P#p.domain, P#p.da, M)
+          end, P#p.domain),
+    list_to_tuple(L).
 
-%here is the special case where we are dividing the general polynomial A(x) by a polynomial with the form P(x) = x - I, for a constant I. If we evaluate this at 0, P(0) = 0, so the division seems impossible at that point. In this case, we need an alternative formula.
-div_e(Ps, Domain, DA, M, Base) -> 
-    %calculates the polynomial P(x) / (x - M).
-    %M is a point in the domain of polynomial P.
-    %io:fwrite({Ps, DA, M}),
-    Dividends = 
+%div_e_parameters(_, _, M) ->
+%    parameters:div_e(M);
+div_e_parameters(Domain, DA, M) ->
+    Dividends = %this seems like it could be pre-computed for every element in the domain. todo.
         lists:map(
           fun(D) -> 
                   X = ?sub(D, M),
@@ -98,31 +102,44 @@ div_e(Ps, Domain, DA, M, Base) ->
                       _ -> X
                   end
           end, Domain),
-    IDs = ff:batch_inverse(Dividends, ?order),
-    %todo. can't we pre-calculate these IDs??
-          
-    lists:zipwith3(
+    NegDividends2 = %this also could be pre-computed. todo.
+        lists:zipwith3(
+          fun(D, ID, A) ->
+                  if
+                      (D == M) -> 1;
+                      true ->
+                          ?mul(A, ID)
+                  end
+          end, Domain, Dividends, DA),
+    {IDs, IDs2} = %this can be pre-computed.
+        lists:split(
+          length(Dividends),
+          ff:batch_inverse(
+            Dividends ++ NegDividends2,
+            ?order)),
+    {IDs, IDs2}.
+
+%here is the special case where we are dividing the general polynomial A(x) by a polynomial with the form P(x) = x - I, for a constant I. If we evaluate this at 0, P(0) = 0, so the division seems impossible at that point. In this case, we need an alternative formula.
+div_e(Ps, Domain, DA, M, DivEAll) -> 
+    %calculates the polynomial P(x) / (x - M).
+    %M is a point in the domain of polynomial P.
+         
+    {IDs, IDs2} = element(M, DivEAll),
+ 
+    Result = lists:zipwith3(
       fun(P, D, ID) -> 
               if
                   not(D == M) -> ?mul(P, ID);
                   true -> 
-                      DA_M = grab_dam(
-                               M, Domain, DA),
+                      %DA_M = grab_dam(
+                      %         M, Domain, DA),
+                      DA_M = lists:nth(M, DA),%only works if the domain is the positive integers.
                       div_e2(Ps, Domain, M, 
-                             DA, DA_M, Base)
+                             DA, DA_M, IDs2)
               end
-      end, Ps, Domain, IDs).
-div_e2(Ps, Domain, M, DA, DA_M, Base) ->
-    Divisors = 
-        lists:zipwith(
-          fun(D, A) ->
-                  if
-                      (D == M) -> 1;
-                      true ->
-                          ?mul(A, ?sub(M, D))
-                  end
-          end, Domain, DA),
-    IDs = ff:batch_inverse(Divisors, Base),
+      end, Ps, Domain, IDs),
+    Result.
+div_e2(Ps, Domain, M, DA, DA_M, IDs) ->
     X = lists:zipwith3(
           fun(P, D, ID) ->
                   if
@@ -131,7 +148,7 @@ div_e2(Ps, Domain, M, DA, DA_M, Base) ->
                   end
           end, Ps, Domain, IDs),
     X2 = add_all(X),
-    ?mul(X2, DA_M).
+    ?mul(?neg(X2), DA_M).
 
 grab_dam(M, [M|_], [D|_]) -> D;
 grab_dam(M, [_|T], [_|D]) -> 
