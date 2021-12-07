@@ -15,6 +15,15 @@ https://vitalik.ca/general/2021/06/18/verkle.html
 Techniques used in this software:
 https://dankradfeist.de/ethereum/2021/06/18/pcs-multiproofs.html
 
+Installation
+=============
+
+You need to install erlang first to use this database.
+
+To run the software: ```sh start.sh```
+
+Then, to run the benchmark: `benchmark:doit(1).`
+
 Benchmark.
 ===========
 
@@ -26,13 +35,6 @@ Making the proof with 1 cpu took 22 seconds.
 
 Verifying took 3.9 seconds.
 
-Installation
-=============
-
-You need to install erlang first to use this database.
-
-To run the software: ```sh start.sh```
-
 to run the benchmark test `test_trie:test().`
 it prints out the result as an error, time is measured in millionths of a second. 6 decimals.
 
@@ -40,5 +42,4 @@ you can see the code of the benchmark.
 
 https://github.com/zack-bitcoin/verkle/blob/master/src/benchmark.erl
 
-in `benchmark:doit(1).`
 
