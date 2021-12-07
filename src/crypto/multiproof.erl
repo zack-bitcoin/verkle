@@ -3,7 +3,8 @@
          compress/1, decompress/1,
          make_parameters_jacob/2, 
          primitive_nth_root/2,
-         prove/4, verify/4
+         prove/4, verify/4,
+         make_parameters_range/2
         ]).
 
 %multiproofs for pedersen IPA.
@@ -18,14 +19,17 @@
 -define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
 -define(mul(A, B), ((A * B) rem ?order)).
 
+make_parameters_range(Many, E) ->
+    D = range(1, Many+1),
+    make_parameters_jacob(D, E).
 make_parameters_jacob(Domain, E) ->
-    {Gs, Hs, Q} = ipa:basis(4, E),
+    {Gs, Hs, Q} = ipa:basis(length(Domain), E),
     make_parameters2(Domain, E, Gs, Hs, Q).
 make_parameters2(Domain, E, Gs, Hs, Q) ->
     Base = secp256k1:order(E),
     DAC = poly:calc_DA(Domain, E),%derivative of polynomial PA in coefficient format.
     DA = poly:c2e(DAC, Domain, Base),%now evaluation format.
-    Ls = poly:lagrange_polynomials(Domain, Base),
+    %Ls = poly:lagrange_polynomials(Domain, Base),
     PA = poly:calc_A(Domain, Base),
     #p{e = E, %the elliptic curve settings.
        b = Base, %group order of the elliptic curve.
@@ -33,7 +37,7 @@ make_parameters2(Domain, E, Gs, Hs, Q) ->
        domain = Domain, %the locations in the polynomial where we store information.
        a = PA, %all the base polynomials of the domain multiplied together.
        da = DA, %the finite derivative of PA. used along with PA to calculate values for the evaluation format polynomial outside of the domain.
-       ls = Ls}.
+       ls = 0}.
     
 
 primitive_nth_root(N, E) ->

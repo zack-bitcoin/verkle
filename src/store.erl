@@ -72,6 +72,7 @@ batch(Leaves, RP, stem, Depth, CFG) ->
                         element(I, Types)}
              end, range(1, size(Hashes))),
     %maybe we can't zip over batch here if batch is returning the entire stem and leaf. because this ends up filling the ram with all the stems and leaves we will be writing. TODO, stream the rest of the function into this zipwith.
+    %io:fwrite({HPT1, Leaves2}),
     RHPT = lists:zipwith(
            fun(Leaves3, {H, P, T}) -> 
                    {P2, Type, Tree} = 

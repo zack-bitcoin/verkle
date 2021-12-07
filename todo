@@ -1,8 +1,3 @@
-working on storing batches of leaves faster. test_trie:test(18, CFG).
-making that tree ram structure to build the batch, it is a bad idea. Every time any part changes, erlang wants to re-store the entire thing in ram.
+delete unused code from older versions that did not work.
 
-We should edit in-place on the existing trees instead.
-
-
-
-
+There is something wrong with get:batch. it is slower for the 256 child version, it should be quicker.

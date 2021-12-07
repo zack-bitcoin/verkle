@@ -34,7 +34,8 @@ init([CFG, Amount, Mode, Location]) ->
     A5 = ids:main(CFG),
     L2 = Location ++ "data/" ++ IDS ++ "_verkle_bits.db",
     Children = [{A3, {dump_sup, start_link, [A3, KeyLength+Size, Amount, Mode, Location]}, permanent, 5000, supervisor, [dump_sup]},
-		{A4, {dump_sup, start_link, [A4, (?nwidth div 4)+(?nwidth*(HashSize + KeyLength)), Amount, Mode, Location]}, permanent, 5000, supervisor, [dump_sup]},
+		{A4, {dump_sup, start_link, [A4, (?nwidth div 4)+(?nwidth*(HashSize + KeyLength)) + (2*HashSize), Amount, Mode, Location]}, permanent, 5000, supervisor, [dump_sup]},
+		%{A4, {dump_sup, start_link, [A4, (?nwidth div 4)+(?nwidth*(HashSize + KeyLength)) + (2*HashSize), Amount, Mode, Location]}, permanent, 5000, supervisor, [dump_sup]},
 		%{A2, {bits, start_link, [A2, L2, Amount]}, permanent, 5000, worker, [bits]},
 		{A5, {trie, start_link, [CFG]}, permanent, 5000, worker, [trie]}
 	       ],

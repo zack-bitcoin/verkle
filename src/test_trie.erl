@@ -490,24 +490,28 @@ test(17, CFG) ->
 test(18, CFG) ->
     %Proof2 = verify:update_proof(Leaf2, Proof, CFG),
     Loc = 1,
-    Times = 1000,
+    Times = 5002,
+    %Times = 3,
     %Many = range(1, min(100, Times)),
-    Many = [1,2],
+    Many = range(1, Times - 2),
+    %Many = [1,2],
     Leaves = 
         lists:map(
           fun(N) -> 
-                  #leaf{key = Times + 1 - N, value = <<N:16>>}
+                  #leaf{key = (Times) + 1 - N, value = <<N:16>>}
           %end, Many),
           end, range(1, Times+1)),
-    io:fwrite("load up the linear database\n"),
-    NewLoc2 = test3a(Times, Times, Loc),
+    %io:fwrite("load up the linear database\n"),
+    %NewLoc2 = test3a(Times, Times, Loc),
     io:fwrite("load up the batch database\n"),
+    T1 = erlang:timestamp(),
     {NewLoc, stem, _} = 
         store:batch(Leaves, Loc, CFG),
-    io:fwrite({stem:get(NewLoc, CFG),
-               stem:get(NewLoc2, CFG)}),
-    F = fun(N) -> stem:get(element(2, ((stem:get(N, CFG))#stem.pointers)), CFG) end,
-    F2 = fun(N) -> leaf:get(element(3, ((stem:get(N, CFG))#stem.pointers)), CFG) end,
+    T2 = erlang:timestamp(),
+    %io:fwrite({stem:get(NewLoc, CFG),
+    %           stem:get(NewLoc2, CFG)}),
+    %F = fun(N) -> stem:get(element(2, ((stem:get(N, CFG))#stem.pointers)), CFG) end,
+    %F2 = fun(N) -> leaf:get(element(3, ((stem:get(N, CFG))#stem.pointers)), CFG) end,
     
 %    io:fwrite({stem:get(NewLoc, CFG),
 %               stem:get(NewLoc2, CFG),
@@ -522,18 +526,22 @@ test(18, CFG) ->
     io:fwrite("make proof\n"),
     Proof = 
         get:batch(Many, NewLoc, CFG),
+    T3 = erlang:timestamp(),
         %get:batch([1], NewLoc, CFG),
     io:fwrite("verify proof\n"),
     %io:fwrite({Root, Tree}),
     Root = stem:root(stem:get(NewLoc, CFG)),
     {true, Leaves2} = 
         verify:proof(Root, Proof, CFG),
-    %io:fwrite({length(Leaves2), length(Leaves)}),
-    %io:fwrite({Proof, Many, Leaves2}),
+    T4 = erlang:timestamp(),
     true = (length(Leaves2) == length(Many)),
-    %io:fwrite(Leaves),
-    %io:fwrite(Leaves),
-    %io:fwrite(Proof),
+    if
+        true ->
+            io:fwrite({timer:now_diff(T2, T1),
+                       timer:now_diff(T3, T2),
+                       timer:now_diff(T4, T3)});
+        true -> ok
+    end,
     success;
     %test3b(Times, NewLoc, CFG),
     %{Hash4, Value4, Proof4} = trie:get(4, NewLoc, ?ID),
