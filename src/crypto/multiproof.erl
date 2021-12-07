@@ -12,8 +12,6 @@
 
 %going through this paper: https://dankradfeist.de/ethereum/2021/06/18/pcs-multiproofs.html
 
-%vitalik wrote on this topic as well: https://vitalik.ca/general/2021/06/18/verkle.html
-
 -record(p, {e, b, g, h, q, domain, a, da, ls}).
 
 -define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).

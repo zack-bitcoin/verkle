@@ -2,7 +2,7 @@
 -behaviour(gen_server).
 -export([start_link/1,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2, 
          root_hash/2,cfg/1,get/3,put/5,
-         put_batch/3,delete/3,%garbage/2,garbage_leaves/2,
+         put_batch/3,%delete/3,%garbage/2,garbage_leaves/2,
 	 get_all/2,new_trie/2, 
          restore/5,restore/7, 
 	 empty/1, 
@@ -82,10 +82,10 @@ handle_call({garbage, NewRoot, OldRoot}, _From, CFG) ->%prune new
 %    1=2,
 %    X = prune:stem(OldRoot, NewRoot, CFG),
 %    {reply, X, CFG};
-handle_call({delete, Key, Root}, _From, CFG) ->
-    valid_key(Key),
-    NewRoot = delete:delete(Key, Root, CFG),
-    {reply, NewRoot, CFG};
+%handle_call({delete, Key, Root}, _From, CFG) ->
+%    valid_key(Key),
+%    NewRoot = delete:delete(Key, Root, CFG),
+%    {reply, NewRoot, CFG};
 handle_call({restore, Key, Value, Meta, Hash, Proof, Root}, _From, CFG) -> 
     valid_key(Key),
     Leaf = leaf:new(Key, Value, Meta, CFG),
@@ -175,9 +175,9 @@ get(Key, Root, ID) ->
 get_all(Root, ID) -> 
     gen_server:call({global, ids:main_id(ID)}, 
                     {get_all, Root}).
-delete(Key, Root, ID) -> 
-    gen_server:call({global, ids:main_id(ID)}, 
-                    {delete, Key, Root}).
+%delete(Key, Root, ID) -> 
+%    gen_server:call({global, ids:main_id(ID)}, 
+%                    {delete, Key, Root}).
 garbage(NewRoot, OldRoot, ID) ->%removes new
     gen_server:call({global, ids:main_id(ID)}, 
                     {garbage, NewRoot, OldRoot}).
