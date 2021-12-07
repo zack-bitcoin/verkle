@@ -2,7 +2,7 @@
 -export([
 batch/3, index2domain/2, paths2tree/1,
 %get/3, same_end/3, 
-split3parts/4, index2domain/2,
+split3parts/4, 
 keys2paths/2, points_values/3, 
 withdraw_points/1, withdraw_points2/1,
 test/0]).
@@ -282,47 +282,6 @@ points_values([H|T], Root, CFG) ->
      points_values(T, Root, CFG)];
 points_values([], _, _) -> [].
 
-%LP = stem:pointer(Loc, Root),
-%    L = leaf:get(LP, CFG),
-%    {Loc, L}.
-
-            
-                              
-    
-    
-
-get(Path, Root, CFG) ->
-    S = stem:get(Root, CFG),
-    H = stem:hash(S),
-    case get2(Path, S, [stem:root(S)], CFG) of
-	{unknown, Proof} -> {H, unknown, Proof};
-	{empty, Proof} -> {H, empty, Proof};
-	{A, Proof} -> {H, A, Proof}
-    end.       
-get2([<<N:?nindex>> | Path], Stem, Proof, CFG) ->
-    NextType = stem:type(N+1, Stem),
-    PN = stem:pointer(N+1, Stem),
-    if
-	NextType == 0 -> %empty
-	    %Next = stem:get(PN, CFG),
-	    {empty, Proof};
-	PN == 0 -> {unknown, Proof};
-	NextType == 1 -> %another stem
-	    Next = stem:get(PN, CFG),
-	    get2(Path, Next, [stem:root(Next)|Proof], CFG);
-	NextType == 2 -> %leaf
-	    Leaf2 = leaf:get(PN, CFG),
-	    LPath = leaf:path(Leaf2, CFG),
-	    B = same_end(LPath, Path, CFG),
-	    LV = leaf:key(Leaf2),
-	    if
-		B -> {Leaf2, Proof};
-		LV == 0 -> 
-		    {empty, Proof};
-		true -> 
-		    {empty, [leaf:serialize(Leaf2, CFG)|Proof]}
-	    end
-    end.
 same_end(LPath, Path, _CFG) ->
     S = length(Path)*4,
     LS = (length(LPath)*4) - S,
