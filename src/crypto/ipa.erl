@@ -4,6 +4,9 @@
          basis/2,
          test/1]).
 %inner product arguments using pedersen commitments.
+
+%learn more about inner product arguments here https://dankradfeist.de/ethereum/2021/07/27/inner-product-arguments.html
+
 %uses the secp256k1 library.
 
 -define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).

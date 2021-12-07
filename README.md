@@ -38,8 +38,19 @@ Verifying took 3.9 seconds.
 to run the benchmark test `test_trie:test().`
 it prints out the result as an error, time is measured in millionths of a second. 6 decimals.
 
-you can see the code of the benchmark.
+[you can see the code of the benchmark.](src/benchmark.erl)
 
-https://github.com/zack-bitcoin/verkle/blob/master/src/benchmark.erl
+Crypto used
+==============
 
+[secp256k1 is the same elliptic curve as is used in bitcoin](src/crypto/secp256k1.erl)
+Includes the bucket algorithm for efficiently calculating multi-exponents.
+Stores elliptic points in jacobian format for efficiency.
+Includes a function for batch simplifying jacobian points, to set their Z values to 1.
+
+[pedersen commitments and inner product arguments on top of secp256k1](src/crypto/ipa.erl)
+
+[polynomial library for polynomials stored in evaluation format, as recommended by Dankrad Feist](src/crypto/poly.erl)
+
+[a multiproof system for pedersen commitments](src/crypto/multiproof.erl)
 
