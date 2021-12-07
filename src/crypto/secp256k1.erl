@@ -145,7 +145,6 @@ compress(L = [_|_]) ->
 compress(J) ->
     compress(to_affine(J)).
 decompress(<<S, X:256>>) ->
-    %todo, we need a way to batch this computation. the square root part is expensive.
     %since the exponent and the modulus are the same every time, it seems like we should be able to precompute a lot of stuff.
     %Y*Y = X*X*X + 7
     YY = 7 + ?mul(X, ?mul(X, X)),
@@ -637,7 +636,6 @@ test(9) ->
     {D1, D2, D3};
 test(10) ->
     %multi exponent test
-    %todo. make it pass.
     E = make(),
     Base = field_prime(E),
     Rs = [ff:neg(1, Base),

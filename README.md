@@ -33,7 +33,7 @@ Loading took 7 seconds.
 
 Making the proof with 1 cpu took 17 seconds.
 
-Verifying took 3.7 seconds.
+Verifying took 3.9 seconds.
 
 to run the benchmark test `test_trie:test().`
 it prints out the result as an error, time is measured in millionths of a second. 6 decimals.

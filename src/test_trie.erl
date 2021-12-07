@@ -490,7 +490,7 @@ test(17, CFG) ->
 test(18, CFG) ->
     %Proof2 = verify:update_proof(Leaf2, Proof, CFG),
     Loc = 1,
-    Times = 1002,
+    Times = 102,
     %Times = 3,
     %Many = range(1, min(100, Times)),
     Many = range(1, Times - 2),

@@ -23,43 +23,21 @@ batch(Keys, Root, CFG) ->
     Paths = keys2paths(Keys, CFG),
     %Paths example: [[1,4,3,2],[1,1,1,2],[1,1,1,1],[2,1,1,1]]
     Tree = paths2tree(Paths),
-    %Tree example [[1,[[4,3,2], [1,1,[[1], [2]]]]], [2,1,1,1]],
+    %Tree example [[1|[[4,3,2], [1,1|[[1], [2]]]]], [2,1,1,1]],
     %list of lists means or. list of integers means and.
     Tree2 = points_values(Tree, RootStem, CFG),
     %obtains the stems and leaves by reading from the database.
 
-    %Tree3b = remove_hashes(Tree2),
-    %removes the lists of hashes, as they aren't needed to verify a verkle proof.
-    %io:fwrite({Tree3}),
-    %Tree4b = withdraw_points(Tree3b),
-    Tree3 = withdraw_points(Tree2),
-    %io:fwrite(Tree2),
-    Tree4 = remove_hashes(Tree3),
-    %io:fwrite(Tree3),
-    %io:fwrite({Tree4, Tree4b}),
-    %removes repeated elliptic points, by shifting all the elliptic points one step towards the root.
-%this is the version we will send to them, so we should use it to build up the commits.
+    Tree3 = withdraw_points(Tree2),%removing duplicate elliptic points by shifting all the points one step towards the root.
+    Tree4 = remove_hashes(Tree3),%the hashes in each stem aren't needed to verify the verkle proof, so they are removed.
 
-    %[Root4|Tl4]=Tree4,
-    %io:fwrite({Tree4}),%[[{1, 35}, [{0, l1}],[{1,l5}]], [{2, 10},{0,l2}, {3, 17},{0, l3}]]
-            %error is in "l2}, {3,", there should be a list seperation here.
-
-
-    %io:fwrite(Tree2),
-    %Tree example [[{point, 1, Hashes},[[{point, 4, hashes}], [{point, 1, hashes},{point, 1, hashes},[[{point, 1, hashes}], [2]]]]], [{2, point}]],
     Lookups = flatten(Tree2, []),
-    %io:fwrite({Lookups}),
-    %Leaves = get_leaves(Tree2, []),
-    %Structure = structure(Tree2, 0),
-    %io:fwrite({Leaves, Structure, Tree2}),
     {Zs0, Commits, As0} = split3parts(Lookups, [], [], []),
     P = parameters:read(),
     Zs = index2domain(Zs0, P#p.domain),
-    %io:fwrite({Zs}),
     As = binary2int(As0),
 
-
-    {CommitG, _Commits2, Opening} = multiproof:prove(As, Zs, Commits, P),
+    {CommitG, _Commits2, Opening} = multiproof:prove(As, Zs, Commits, P),%this is the slow step.
 
     %sanity checks
     %Tree5 = verify:unfold(Root4, Tl4, [], CFG),

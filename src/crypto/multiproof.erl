@@ -71,17 +71,11 @@ calc_G_e(R, As, Ys, Zs, Domain, DA, Base) ->
 calc_G_e_helper(_, _, [], _) -> [];
 calc_G_e_helper(RA, R, [P|T], Base) -> 
     X = poly:mul_scalar(RA, P, Base),
-    case T of
-        [] -> X;
-        _ ->
-            poly:add(
-              X,
-              calc_G_e_helper(
-                %poly:fmul(RA, R, Base), 
-                ?mul(RA, R), 
-                R, T, Base),
-              Base)
-    end.
+    poly:add(
+      X,
+      calc_G_e_helper(
+        ?mul(RA, R), 
+        R, T, Base)).
     
 mod(X,Y)->(X rem Y + Y) rem Y.
 sub(A, B, Base) ->
@@ -114,25 +108,18 @@ calc_G2_2(R, T, Ys, Zs, Base) ->
     Result = ff:add_all(L1, Base),
     {RIDs, Result}.
 
-                                 
-
-%sum_i: (r^i)/(t - z_i)
-calc_H_e(_, _, _, [], [], _) -> [];
+%sum_i: polyA_i * (r^i)/(t - z_i)
 calc_H_e(R, RA, T, As, Zs, Base) ->
-    X = poly:mul_scalar(
-          divide(RA, sub(T, hd(Zs), Base), Base),%todo, try to batch this division
-          hd(As),
-          Base),
-    if
-        (length(As) == 1) -> X;
-        true ->
-            poly:add(
-              X,
-              calc_H_e(R, mul(RA, R, Base), T, tl(As),
-                       tl(Zs), Base),
-              Base)
-    end.
-             
+    Divisors = 
+        lists:map(fun(Z) -> sub(T, Z, Base) end, Zs),
+    IDs = ff:batch_inverse(Divisors, Base),
+    RIDs = mul_r_powers(R, 1, IDs, Base),
+    calc_H_e2(RIDs, As, Base).
+calc_H_e2([], [], _) -> [];
+calc_H_e2([H|T], [A|AT], Base) -> 
+    X = poly:mul_scalar(H, A, Base),
+    poly:add(X, calc_H_e2(T, AT, Base)).
+
 calc_R([], [], [], B) -> 
     <<R:256>> = hash:doit(B),
     R;
@@ -169,6 +156,7 @@ prove(As, %committed data
       Commits_e,
       #p{g = Gs, h = Hs, q = Q, e = E, da = DA,
         a = PA, domain = Domain}) ->
+    io:fwrite("multiprove 0\n"),
     Base = secp256k1:order(E),
     Ys = lists:zipwith(
            fun(F, Z) ->
@@ -179,15 +167,24 @@ prove(As, %committed data
           Commits_e),
     Timestamp1 = erlang:timestamp(),
     R = calc_R(AffineCommits, Zs, Ys, <<>>),
+    io:fwrite("multiprove 3\n"),
+    %spends lots of time here.
     G2 = calc_G_e(R, As, Ys, Zs, Domain, DA, Base),
+    io:fwrite("multiprove 4\n"),
     CommitG_e = ipa:commit(G2, Gs, E),
     T = calc_T(secp256k1:to_affine(CommitG_e), R),
+    io:fwrite("multiprove 6\n"),
+    %spend very little time here.
     He = calc_H_e(R, 1, T, As, Zs, Base),
+    io:fwrite("multiprove 7\n"),
     G_sub_E_e = poly:sub(G2, He, Base),
     EV = poly:eval_outside_v(T, Domain, PA, DA, Base),
+    io:fwrite("multiprove 9\n"),
     Timestamp2 = erlang:timestamp(),
+    %spend a little time here.
     IPA = ipa:make_ipa(G_sub_E_e, EV, 
                        Gs, Hs, Q, E),
+    io:fwrite("multiprove 10\n"),
     Timestamp3 = erlang:timestamp(),
     %io:fwrite("ipa time : "),
     %io:fwrite(integer_to_list(timer:now_diff(Timestamp3, Timestamp2))),
