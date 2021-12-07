@@ -42,11 +42,11 @@ it prints out the result as an error, time is measured in millionths of a second
 
 benchmark of 20k elements.
 
-loading: 15
+loading: 16
 
-making proof: 53
+making proof: 23
 
-verifying: 8.9
+verifying: 9.5
 
 So, it is scaling sub-linearly. Doubling the number of things you prove costs less than 2x more for each step.
 
