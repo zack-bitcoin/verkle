@@ -10,7 +10,8 @@ test() ->
     %V = [1,2,3,4,5,7,8,9,10,11,12,13,14,16,17],
     %V = [1,2,3,5,7,8,9,10,11,12,13,14,16,17,18],
     %V = [5, 6, 12, 13],
-    V = [101, 17],
+    %V = [101, 17],
+    V = [18],
     test_helper(V, CFG).
 test_helper([], _) -> success;
 test_helper([N|T], CFG) -> 
@@ -489,7 +490,7 @@ test(17, CFG) ->
 test(18, CFG) ->
     %Proof2 = verify:update_proof(Leaf2, Proof, CFG),
     Loc = 1,
-    Times = 5002,
+    Times = 1002,
     %Times = 3,
     %Many = range(1, min(100, Times)),
     Many = range(1, Times - 2),

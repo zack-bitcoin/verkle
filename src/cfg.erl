@@ -8,6 +8,7 @@
 	     , hash_size
 	     , mode
 	     , empty_root
+             , parameters
 	     }).
 -opaque cfg() :: #cfg{}.
 -type path() :: pos_integer().
@@ -15,6 +16,7 @@
 -type id() :: atom().
 -type meta() :: non_neg_integer().
 -type hash_size() :: pos_integer().
+%-include("parameters256.hrl").
 %-spec new(path(), value(), id(), meta(), hash_size()) -> cfg().
 empty(X) when is_record(X, cfg) -> 
     X#cfg.empty_root.

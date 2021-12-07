@@ -135,7 +135,7 @@ split4ways([], A, B, C, D) ->
 split4ways([{A, B, C, D}|T], W, X, Y, Z) -> 
     split4ways(T, [A|W], [B|X], [C|Y], [D|Z]).
 
-hash_thing(0, 0, empty, OldHash, _) ->
+hash_thing(0, 0, empty, _, _) ->
     %type 0 is empty
     <<0:256>>;
 hash_thing(_, leaf, leaf_not_recorded, 

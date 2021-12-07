@@ -57,7 +57,7 @@ update_proofs2([<<N:?nindex>>|M], LH, Proof, D, CFG, Proof2) ->
     P1 = hd(Proof),
     P = merge_find_helper(P1, D),
     P2 = setelement(N+1, P, LH),
-    D2 = dict:store(P1, P2, D),
+    %D2 = dict:store(P1, P2, D),
     D3 = dict:store(P, P2, D),
     NH = stem:hash(P2),
     update_proofs2(M, NH, tl(Proof), D3, CFG, [P2|Proof2]).
@@ -72,7 +72,9 @@ proof(Root0, {Tree, CommitG, Open}, CFG) ->
     
     %[root, [{1, p1}, [{0, L1},{1, L2}], [{3, p2},{0,L3}]]]
     [Root|Rest] = Tree,
-    B = secp256k1:jacob_equal(Root0, Root, ?p#p.e),
+    P = parameters:read(),
+    %B = secp256k1:jacob_equal(Root0, Root, ?p#p.e),
+    B = secp256k1:jacob_equal(Root0, Root, P#p.e),
     if
         not(B) -> false;
         true ->
@@ -83,7 +85,8 @@ proof(Root0, {Tree, CommitG, Open}, CFG) ->
             {Commits, Zs0, Ys} = 
                 get:split3parts(Tree2, [],[],[]),
             Zs = get:index2domain(
-                   Zs0, ?p#p.domain),
+                   %Zs0, ?p#p.domain),
+                   Zs0, P#p.domain),
             %io:fwrite({Zs}),%[1,4,1,3,2,1,2]
             %io:fwrite({Commits}),%[17,10,10,88,35,35,88]
             %should be [17,88,10,88,35,35,88]
@@ -92,9 +95,10 @@ proof(Root0, {Tree, CommitG, Open}, CFG) ->
                     Ys),
             B2 = multiproof:verify(
                    {CommitG, Commits, Open}, 
-                   Zs, Ys2, ?p),
+                   Zs, Ys2, P),
             if
                 not(B) -> false;
+                not(B2) -> false;
                 true ->
                     {true, leaves(Rest)}
                     %get all the leaves
@@ -112,7 +116,7 @@ leaves([H|T]) ->
     leaves(H) ++ leaves(T);
 leaves(_) ->  [].
 
-unfold(Root, {Index, X = {Key, B}}, T, CFG) %leaf case
+unfold(Root, {Index, {Key, B}}, T, CFG) %leaf case
   when is_binary(B) ->
     Leaf = #leaf{key = Key, value = B},
     <<L:256>> = leaf:hash(Leaf, CFG),
@@ -133,121 +137,4 @@ unfold(Root, [{Index, X ={_, _, _}}|R], T, CFG) %point case
 unfold(Root, [H|J], T, CFG) ->
     unfold(Root, H, T, CFG)
         ++ unfold(Root, J, [], CFG);
-unfold(Root, [], _, _) -> [].
-
-    
-
-
-
-%    Paths0 = lists:map(fun(L) -> leaf:path(L, CFG)
-%                      end, Leaves),
-%    Paths = lists:map(
-%             fun(Path) ->
-%                     lists:map(
-%                       fun(<<P:?nindex>>) ->
-%                               P end, Path)
-%             end, Paths0),
-%    Tree = get:paths2tree(Paths),
-%    Zs0 = flatten(Tree, Structure, []),
-%    Zs = get:index2domain(Zs0, ?p#p.domain),
-%    io:fwrite({Root, Commits0}).
-   
-
-
- 
-    %io:fwrite({RootHash}),
-    %io:fwrite({length(Leaves), length(Commits), length(Zs),
-    %          Leaves, Structure, Tree}).
-
-    %need to show that roothash is the hash of 
-%    Commits = lists:reverse(Commits0),
-%    RH2 = stem:hash_point(hd(Commits)),
-%    if
-%        (RootHash == RH2) ->%check that the proof connects to this root hash.
-%            proof_loop(leaf:path(Leaf, CFG),
-%                       Leaf, Commits, CFG);
-%        true ->
-
-%%	    io:fwrite("false 1\n"),
-%	    false
-%proof_loop([<<N:?nindex>> | R], Leaf, P, CFG) 
-
-
-
-
- 
-unpack_tree([H|T], Acc, _) when is_integer(H) ->
-    unpack_tree(T, [H|Acc], integers);
-unpack_tree([H|T], Acc, _) ->
-    unpack_tree(H, Acc, 0) ++ 
-        unpack_tree(T, Acc, lists);
-unpack_tree([], Acc, integers) -> 
-    [lists:reverse(Acc)];
-unpack_tree([], Acc, lists) -> [].
-%unpack_tree([], Acc, 0) -> 
-    
-
-flatten(Tree, Structure, X) ->
-    Tree2 = unpack_tree(Tree, [], 0),
-    Tree3 = lists:zipwith(
-              fun(L, S) ->
-                      {A, _} = lists:split(S, L),
-                      A
-              end, Tree2, Structure),
-    lists:foldl(fun(A, B) -> B ++ A end,
-                [], Tree3).
- 
-flatten([]) -> [];
-flatten([H|T]) when is_list(H) -> 
-    flatten(H) ++ flatten(T);
-flatten([H|T]) when is_integer(H) -> 
-    [H|flatten(T)].
-
-proof_old(RootHash, L, Proof, CFG) ->
-    [H|F] = lists:reverse(Proof),
-    %[H|F] = Proof,
-    SH = stem:hash_point(H),
-    if
-	SH == RootHash ->
-	    proof_internal(leaf:path(L, CFG), L, [H|F], CFG);
-	true -> 
-	    io:fwrite("false 1\n"),
-	    false
-    end.
-
-proof_internal([<<N:?nindex>> | M], Leaf, P, CFG) when length(P) == 1->
-    P1 = hd(P),
-    Hash = element(N+1, P1),
-    V = leaf:value(Leaf),
-    LH = leaf:hash(Leaf, CFG),
-    Hash == LH;
-proof_internal([<<N:?nindex>>| Path ], Leaf, [P1, P2 | Proof], CFG) ->
-    %if leaf is empty, and P2 is a leaf, then we do a different test.
-    %pass if hash(leaf) is in P1, and N does _not_ point to leaf P2.
-    LB = leaf:is_serialized_leaf(P2, CFG),
-    LV = leaf:value(Leaf),
-    if
-	(LV == empty) and LB ->
-	    Leaf2 = leaf:deserialize(P2, CFG),
-	    LH = leaf:hash(Leaf2, CFG),
-	    is_in(LH, tuple_to_list(P1)) 
-		and not(get:same_end(leaf:path(Leaf2, CFG), 
-				     [<<N:?nindex>>|Path], 
-				     CFG));
-	true ->
-	    %Hash = element(N+1, P1),
-            %Hash = 
-	    case stem:hash_point(P2) of
-		Hash -> proof_internal(Path, Leaf, [P2 | Proof], CFG);
-		X ->
-		    io:fwrite("false 3\n"),
-		    %io:fwrite({X, Hash, [P1, P2|Proof]}),
-		    false
-	    end
-    end;
-proof_internal(_, _, _, _) ->
-    io:fwrite("false 2\n"),
-    false.
-is_in(X, []) -> false;
-is_in(X, [X|_]) -> true;
-is_in(X, [A|T]) -> is_in(X, T).
+unfold(_, [], _, _) -> [].
