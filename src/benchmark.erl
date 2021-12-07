@@ -23,6 +23,9 @@ doit(1) ->
                   #leaf{key = (Times) + 1 - N, value = <<N:16>>}
           %end, Many),
           end, range(1, Times+1)),
+    io:fwrite("benchmark for "),
+    io:fwrite(integer_to_list(Times-2)),
+    io:fwrite(" many elements \n"),
     io:fwrite("load up the batch database\n"),
     T1 = erlang:timestamp(),
     {NewLoc, stem, _} = 

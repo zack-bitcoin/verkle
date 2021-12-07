@@ -40,6 +40,16 @@ it prints out the result as an error, time is measured in millionths of a second
 
 [you can see the code of the benchmark.](src/benchmark.erl)
 
+benchmark of 20k elements.
+
+loading: 15
+
+making proof: 53
+
+verifying: 8.9
+
+So, it is scaling sub-linearly. Doubling the number of things you prove costs less than 2x more for each step.
+
 Crypto used
 ==============
 
