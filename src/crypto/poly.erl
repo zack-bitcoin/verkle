@@ -5,6 +5,7 @@
    [calc_DA/2, calc_A/2, 
     c2e/3, %lagrange_polynomials/2, 
     sub/3, div_e/5, mul_scalar/3, add/2, 
+    evaluation_add/2,
     eval_e/4, eval_outside/6, eval_outside_v/5,
     all_div_e_parameters/1
    ]).
@@ -34,11 +35,15 @@ symetric_view(X, Y) ->
 
 %polynomial operations
 add([], []) -> [];
-add([], X) -> X;
+%add([], X) -> X;
 add(X, []) -> X;
 add([A|AT], [B|BT]) ->
     [?add(A, B)|
       add(AT, BT)].
+evaluation_add([], []) -> [];
+evaluation_add([A|AT], [B|BT]) ->
+    [?add(A, B)|
+      evaluation_add(AT, BT)].
 sub(A, B, Base) ->
     %add(A, ?neg(B), Base).
     %?add(A, ?neg(B)).
@@ -82,9 +87,9 @@ mul_c([A|AT], B, Base) ->
 all_div_e_parameters(P) ->
     L = lists:map(
           fun(M) ->
-                  io:fwrite("generating parameter "),
-                  io:fwrite(integer_to_list(M)),
-                  io:fwrite("\n"),
+                  %io:fwrite("generating parameter "),
+                  %io:fwrite(integer_to_list(M)),
+                  %io:fwrite("\n"),
                   div_e_parameters(
                     P#p.domain, P#p.da, M)
           end, P#p.domain),
@@ -102,20 +107,21 @@ div_e_parameters(Domain, DA, M) ->
                       _ -> X
                   end
           end, Domain),
-    NegDividends2 = %this also could be pre-computed. todo.
+    Dividends2 = %this also could be pre-computed. todo.
         lists:zipwith3(
           fun(D, ID, A) ->
                   if
                       (D == M) -> 1;
                       true ->
-                          ?mul(A, ID)
+                          %?mul(A, ID)
+                          ?mul(A, ?sub(M, D))
                   end
           end, Domain, Dividends, DA),
     {IDs, IDs2} = %this can be pre-computed.
         lists:split(
           length(Dividends),
           ff:batch_inverse(
-            Dividends ++ NegDividends2,
+            Dividends ++ Dividends2,
             ?order)),
     {IDs, IDs2}.
 
@@ -148,7 +154,7 @@ div_e2(Ps, Domain, M, DA, DA_M, IDs) ->
                   end
           end, Ps, Domain, IDs),
     X2 = add_all(X),
-    ?mul(?neg(X2), DA_M).
+    ?mul(X2, DA_M).
 
 grab_dam(M, [M|_], [D|_]) -> D;
 grab_dam(M, [_|T], [_|D]) -> 

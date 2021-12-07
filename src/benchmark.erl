@@ -12,7 +12,7 @@ doit(1) ->
     verkle_app:start(normal, []),
     CFG = trie:cfg(?ID),
     Loc = 1,
-    Times = 20002,
+    Times = 5002,
     %Times = 3,
     %Many = range(1, min(100, Times)),
     Many = range(1, Times - 2),

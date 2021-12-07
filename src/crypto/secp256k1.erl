@@ -122,7 +122,7 @@ to_affine_batch(Ps) ->
     Zs2 = lists:filter(fun(X) -> not(X == 0) end,
                        Zs),
     Ps2 = lists:filter(
-            fun(P = {_, _, Z}) -> not(Z == 0) end,
+            fun({_, _, Z}) -> not(Z == 0) end,
             Ps),
     %Is = invert_batch(Zs, Base),
     Is = ff:batch_inverse(Zs2, ?prime),
@@ -155,7 +155,7 @@ decompress(<<S, X:256>>) ->
              true -> ?prime - Y
          end,
     to_jacob({X, Y2}).
-jacob_negate({X, Y, Z}, E) ->
+jacob_negate({X, Y, Z}, _E) ->
     {X, ?neg(Y), Z}.
 jacob_equal({X1, Y1, Z1}, {X2, Y2, Z2}, E) ->
     Base = field_prime(E),
@@ -170,10 +170,10 @@ jacob_equal({X1, Y1, Z1}, {X2, Y2, Z2}, E) ->
     Check1 and Check2.
 jacob_sub(P1, P2, E) -> 
     jacob_add(P1, jacob_negate(P2, E), E).
-jacob_add(P, {0, _, _}, E) -> P;
-jacob_add(P, {_, 0, _}, E) -> P;
-jacob_add({0, _, _}, P, E) -> P;
-jacob_add({_, 0, _}, P, E) -> P;
+jacob_add(P, {0, _, _}, _E) -> P;
+jacob_add(P, {_, 0, _}, _E) -> P;
+jacob_add({0, _, _}, P, _E) -> P;
+jacob_add({_, 0, _}, P, _E) -> P;
 jacob_add({X1, Y1, Z1}, {X2, Y2, Z2}, E) ->
     %http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#addition-add-2007-bl 
     %Base = field_prime(E),
@@ -268,9 +268,9 @@ addition(P1, P2, E) ->
 jacob_zero() -> {0,1,0}.
 jacob_mul(P, X, E) ->
     jacob_mul(jacob_zero(), P, X, E).
-jacob_mul(_, _, 0, E) -> 
+jacob_mul(_, _, 0, _E) -> 
     jacob_zero();
-jacob_mul(_, {_, _, 0}, _, E) -> 
+jacob_mul(_, {_, _, 0}, _, _E) -> 
     jacob_zero();
 jacob_mul(A, P, X, E) when (X < 0) ->
     jacob_mul(A, jacob_negate(P, E), -X, E);
@@ -360,7 +360,7 @@ endo_mul(P, X, E) ->
 
 %multiplication(infinity, _, _) ->
 %    infinity;
-multiplication(P1, 0, E) ->
+multiplication(_P1, 0, _E) ->
     %infinity;
     {0,0};
 multiplication(P1, X, E) 
@@ -493,19 +493,19 @@ multi_exponent(Rs0, Gs0, E) ->
     Rs = lists:map(fun(X) -> mod(X, Base) end,
                    Rs1),
     multi_exponent2(Rs, Gs, E).
-multi_exponent2([], [], E) ->
+multi_exponent2([], [], _E) ->
     jacob_zero();
 multi_exponent2(Rs, Gs, E) ->
     C0 = floor(math:log(length(Rs))/math:log(2))-2,
     C1 = min(C0, 10),%more than 10 uses a lot of memory.
     C = max(1, C1),
-    if
-        (C1 > 6) ->
-            io:fwrite("C is "),
-            io:fwrite(integer_to_list(C)),
-            io:fwrite("\n");
-        true -> ok
-    end,
+%    if
+%        (C1 > 6) ->
+%            io:fwrite("C is "),
+%            io:fwrite(integer_to_list(C)),
+%            io:fwrite("\n");
+%        true -> ok
+%    end,
     F = det_pow(2, C),
     %write each integer in R in binary. partition the binaries into chunks of C bits.
     B = 256,

@@ -57,7 +57,7 @@ primitive_nth_root(N, E) ->
     end.
 
 calc_G_e(R, As, Ys, Zs, Domain, DA, Base) ->
-    io:fwrite("calc G e 0\n"),
+    %io:fwrite("calc G e 0\n"),
     DivEAll = parameters:div_e(),
     GP = lists:zipwith3(
            fun(A, Y, Z) ->
@@ -72,41 +72,34 @@ calc_G_e(R, As, Ys, Zs, Domain, DA, Base) ->
                      Z,
                      DivEAll)
            end, As, Ys, Zs),
-    io:fwrite("calc G e 1\n"),
+    %io:fwrite("calc G e 1\n"),
     Result = calc_G_e_helper(1, R, GP, Base),
-    io:fwrite("calc G e 2\n"),
+    %io:fwrite("calc G e 2\n"),
     Result.
-calc_G_e_helper(_, _, [], _) -> [];
+calc_G_e_helper(RA, _R, [P], Base) -> 
+    poly:mul_scalar(RA, P, Base);
 calc_G_e_helper(RA, R, [P|T], Base) -> 
     X = poly:mul_scalar(RA, P, Base),
-    poly:add(
+    poly:evaluation_add(
       X,
       calc_G_e_helper(
         ?mul(RA, R), 
         R, T, Base)).
     
-mod(X,Y)->(X rem Y + Y) rem Y.
-sub(A, B, Base) ->
-    mod(A - B, Base).
-add(A, B, Base) ->
-    mod(A + B, Base).
-mul(A, B, Base) ->
-    mod(A * B, Base).
-divide(A, B, N) ->
-    B2 = basics:inverse(B, N),
-    mul(A, B2, N).
-    
 
 mul_r_powers(_, _, [], _) -> [];
 mul_r_powers(R, A, [C|T], Base) ->
-    [ff:mul(C, A, Base)|
+    %[ff:mul(C, A, Base)|
+    [?mul(C, A)|
      mul_r_powers(
-       R, ff:mul(A, R, Base), T, Base)].
+       %R, ff:mul(A, R, Base), T, Base)].
+       R, ?mul(A, R), T, Base)].
 
 %sum_i:  r^i * y_i / (t - z_i)
 calc_G2_2(R, T, Ys, Zs, Base) ->
     Divisors = 
-        lists:map(fun(Z) -> sub(T, Z, Base) end, Zs),
+        %lists:map(fun(Z) -> sub(T, Z, Base) end, Zs),
+        lists:map(fun(Z) -> ?sub(T, Z) end, Zs),
     IDs = ff:batch_inverse(Divisors, Base),
     RIDs = mul_r_powers(R, 1, IDs, Base),
 
@@ -119,7 +112,8 @@ calc_G2_2(R, T, Ys, Zs, Base) ->
 %sum_i: polyA_i * (r^i)/(t - z_i)
 calc_H_e(R, RA, T, As, Zs, Base) ->
     Divisors = 
-        lists:map(fun(Z) -> sub(T, Z, Base) end, Zs),
+        %lists:map(fun(Z) -> sub(T, Z, Base) end, Zs),
+        lists:map(fun(Z) -> ?sub(T, Z) end, Zs),
     IDs = ff:batch_inverse(Divisors, Base),
     RIDs = mul_r_powers(R, 1, IDs, Base),
     calc_H_e2(RIDs, As, Base).
@@ -243,7 +237,8 @@ verify({CommitG, Commits, Open_G_E}, Zs, Ys,
     %io:fwrite("proofs per second: "),
     %io:fwrite(integer_to_list(round(length(Zs) * 1000000 / NegE))),
     %io:fwrite("\n"),
-    0 == add(G2, element(2, Open_G_E), Base).
+    %0 == add(G2, element(2, Open_G_E), Base).
+    0 == ?add(G2, element(2, Open_G_E)).
    
          
 range(X, X) -> [];
@@ -291,15 +286,16 @@ test(7) ->
     E = secp256k1:make(),
     Base = secp256k1:order(E),
     Root4 = primitive_nth_root(4, E),
-    Root4b = mul(Root4, Root4, Base),
-    Root4c = mul(Root4b, Root4, Base),
+    Root4b = ?mul(Root4, Root4),
+    Root4c = ?mul(Root4b, Root4),
     Domain = [1, Root4, Root4b, Root4c],
     %Domain = [5,6,7,8],
     P = make_parameters_jacob(Domain, E),
-    A = [sub(0, 4, Base),
-         sub(0, 3, Base),
-         sub(0, 2, Base),
-         sub(0, 1, Base)],
+    %A = [sub(0, 4, Base),
+    %     sub(0, 3, Base),
+    %     sub(0, 2, Base),
+    %     sub(0, 1, Base)],
+    A = [?neg(4), ?neg(3), ?neg(2), ?neg(1)],
     As = lists:map(fun(_) -> A end,
                    range(0, Many)),
     %As = lists:map(fun(R) -> [sub(0, R, Base),
