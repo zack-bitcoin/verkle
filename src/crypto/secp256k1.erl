@@ -97,10 +97,11 @@ to_affine(P = {_, _, Z}) ->
     Z2 = ff:inverse(mod(Z, ?prime), ?prime),
     to_affine(P, Z2).
 to_affine({X, Y, _}, Inverse) ->
-    P2 = ff:mul(Inverse, Inverse, ?prime),
-    P3 = ff:mul(Inverse, P2, ?prime),
-    {ff:mul(X, P2, ?prime),
-     ff:mul(Y, P3, ?prime)}.
+    P2 = ?mul(Inverse, Inverse),
+    P3 = ?mul(Inverse, P2),
+    {?mul(X, P2),
+%     ?mul(Y, P3)}.
+     ff:mul(Y, P3, ?prime)}.%Y is sometimes negative.
 
 zero_spots([], _) -> [];
 zero_spots([0|T], N) -> 

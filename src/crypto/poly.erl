@@ -51,9 +51,9 @@ mul_scalar(S, [A|T], Base)
     %[ff:mul(S, A, Base)|
     [?mul(S, A)|
      mul_scalar(S, T, Base)].
-add_all([P], _) -> P;
-add_all([A, B|T], Base) -> 
-    add_all([?add(A, B)|T], Base).
+add_all([P]) -> P;
+add_all([A, B|T]) -> 
+    add_all([?add(A, B)|T]).
 mul_c_all([X], _) -> X;
 mul_c_all([A, B|T], Base) ->
     mul_c_all([mul_c(A, B, Base)|T], Base).
@@ -130,7 +130,7 @@ div_e2(Ps, Domain, M, DA, DA_M, Base) ->
                       true -> ?mul(P, ID)
                   end
           end, Ps, Domain, IDs),
-    X2 = ff:add_all(X, Base),
+    X2 = add_all(X),
     ?mul(X2, DA_M).
 
 grab_dam(M, [M|_], [D|_]) -> D;
@@ -158,7 +158,7 @@ calc_DA(Domain, E) ->
                         end, Domain2),
                   mul_c_all(Y, Base)
           end, Domain),
-    add_all(X, Base).
+    add_all(X).
     
                           
               
@@ -206,7 +206,7 @@ eval_outside(Z, P, Domain, A, DA, Base) ->
                   %ff:mul(PE, V, Base)
                   ?mul(PE, V)
           end, P, EV),
-    ff:add_all(L, Base).
+    add_all(L).
     
 
 remove_element(X, [X|T]) -> T;
