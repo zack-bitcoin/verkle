@@ -1,3 +1,1 @@
-delete unused code from older versions that did not work.
-
 There is something wrong with get:batch. it is slower for the 256 child version, it should be quicker.
