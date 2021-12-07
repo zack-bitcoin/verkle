@@ -490,7 +490,7 @@ test(17, CFG) ->
 test(18, CFG) ->
     %Proof2 = verify:update_proof(Leaf2, Proof, CFG),
     Loc = 1,
-    Times = 1002,
+    Times = 5002,
     %Times = 3,
     %Many = range(1, min(100, Times)),
     Many = range(1, Times - 2),
@@ -535,9 +535,12 @@ test(18, CFG) ->
     true = (length(Leaves2) == length(Many)),
     if
         true ->
-            io:fwrite({timer:now_diff(T2, T1),
-                       timer:now_diff(T3, T2),
-                       timer:now_diff(T4, T3)});
+            io:fwrite("measured in millionths of a second. 6 decimals. \n"),
+            io:fwrite(
+              {{load_tree, timer:now_diff(T2, T1)},
+               {make_proof, 
+                timer:now_diff(T3, T2)},
+               {verify, timer:now_diff(T4, T3)}});
         true -> ok
     end,
     success;

@@ -32,3 +32,7 @@ Installation
 You need to install erlang first to use this database.
 
 To run the software: ```sh start.sh```
+
+to run the benchmark test `test_trie:test().`
+it prints out the result as an error, time is measured in millionths of a second. 6 decimals.
+
