@@ -1,7 +1,7 @@
 Verkle Tree
 ===========
 
-Pure erlang implementation of verkle trees.
+Pure erlang implementation of pedersen-commitment based verkle trees.
 
 This software seems to basically work, but it still has some inefficiencies.
 See the todo list for what needs to be done still.
@@ -11,6 +11,9 @@ Written in pure erlang.
 
 learn about verkle trees here:
 https://vitalik.ca/general/2021/06/18/verkle.html
+
+Techniques used in this software:
+https://dankradfeist.de/ethereum/2021/06/18/pcs-multiproofs.html
 
 Benchmark.
 ===========
