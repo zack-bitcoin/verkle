@@ -36,3 +36,9 @@ To run the software: ```sh start.sh```
 to run the benchmark test `test_trie:test().`
 it prints out the result as an error, time is measured in millionths of a second. 6 decimals.
 
+you can see the code of the benchmark.
+
+https://github.com/zack-bitcoin/verkle/blob/master/src/benchmark.erl
+
+in `benchmark:doit(1).`
+

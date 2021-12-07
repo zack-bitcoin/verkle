@@ -10,8 +10,7 @@ test() ->
     %V = [1,2,3,4,5,7,8,9,10,11,12,13,14,16,17],
     %V = [1,2,3,5,7,8,9,10,11,12,13,14,16,17,18],
     %V = [5, 6, 12, 13],
-    V = [18],
-    %V = [101, 17,18],
+    V = [101, 17],
     test_helper(V, CFG).
 test_helper([], _) -> success;
 test_helper([N|T], CFG) -> 
@@ -506,21 +505,6 @@ test(18, CFG) ->
     {NewLoc, stem, _} = 
         store:batch(Leaves, Loc, CFG),
     T2 = erlang:timestamp(),
-    %io:fwrite({stem:get(NewLoc, CFG),
-    %           stem:get(NewLoc2, CFG)}),
-    %F = fun(N) -> stem:get(element(2, ((stem:get(N, CFG))#stem.pointers)), CFG) end,
-    %F2 = fun(N) -> leaf:get(element(3, ((stem:get(N, CFG))#stem.pointers)), CFG) end,
-    
-%    io:fwrite({stem:get(NewLoc, CFG),
-%               stem:get(NewLoc2, CFG),
-%               F(NewLoc), F(NewLoc2)}),
-    %element(1, (stem:get(NewLoc, CFG))#stem.pointers,
-    %(stem:get(NewLoc2, CFG))#stem.pointers,
-    %io:fwrite({Root, NewLoc}),
-
-    %io:fwrite({Loc, NewLoc, NewLoc2}),
-    %io:fwrite("before root hash\n"),
-    %Many = [1,2,3,5],
     io:fwrite("make proof\n"),
     Proof = 
         get:batch(Many, NewLoc, CFG),
