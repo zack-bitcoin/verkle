@@ -56,8 +56,24 @@ primitive_nth_root(N, E) ->
         true -> G
     end.
 
-calc_G_e(R, As, Ys, Zs, Domain, DA, Base) ->
-    %io:fwrite("calc G e 0\n"),
+calc_G_e(R, As, Ys, Zs, Domain, DA) ->
+    DivEAll = parameters:div_e(),
+    calc_G_e2(1, R, As, Ys, Zs,
+              Domain, DA, DivEAll, []).
+calc_G_e2(_, _, [], [], [], _, _, _, 
+          Accumulator) -> Accumulator;
+calc_G_e2(RA, R, [A|AT], [Y|YT], [Z|ZT], Domain,
+          DA, DivEAll, Accumulator) ->
+    X1 = lists:map(fun(C) -> ?sub(C, Y) end, A),
+    P = poly:div_e(X1, Domain, DA, Z, DivEAll),
+    X = poly:mul_scalar(RA, P),
+    A2 = poly:add(X, Accumulator), 
+    calc_G_e2(?mul(RA, R), R, AT, YT, ZT, Domain,
+              DA, DivEAll, A2).
+
+
+old_calc_G_e(R, As, Ys, Zs, Domain, DA, Base) ->
+    io:fwrite("calc G e 0\n"),
     DivEAll = parameters:div_e(),
     GP = lists:zipwith3(
            fun(A, Y, Z) ->
@@ -65,17 +81,18 @@ calc_G_e(R, As, Ys, Zs, Domain, DA, Base) ->
                          fun(C) -> 
                                  ?sub(C, Y)
                          end, A),
-                   poly:div_e(%we can batch this division before the polynomial gets involved.
+                   poly:div_e(
                      X,
                      Domain,
                      DA,
                      Z,
                      DivEAll)
            end, As, Ys, Zs),
-    %io:fwrite("calc G e 1\n"),
+    io:fwrite("calc G e 1\n"),
     Result = calc_G_e_helper(1, R, GP, Base),
-    %io:fwrite("calc G e 2\n"),
+    io:fwrite("calc G e 2\n"),
     Result.
+
 calc_G_e_helper(RA, _R, [P], Base) -> 
     poly:mul_scalar(RA, P, Base);
 calc_G_e_helper(RA, R, [P|T], Base) -> 
@@ -158,35 +175,46 @@ prove(As, %committed data
       Commits_e,
       #p{g = Gs, h = Hs, q = Q, e = E, da = DA,
         a = PA, domain = Domain}) ->
-    %io:fwrite("multiprove 0\n"),
+    io:fwrite("multiprove 0\n"),
     Base = secp256k1:order(E),
     Ys = lists:zipwith(
            fun(F, Z) ->
                    poly:eval_e(Z, F, Domain, Base)
            end, As, Zs),
+    io:fwrite("multiprove 1\n"),
     AffineCommits = 
         secp256k1:to_affine_batch(
           Commits_e),
     Timestamp1 = erlang:timestamp(),
+    io:fwrite("multiprove 2\n"),
     R = calc_R(AffineCommits, Zs, Ys, <<>>),
     %io:fwrite("multiprove 3\n"),
     %spends lots of time here.
-    G2 = calc_G_e(R, As, Ys, Zs, Domain, DA, Base),
+    io:fwrite("multiprove 3\n"),
+    %freezes here.
+    %G2 = calc_G_e(R, As, Ys, Zs, Domain, DA, Base),
+    G2 = calc_G_e(R, As, Ys, Zs, Domain, DA),
     %io:fwrite("multiprove 4\n"),
+    io:fwrite("multiprove 4\n"),
     CommitG_e = ipa:commit(G2, Gs, E),
+    io:fwrite("multiprove 5\n"),
     T = calc_T(secp256k1:to_affine(CommitG_e), R),
     %io:fwrite("multiprove 6\n"),
     %spend very little time here.
+    io:fwrite("multiprove 6\n"),
     He = calc_H_e(R, 1, T, As, Zs, Base),
     %io:fwrite("multiprove 7\n"),
+    io:fwrite("multiprove 7\n"),
     G_sub_E_e = poly:sub(G2, He, Base),
+    io:fwrite("multiprove 8\n"),
     EV = poly:eval_outside_v(T, Domain, PA, DA, Base),
     %io:fwrite("multiprove 9\n"),
+    io:fwrite("multiprove 9\n"),
     Timestamp2 = erlang:timestamp(),
     %spend a little time here.
     IPA = ipa:make_ipa(G_sub_E_e, EV, 
                        Gs, Hs, Q, E),
-    %io:fwrite("multiprove 10\n"),
+    io:fwrite("multiprove 10\n"),
     Timestamp3 = erlang:timestamp(),
     %io:fwrite("ipa time : "),
     %io:fwrite(integer_to_list(timer:now_diff(Timestamp3, Timestamp2))),

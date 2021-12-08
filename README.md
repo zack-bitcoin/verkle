@@ -29,11 +29,11 @@ Benchmark.
 
 I loaded 5000 elements into the database. I made a proof of all 5000 of them, and then verified that proof.
 
-Loading took 7.1 seconds.
+Loading took 6.9 seconds.
 
-Making the proof with 1 cpu took 7.9 seconds.
+Making the proof with 1 cpu took 6.8 seconds.
 
-Verifying took 4.0 seconds.
+Verifying took 3.2 seconds.
 
 to run the benchmark test `test_trie:test().`
 it prints out the result as an error, time is measured in millionths of a second. 6 decimals.
@@ -42,13 +42,19 @@ it prints out the result as an error, time is measured in millionths of a second
 
 benchmark of 20k elements.
 
-loading: 15.5
+loading: 15.7
 
-making proof: 22
+making proof: 19
 
-verifying: 8.9
+verifying: 9.4
 
-So, it is scaling sub-linearly. Doubling the number of things you prove costs less than 2x more for each step.
+40k
+
+loading: 27
+
+proving: 39
+
+verifying: 16.6
 
 It is also possible to run the database in RAM instead of the hard drive, but it doesn't seem to make it any faster. The bottleneck is on CPU computation of the cryptography, not on accessing memory.
 

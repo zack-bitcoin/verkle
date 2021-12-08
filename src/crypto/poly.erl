@@ -4,7 +4,8 @@
 -export(
    [calc_DA/2, calc_A/2, 
     c2e/3, %lagrange_polynomials/2, 
-    sub/3, div_e/5, mul_scalar/3, add/2, 
+    sub/3, div_e/5, mul_scalar/3, mul_scalar/2, 
+    add/2, 
     evaluation_add/2,
     eval_e/4, eval_outside/6, eval_outside_v/5,
     all_div_e_parameters/1
@@ -53,6 +54,8 @@ neg([H|T], Base) ->
     %[ff:sub(0, H, Base)|
     [?neg(H)|
      neg(T, Base)].
+mul_scalar(S, A) ->
+    mul_scalar(S, A, 0).
 mul_scalar(_, [], _) -> [];
 mul_scalar(S, [A|T], Base) 
   when is_integer(S) -> 
@@ -98,7 +101,7 @@ all_div_e_parameters(P) ->
 %div_e_parameters(_, _, M) ->
 %    parameters:div_e(M);
 div_e_parameters(Domain, DA, M) ->
-    Dividends = %this seems like it could be pre-computed for every element in the domain. todo.
+    Dividends = 
         lists:map(
           fun(D) -> 
                   X = ?sub(D, M),
@@ -107,17 +110,16 @@ div_e_parameters(Domain, DA, M) ->
                       _ -> X
                   end
           end, Domain),
-    Dividends2 = %this also could be pre-computed. todo.
+    Dividends2 = 
         lists:zipwith3(
           fun(D, ID, A) ->
                   if
                       (D == M) -> 1;
                       true ->
-                          %?mul(A, ID)
                           ?mul(A, ?sub(M, D))
                   end
           end, Domain, Dividends, DA),
-    {IDs, IDs2} = %this can be pre-computed.
+    {IDs, IDs2} = 
         lists:split(
           length(Dividends),
           ff:batch_inverse(
@@ -131,6 +133,7 @@ div_e(Ps, Domain, DA, M, DivEAll) ->
     %M is a point in the domain of polynomial P.
          
     {IDs, IDs2} = element(M, DivEAll),
+    DA_M = lists:nth(M, DA),%only works if the domain is the positive integers.
  
     Result = lists:zipwith3(
       fun(P, D, ID) -> 
@@ -139,7 +142,6 @@ div_e(Ps, Domain, DA, M, DivEAll) ->
                   true -> 
                       %DA_M = grab_dam(
                       %         M, Domain, DA),
-                      DA_M = lists:nth(M, DA),%only works if the domain is the positive integers.
                       div_e2(Ps, Domain, M, 
                              DA, DA_M, IDs2)
               end

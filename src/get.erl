@@ -20,24 +20,40 @@ keys2paths(Keys, CFG) ->
       end, Paths0).
 batch(Keys, Root, CFG) ->
     RootStem = stem:get(Root, CFG),
+    io:fwrite("get 0\n"),
+    %a little slow.
     Paths = keys2paths(Keys, CFG),
     %Paths example: [[1,4,3,2],[1,1,1,2],[1,1,1,1],[2,1,1,1]]
     Tree = paths2tree(Paths),
     %Tree example [[1|[[4,3,2], [1,1|[[1], [2]]]]], [2,1,1,1]],
     %list of lists means or. list of integers means and.
+    io:fwrite("get 1\n"),
+    %a little slow.
     Tree2 = points_values(Tree, RootStem, CFG),
     %obtains the stems and leaves by reading from the database.
 
+    io:fwrite("get 2\n"),
     Tree3 = withdraw_points(Tree2),%removing duplicate elliptic points by shifting all the points one step towards the root.
+    io:fwrite("get 3\n"),
     Tree4 = remove_hashes(Tree3),%the hashes in each stem aren't needed to verify the verkle proof, so they are removed.
 
+    io:fwrite("get 4\n"),
     Lookups = flatten(Tree2, []),
+    io:fwrite("get 5\n"),
     {Zs0, Commits, As0} = split3parts(Lookups, [], [], []),
+    io:fwrite("get 6\n"),
     P = parameters:read(),
+    io:fwrite("get 7\n"),
     Zs = index2domain(Zs0, P#p.domain),
+    io:fwrite("get 8\n"),
+    %medium slow.
     As = binary2int(As0),
 
+    io:fwrite("get 9\n"),
+    %the slow step.
+    %crashes here.
     {CommitG, _Commits2, Opening} = multiproof:prove(As, Zs, Commits, P),%this is the slow step.
+    io:fwrite("get 10\n"),
 
     %sanity checks
     %Tree5 = verify:unfold(Root4, Tl4, [], CFG),
