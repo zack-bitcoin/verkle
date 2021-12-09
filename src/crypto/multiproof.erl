@@ -3,7 +3,7 @@
          compress/1, decompress/1,
          make_parameters_jacob/2, 
          primitive_nth_root/2,
-         prove/4, verify/4,
+         prove/4, verify/5,
          make_parameters_range/2
         ]).
 
@@ -57,59 +57,29 @@ primitive_nth_root(N, E) ->
     end.
 
 calc_G_e(R, As, Ys, Zs, Domain, DA) ->
+
+    %polynomial h from dankrad's paper.
+
     DivEAll = parameters:div_e(),
+    %DivEAll2 = poly:all_div_e_parameters2(),
+    DivEAll2 = 0,
     calc_G_e2(1, R, As, Ys, Zs,
-              Domain, DA, DivEAll, []).
-calc_G_e2(_, _, [], [], [], _, _, _, 
+              Domain, DA, DivEAll, DivEAll2, []).
+calc_G_e2(_, _, [], [], [], _, _, _, _ ,
           Accumulator) -> Accumulator;
 calc_G_e2(RA, R, [A|AT], [Y|YT], [Z|ZT], Domain,
-          DA, DivEAll, Accumulator) ->
+          DA, DivEAll, DivEAll2, Accumulator) ->
     X1 = lists:map(fun(C) -> ?sub(C, Y) end, A),
-    P = poly:div_e(X1, Domain, DA, Z, DivEAll),
+    P = poly:div_e(X1, Domain, DA, Z, DivEAll, DivEAll2),
     X = poly:mul_scalar(RA, P),
     A2 = poly:add(X, Accumulator), 
     calc_G_e2(?mul(RA, R), R, AT, YT, ZT, Domain,
-              DA, DivEAll, A2).
-
-
-old_calc_G_e(R, As, Ys, Zs, Domain, DA, Base) ->
-    io:fwrite("calc G e 0\n"),
-    DivEAll = parameters:div_e(),
-    GP = lists:zipwith3(
-           fun(A, Y, Z) ->
-                   X = lists:map(
-                         fun(C) -> 
-                                 ?sub(C, Y)
-                         end, A),
-                   poly:div_e(
-                     X,
-                     Domain,
-                     DA,
-                     Z,
-                     DivEAll)
-           end, As, Ys, Zs),
-    io:fwrite("calc G e 1\n"),
-    Result = calc_G_e_helper(1, R, GP, Base),
-    io:fwrite("calc G e 2\n"),
-    Result.
-
-calc_G_e_helper(RA, _R, [P], Base) -> 
-    poly:mul_scalar(RA, P, Base);
-calc_G_e_helper(RA, R, [P|T], Base) -> 
-    X = poly:mul_scalar(RA, P, Base),
-    poly:evaluation_add(
-      X,
-      calc_G_e_helper(
-        ?mul(RA, R), 
-        R, T, Base)).
-    
+              DA, DivEAll, DivEAll2, A2).
 
 mul_r_powers(_, _, [], _) -> [];
 mul_r_powers(R, A, [C|T], Base) ->
-    %[ff:mul(C, A, Base)|
     [?mul(C, A)|
      mul_r_powers(
-       %R, ff:mul(A, R, Base), T, Base)].
        R, ?mul(A, R), T, Base)].
 
 %sum_i:  r^i * y_i / (t - z_i)
@@ -127,17 +97,18 @@ calc_G2_2(R, T, Ys, Zs, Base) ->
     {RIDs, Result}.
 
 %sum_i: polyA_i * (r^i)/(t - z_i)
-calc_H_e(R, RA, T, As, Zs, Base) ->
+calc_H(R, RA, T, As, Zs, Base) ->
     Divisors = 
         %lists:map(fun(Z) -> sub(T, Z, Base) end, Zs),
         lists:map(fun(Z) -> ?sub(T, Z) end, Zs),
     IDs = ff:batch_inverse(Divisors, Base),
     RIDs = mul_r_powers(R, 1, IDs, Base),
-    calc_H_e2(RIDs, As, Base).
-calc_H_e2([], [], _) -> [];
-calc_H_e2([H|T], [A|AT], Base) -> 
+    calc_H2(RIDs, As, Base, []).
+calc_H2([], [], _, Accumulator) -> Accumulator;
+calc_H2([H|T], [A|AT], Base, Acc) -> 
     X = poly:mul_scalar(H, A, Base),
-    poly:add(X, calc_H_e2(T, AT, Base)).
+    Acc2 = poly:add(X, Acc),
+    calc_H2(T, AT, Base, Acc2).
 
 calc_R([], [], [], B) -> 
     <<R:256>> = hash:doit(B),
@@ -175,17 +146,19 @@ prove(As, %committed data
       Commits_e,
       #p{g = Gs, h = Hs, q = Q, e = E, da = DA,
         a = PA, domain = Domain}) ->
+
+    %todo. instead of accepting the entire list of As, we should receive a tree structure that allows us to stream the As. that way the memory requirement doesn't get so big.
+
     io:fwrite("multiprove 0\n"),
     Base = secp256k1:order(E),
     Ys = lists:zipwith(
            fun(F, Z) ->
                    poly:eval_e(Z, F, Domain, Base)
-           end, As, Zs),
+           end, As, Zs),%this should be streamed with calculating the As.
     io:fwrite("multiprove 1\n"),
     AffineCommits = 
         secp256k1:to_affine_batch(
           Commits_e),
-    Timestamp1 = erlang:timestamp(),
     io:fwrite("multiprove 2\n"),
     R = calc_R(AffineCommits, Zs, Ys, <<>>),
     %io:fwrite("multiprove 3\n"),
@@ -193,7 +166,7 @@ prove(As, %committed data
     io:fwrite("multiprove 3\n"),
     %freezes here.
     %G2 = calc_G_e(R, As, Ys, Zs, Domain, DA, Base),
-    G2 = calc_G_e(R, As, Ys, Zs, Domain, DA),
+    G2 = calc_G_e(R, As, Ys, Zs, Domain, DA),%this needs to be streamed with the creation of the As, so we collapse the memory down.
     %io:fwrite("multiprove 4\n"),
     io:fwrite("multiprove 4\n"),
     CommitG_e = ipa:commit(G2, Gs, E),
@@ -202,7 +175,9 @@ prove(As, %committed data
     %io:fwrite("multiprove 6\n"),
     %spend very little time here.
     io:fwrite("multiprove 6\n"),
-    He = calc_H_e(R, 1, T, As, Zs, Base),
+    He = calc_H(R, 1, T, As, Zs, Base),%this needs to be streamed with the creation of As, so we collaps the memory requirement.
+
+
     %io:fwrite("multiprove 7\n"),
     io:fwrite("multiprove 7\n"),
     G_sub_E_e = poly:sub(G2, He, Base),
@@ -210,20 +185,14 @@ prove(As, %committed data
     EV = poly:eval_outside_v(T, Domain, PA, DA, Base),
     %io:fwrite("multiprove 9\n"),
     io:fwrite("multiprove 9\n"),
-    Timestamp2 = erlang:timestamp(),
     %spend a little time here.
     IPA = ipa:make_ipa(G_sub_E_e, EV, 
                        Gs, Hs, Q, E),
     io:fwrite("multiprove 10\n"),
-    Timestamp3 = erlang:timestamp(),
-    %io:fwrite("ipa time : "),
-    %io:fwrite(integer_to_list(timer:now_diff(Timestamp3, Timestamp2))),
-    %io:fwrite("\n"),
-%    io:fwrite("other proving time: "),
-%    io:fwrite(integer_to_list(timer:now_diff(Timestamp2, Timestamp1))),
-%    io:fwrite("\n"),
-    {CommitG_e, Commits_e, IPA}.
-verify({CommitG, Commits, Open_G_E}, Zs, Ys, 
+    {CommitG_e, 
+     %Commits_e, %this was an input. doesn't make sense to have it as an output too. todo.
+     IPA}.
+verify({CommitG, Open_G_E}, Commits, Zs, Ys,
        #p{g = Gs, h = Hs, q = Q, e = E,
          domain = Domain, da = DA, a = PA}) ->
     %io:fwrite({CommitG0, Commits0, Cs0}),
@@ -349,16 +318,16 @@ test(7) ->
                 Commits0),
     io:fwrite("make proof\n"),
     Proof = prove(As, Zs, Commits, P),
-    {P1, Ps1, Open = {_,_,Ps2,_,_}} = Proof,
+    {P1, Open = {_,_,Ps2,_,_}} = Proof,
     [P1b|Ps2b] = secp256k1:simplify_Zs_batch(
                    [P1|Ps2]),
     Open2 = setelement(3, Open, Ps2b),
-    Proof2 = {P1b, Ps1, Open2},
+    Proof2 = {P1b, Open2},
     T2 = erlang:timestamp(),
     io:fwrite("verify proof\n"),
-    true = verify(Proof2, Zs, Ys, P),
+    true = verify(Proof2, Commits, Zs, Ys, P),
     T3 = erlang:timestamp(),
-    true = verify(Proof, Zs, Ys, P),
+    true = verify(Proof, Commits, Zs, Ys, P),
     {prove, timer:now_diff(T2, T1),
       verify, timer:now_diff(T3, T2)}.
     

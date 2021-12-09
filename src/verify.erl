@@ -94,8 +94,8 @@ proof(Root0, {Tree, CommitG, Open}, CFG) ->
                     fun(<<X:256>>) -> X end,
                     Ys),
             B2 = multiproof:verify(
-                   {CommitG, Commits, Open}, 
-                   Zs, Ys2, P),
+                   {CommitG, Open}, 
+                   Commits, Zs, Ys2, P),
             if
                 not(B) -> false;
                 not(B2) -> false;

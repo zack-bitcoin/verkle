@@ -27,6 +27,7 @@
 -define(neg(A), ((?prime - A) rem ?prime)).%assumes A less than ?prime
 -define(add(A, B), ((A + B) rem ?prime)).
 -define(mul(A, B), ((A * B) rem ?prime)).
+-define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
 
                         
 %-define(sub
@@ -449,26 +450,45 @@ matrix_diagonal_flip(M) ->
     Tls = lists:map(fun(X) -> tl(X) end, M),
     [Col|matrix_diagonal_flip(Tls)].
 
-bucketify([], Buckets, [], E) -> 
+bucketify([], _Buckets, BucketsETS, [], E, 
+          ManyBuckets) -> 
     %for each bucket, sum up the points inside. [S1, S2, S3, ...
     %T_i = S1 + 2*S2 + 3*S3 ... (this is another multi-exponent. a simpler one this time.)
     %compute starting at the end. S7 + (S7 + S6) + (S7 + S6 + S5) ...
     %io:fwrite(Buckets),
-    T = tuple_to_list(Buckets),
+    %T = tuple_to_list(Buckets),
+    T = lists:map(
+          fun(N) ->
+                  X = ets:lookup(BucketsETS, N),
+                  case X of
+                      [] -> jacob_zero();
+                      [{_, Y}] -> Y
+                  end
+          end, range(1, ManyBuckets)),
     T2 = lists:reverse(T),
     bucketify2(tl(T2), hd(T2), hd(T2), E);
-bucketify([0|T], Buckets, [_|Gs], E) ->
-    bucketify(T, Buckets, Gs, E);
-bucketify([BucketNumber|T], Buckets, [G|Gs], E) ->
+bucketify([0|T], _Buckets, BucketsETS, [_|Gs], E, 
+          ManyBuckets) ->
+    bucketify(T, 0, BucketsETS, Gs, E, 
+              ManyBuckets);
+bucketify([BucketNumber|T], _Buckets, BucketsETS, 
+          [G|Gs], E, ManyBuckets) ->
     %to calculate each T_i.
     %6*G1 + 2*G2 + 5*G3 ... 6th, then 2nd, then 5th buckets.
     %(2^C)-1 buckets in total. 
     %Put a list of the Gs into each bucket.
-    Bucket = element(BucketNumber, Buckets),
-    Bucket2 = jacob_add(G, Bucket, E),
-    Buckets2 = setelement(
-                 BucketNumber, Buckets, Bucket2),
-    bucketify(T, Buckets2, Gs, E).
+
+    BucketETS0 = ets:lookup(BucketsETS, BucketNumber),
+    Bucket = 
+        case BucketETS0 of
+            [] -> jacob_zero();
+            [{_, X}] -> X
+        end,
+    Bucket2 = jacob_add(G, Bucket, E),%todo, instead of adding here, we should build up a list. so we can do efficient addition later with simplified format numbers. this can potentially make it twice as fast.
+            
+    ets:insert(BucketsETS, {BucketNumber, Bucket2}),
+    bucketify(T, 0, BucketsETS, Gs, E, 
+              ManyBuckets).
 bucketify2([], _L, T, _E) -> T;
 bucketify2([S|R], L, T, E) -> 
     L2 = jacob_add(S, L, E),
@@ -484,28 +504,51 @@ remove_zero_terms(R, G, A, B) ->
       tl(R), tl(G), [hd(R)|A], [hd(G)|B]).
 
 
+%multi_exponent([Rs], [Gs], E) ->
+%    jacob_mul(Gs, Rs, E);
+%multi_exponent([Rs0, Rs1], [Gs0, Gs1], E) ->
+%    jacob_add(jacob_mul(Gs0, Rs0, E),
+%              jacob_mul(Gs1, Rs1, E),
+%              E);
+simple_exponent([], [], _, A) -> A;
+simple_exponent([R|RT], [G|GT], E, Acc) -> 
+    A2 = jacob_add(Acc, jacob_mul(G, R, E), E),
+    simple_exponent(RT, GT, E, A2).
 multi_exponent(Rs0, Gs0, E) ->
     %output T.
     %T = R1*G1 + R2*G2 + ...
     Base = field_prime(E),
     {Rs1, Gs} = 
         remove_zero_terms(Rs0, Gs0, [], []),
-    Rs = lists:map(fun(X) -> mod(X, Base) end,
-                   Rs1),
-    multi_exponent2(Rs, Gs, E).
+    if
+        length(Rs1) < 17 ->
+            simple_exponent(
+              Rs1, Gs, E, jacob_zero());
+        true ->
+
+    %io:fwrite("multi exponent length "),
+    %io:fwrite(integer_to_list(length(Rs1))),
+    %io:fwrite(" "),
+    %io:fwrite(integer_to_list(length(Rs0))),
+    %io:fwrite("\n"),
+            Rs = lists:map(fun(X) -> mod(X, Base) end,
+                           Rs1),
+            multi_exponent2(Rs, Gs, E)
+    end.
 multi_exponent2([], [], _E) ->
     jacob_zero();
 multi_exponent2(Rs, Gs, E) ->
     C0 = floor(math:log(length(Rs))/math:log(2))-2,
-    C1 = min(C0, 10),%more than 10 uses a lot of memory.
+    %C1 = min(C0, 10),%more than 10 gets slow.
+    C1 = min(C0, 16),%more than 10 gets slow.
     C = max(1, C1),
-%    if
-%        (C1 > 6) ->
-%            io:fwrite("C is "),
-%            io:fwrite(integer_to_list(C)),
-%            io:fwrite("\n");
-%        true -> ok
-%    end,
+    if
+        (C1 > 9) ->
+            io:fwrite("C is "),
+            io:fwrite(integer_to_list(C)),
+            io:fwrite("\n");
+        true -> ok
+    end,
     F = det_pow(2, C),
     %write each integer in R in binary. partition the binaries into chunks of C bits.
     B = 256,
@@ -518,14 +561,27 @@ multi_exponent2(Rs, Gs, E) ->
     %this break the problem up into 256/C instances of multi-exponentiation.
     %each multi-exponentiation has length(Gs) parts. What is different is that instead of the Rs having 256 bits, they only have C bits. each multi-exponentiation makes [T1, T2, T3...]
     Ts = matrix_diagonal_flip(R_chunks),
-    %io:fwrite(Ts),
-    Buckets = list_to_tuple(
-                many(jacob_zero(), F)),
+    %Buckets = list_to_tuple(
+    %            many(jacob_zero(), F)),
+    if
+        (C1 > 9) ->
+            io:fwrite("start bucketify \n");
+        true -> ok
+    end,
     Ss = lists:map(
            fun(X) -> 
-                   bucketify(X, Buckets, Gs, E)
+                   BucketsETS = ets:new(buckets, [set]),
+                   Result = bucketify(X, 0, BucketsETS, Gs, E, F),
+                   ets:delete(BucketsETS),
+                   Result
            end, Ts),
-    me3(Ss, jacob_zero(), F, E).
+    if
+        (C1 > 9) ->
+            io:fwrite("end bucketify \n");
+        true -> ok
+    end,
+    Result = me3(Ss, jacob_zero(), F, E),
+    Result.
 me3([H], A, _, E) -> 
     jacob_add(H, A, E);
 me3([H|T], A, F, E) -> 
@@ -534,6 +590,14 @@ me3([H|T], A, F, E) ->
     X2 = jacob_mul(X, F, E),
     me3(T, X2, F, E).
 
+range(X, X) -> [X];
+range(A, B) when A < B -> 
+    [A|range(A+1, B)].
+
+mul_test(_, _, 0) -> ok;
+mul_test(A, B, N) -> 
+    C = (A * B) div ?order,
+    mul_test(A, C, N-1).
 
 test(1) ->
     %testing to see if a random number can be used to make a generator of the group.
@@ -769,7 +833,14 @@ test(14) ->
      {add_full, timer:now_diff(T3, T2)},%0.014
      {double_simple, timer:now_diff(T5, T4)},%0.005
      {double_full, timer:now_diff(T6, T5)}%0.005
-    }.
+    };
+test(15) ->
+    %finite field multiplication test
+    <<X:256>> = crypto:strong_rand_bytes(32),
+    T1 = erlang:timestamp(),
+    mul_test(X, X, 25500),
+    T2 = erlang:timestamp(),
+    timer:now_diff(T2, T1).
     
 
     

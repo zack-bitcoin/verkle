@@ -8,7 +8,9 @@ store(Leaf, RP, CFG) ->
 
 batch(Leaves0, RP, CFG) ->%returns {location, stem/leaf, #stem{}/#leaf{}}
     %put them in an ordered list.
+    io:fwrite("store sorting 0\n"),
     Leaves = sort_by_path2(Leaves0, CFG),
+    io:fwrite("store storing 1\n"),
     batch(Leaves, RP, stem, 0, CFG).
 
 batch([], 0, 0, _, _CFG) ->

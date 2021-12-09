@@ -12,19 +12,23 @@ doit(1) ->
     verkle_app:start(normal, []),
     CFG = trie:cfg(?ID),
     Loc = 1,
-    Times = 40002,
+    Times = 40000,
     %Times = 3,
     %Many = range(1, min(100, Times)),
-    Many = range(1, Times - 2),
+    %Many = range(1, Times - 2),
     %Many = [1,2],
     Leaves = 
         lists:map(
           fun(N) -> 
-                  #leaf{key = (Times) + 1 - N, value = <<N:16>>}
+                  Key0 = Times + 1 - N,
+                  <<Key:256>> = <<(-Key0):256>>,%todo. this shouldnt make it crash.
+                  #leaf{key = Key0, value = <<N:16>>}
           %end, Many),
           end, range(1, Times+1)),
+    Many = lists:map(fun(#leaf{key = K}) -> K end,
+                     Leaves),
     io:fwrite("benchmark for "),
-    io:fwrite(integer_to_list(Times-2)),
+    io:fwrite(integer_to_list(Times)),
     io:fwrite(" many elements \n"),
     io:fwrite("load up the batch database\n"),
     T1 = erlang:timestamp(),

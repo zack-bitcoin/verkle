@@ -45,7 +45,7 @@ test(101, CFG) ->
     S1H = secp256k1:hash_point(stem:root(S1)),
     Ys = [LH, S1H],
     Proof = multiproof:prove(As, Zs, Commits, ?p),
-    true = multiproof:verify(Proof, Zs, Ys, ?p),
+    true = multiproof:verify(Proof, Commits, Zs, Ys, ?p),
     success;
 test(1, CFG) ->
     leaf:new(1, empty, 0, CFG),
@@ -490,17 +490,25 @@ test(17, CFG) ->
 test(18, CFG) ->
     %Proof2 = verify:update_proof(Leaf2, Proof, CFG),
     Loc = 1,
-    Times = 102,
-    %Times = 3,
+    %Times = 102,
+    Times = 5,
     %Many = range(1, min(100, Times)),
-    Many = range(1, Times - 2),
+    %Many = range(1, Times - 2),
     %Many = [1,2],
+    %Many = [1000000000 - Times,
+    %        1000000000 - Times + 1],
     Leaves = 
         lists:map(
           fun(N) -> 
-                  #leaf{key = (Times) + 1 - N, value = <<N:16>>}
+                  Key0 = Times + 1 - N,
+                  %<<Key:256>> = <<(-Key0):256>>,
+                  Key = 1000000000 - Key0,
+                  #leaf{key = Key, value = <<N:16>>}
           %end, Many),
           end, range(1, Times+1)),
+    Many = lists:map(fun(#leaf{key = K}) -> K end,
+                     Leaves),
+    %Leaves = lists:reverse(Leaves0),
     io:fwrite("load up the batch database\n"),
     T1 = erlang:timestamp(),
     {NewLoc, stem, _} = 

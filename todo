@@ -1,1 +1,4 @@
-There is something wrong with get:batch. it is slower for the 256 child version, it should be quicker.
+in secp256k1 there is a "todo" note about batching some elliptic additions.
+
+We need a more secure way to generate the 512 base points.
+Maybe use the integers [1,2,3...] as entropy to a deterministic generator.

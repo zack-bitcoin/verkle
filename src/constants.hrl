@@ -13,10 +13,10 @@
 	      , value
 	      , meta = 0 %meta is data we want to remember that doesn't get hashed into the merkle tree.
 	      }).
--record(stem, { types
+-record(stem, { root
+                , types
                 , pointers
                 , hashes
-                , root
 	      }).
 
 %for the 4 child version
