@@ -4,9 +4,15 @@
 
 -define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
 -define(sub(A, B), ((A - B + ?order) rem ?order)).%assumes B less than ?order
--define(neg(A), ((?order - A) rem ?order)).%assumes A less than ?order
+-define(neg(A), (?order - A)).%assumes A less than ?order
 -define(add(A, B), ((A + B) rem ?order)).
 -define(mul(A, B), ((A * B) rem ?order)).
+-define(add_mod(C), %assumes C is positive and less than ?prime
+        if (C>= ?order ) -> C - ?order;
+           true -> C end).
+-define(sub2(A, B), %assumes A and B are positive and less than ?prime
+        (if(A>=B) -> (A - B); 
+           true -> (A + ?order - B) end)).
 
 
 -record(leaf, { key

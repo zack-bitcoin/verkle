@@ -1,3 +1,17 @@
+we are in the middle of an exploration of faster finite field operations. found a much faster subtraction. in secp256k1.
+
+
+for storage, we are computing multi-exponents for the same Gs every time. so we can pre-compute multiples of each G to make this faster. pre-computing the first part of the bucket algorithm.
+
+
+
+maybe stems should store their data as lists, because in store.erl we only access the data in order.
+
+there are a couple todo notes in store.erl
+
+we need to find a way to measure which parts of store are slowing us down.
+
+
 it gets slow if we do more than 40k in a batch
 a todo note in get.erl and in multiprove.
 

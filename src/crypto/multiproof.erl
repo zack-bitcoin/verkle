@@ -17,8 +17,16 @@
 -define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
 -define(mul(A, B), ((A * B) rem ?order)).
 -define(sub(A, B), ((A - B + ?order) rem ?order)).%assumes B less than ?order
--define(neg(A), ((?order - A) rem ?order)).%assumes A less than ?order
+-define(neg(A), ((?order - A))).%assumes A less than ?order
 -define(add(A, B), ((A + B) rem ?order)).
+
+-define(add_mod(C), %assumes C is positive and less than ?prime
+        if (C>= ?order ) -> C - ?order;
+           true -> C end).
+
+-define(sub2(A, B), %assumes A and B are positive and less than ?prime
+        (if(A>=B) -> (A - B); 
+           true -> (A + ?order - B) end)).
 
 make_parameters_range(Many, E) ->
     D = range(1, Many+1),
@@ -69,7 +77,7 @@ calc_G_e2(_, _, [], [], [], _, _, _, _ ,
           Accumulator) -> Accumulator;
 calc_G_e2(RA, R, [A|AT], [Y|YT], [Z|ZT], Domain,
           DA, DivEAll, DivEAll2, Accumulator) ->
-    X1 = lists:map(fun(C) -> ?sub(C, Y) end, A),
+    X1 = lists:map(fun(C) -> ?sub2(C, Y) end, A),
     P = poly:div_e(X1, Domain, DA, Z, DivEAll, DivEAll2),
     X = poly:mul_scalar(RA, P),
     A2 = poly:add(X, Accumulator), 
@@ -86,7 +94,7 @@ mul_r_powers(R, A, [C|T], Base) ->
 calc_G2_2(R, T, Ys, Zs, Base) ->
     Divisors = 
         %lists:map(fun(Z) -> sub(T, Z, Base) end, Zs),
-        lists:map(fun(Z) -> ?sub(T, Z) end, Zs),
+        lists:map(fun(Z) -> ?sub2(T, Z) end, Zs),
     IDs = ff:batch_inverse(Divisors, Base),
     RIDs = mul_r_powers(R, 1, IDs, Base),
 
@@ -100,7 +108,7 @@ calc_G2_2(R, T, Ys, Zs, Base) ->
 calc_H(R, RA, T, As, Zs, Base) ->
     Divisors = 
         %lists:map(fun(Z) -> sub(T, Z, Base) end, Zs),
-        lists:map(fun(Z) -> ?sub(T, Z) end, Zs),
+        lists:map(fun(Z) -> ?sub2(T, Z) end, Zs),
     IDs = ff:batch_inverse(Divisors, Base),
     RIDs = mul_r_powers(R, 1, IDs, Base),
     calc_H2(RIDs, As, Base, []).
@@ -222,7 +230,6 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys,
     T6 = erlang:timestamp(),
     %sum_i  Ci*(R^i/(T-Zi))
     io:fwrite("multiproof verify commit neg e\n"),
-    %CommitNegE = secp256k1:multi_exponent(lists:map(fun(X) -> ff:neg(X, Base) end, RIDs), Commits, E), %this one got slower. todo
     CommitE = secp256k1:multi_exponent(lists:map(fun(X) -> X end, RIDs), Commits, E), %this is the slowest step.
     CommitNegE = secp256k1:jacob_negate(CommitE, E),
     %true = secp256k1:jacob_equal(CommitNegE, CommitNegE2, E),

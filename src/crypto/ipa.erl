@@ -15,17 +15,23 @@
 -define(neg(A), ((?order - A) rem ?order)).%assumes A less than ?order
 -define(add(A, B), ((A + B) rem ?order)).
 -define(mul(A, B), ((A * B) rem ?order)).
+-define(add_mod(C), %assumes C is positive and less than ?prime
+        if (C>= ?order ) -> C - ?order;
+           true -> C end).
 
 dot(A, B) -> dot(A, B, 0).
 dot([], [], Acc) -> Acc;
 dot([A|AT], [B|BT], Acc) ->
     %dot product of two scalar vectors.
     Acc2 = ?mul(A, B),
-    dot(AT, BT, ?add(Acc, Acc2)).
+    Acc3 = Acc + Acc2,
+    %dot(AT, BT, ?add(Acc, Acc2)).
+    dot(AT, BT, ?add_mod(Acc3)).
 fv_add(As, Bs) ->
     %adding 2 scalar vectors by adding each component.
     lists:zipwith(
-      fun(A, B) -> ?add(A, B) end,
+      %fun(A, B) -> ?add(A, B) end,
+      fun(A, B) -> C = A+B, ?add_mod(C) end,
       As, Bs).
 fv_mul(S, Bs) ->
     %multiplying a scalar vector by a scalar.

@@ -24,10 +24,53 @@
 -define(prime, 115792089237316195423570985008687907853269984665640564039457584007908834671663).
 -define(prime_over4, 28948022309329048855892746252171976963317496166410141009864396001977208667916).%(?prime + 1) div 4
 -define(sub(A, B), ((A - B + ?prime) rem ?prime)).%assumes B less than ?prime
--define(neg(A), ((?prime - A) rem ?prime)).%assumes A less than ?prime
+-define(neg(A), (?prime - A)).%assumes A less than ?prime
 -define(add(A, B), ((A + B) rem ?prime)).
+%-define(add(A, B), if ((A+B) > ?prime) -> A+B - ?prime; true -> A+B end ).
 -define(mul(A, B), ((A * B) rem ?prime)).
 -define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
+
+-define(add_mod(C), %assumes C is positive and less than ?prime
+        if (C>=?prime) -> C - ?prime;
+           true -> C end).
+-define(sub2(A, B), %assumes A and B are positive and less than ?prime
+        (if(A>=B) -> (A - B); 
+           true -> (A + ?prime - B) end)).
+%-define(sub2(A, B), ?sub(A, B)).
+                          
+add2(A, B) ->
+    D = A+B,
+    C = D - ?prime,
+    if
+        (C < 0) -> D;
+        true -> C
+    end.
+            
+add(A, B) ->
+    C = A+B,
+    if
+        (C > ?prime) ->
+            C - ?prime;
+        true -> C
+    end.
+empty(A, B) ->
+    if
+        (A > B) ->
+            A;
+        true -> B
+    end.
+    
+
+%add2(A, B) -> ?add(A, B).
+add3(A, B) ->
+    C = A+B,
+    D = C - ?prime,
+    if
+        (D == abs(D)) -> D;
+        true -> C
+    end.
+            
+    
 
                         
 %-define(sub
@@ -184,11 +227,12 @@ jacob_add({X1, Y1, Z1}, {X2, Y2, Z2}, E) ->
     U2 = ?mul(X2, Z1Z1),
     S1 = ?mul(Y1, ?mul(Z2, Z2Z2)),
     S2 = ?mul(Y2, ?mul(Z1, Z1Z1)),
-    H = ?sub(U2, U1),
+    H = ?sub2(U2, U1),
     HH = ?mul(H, H),
     I = 4*HH,
     J = ?mul(H, I),
-    R = 2 * ?sub(S2, S1),
+    R = 2 * ?sub2(S2, S1),
+    %R = ?mul(2, ?sub(S2, S1)),
     if
         (H == 0) and (R == 0) -> 
             %io:fwrite("same point\n"),
@@ -199,12 +243,22 @@ jacob_add({X1, Y1, Z1}, {X2, Y2, Z2}, E) ->
             V = ?mul(U1, I),
             RR = ?mul(R, R),
             V2 = 2*V,
-            X3 = ?sub(RR, ?add(J, V2)),
-            Y3 = ?sub(?mul(R, ?sub(V, X3)),
-                      2*?mul(S1, J)),
-            Z1pZ2 = ?add(Z1, Z2),
-            Z3 = ?mul(H, ?sub(?mul(Z1pZ2, Z1pZ2),
-                              ?add(Z1Z1, Z2Z2))),
+            JV2 = ?add(J, V2),
+            X3 = ?sub2(RR, JV2),
+            RVX3 = ?mul(R, ?sub2(V, X3)),
+            %S1J = ?mul(2, ?mul(S1, J)),
+            S1J = ?mul(S1*2, J),
+            Y3 = ?sub2(RVX3, S1J),
+            Z1pZ2a = Z1 + Z2,
+            Z1pZ2 = ?add_mod(Z1pZ2a),
+            %Z1pZ2 = ?add(Z1, Z2),
+            Z1Z1Z2Z2a = Z1Z1 + Z2Z2,
+            Z1Z1Z2Z2 = ?add_mod(Z1Z1Z2Z2a),
+            %Z1Z1Z2Z2 = ?add(Z1Z1, Z2Z2),
+            ZZmul = ?mul(Z1pZ2, Z1pZ2),
+            %Z3 = ?mul(H, ?sub(?mul(Z1pZ2, Z1pZ2),
+            %                  ?add(Z1Z1, Z2Z2))),
+            Z3 = ?mul(H, ?sub2(ZZmul, Z1Z1Z2Z2)),
             {X3, Y3, Z3}
     end.
 jacob_double({X1, Y1, Z1}, _Curve) ->
@@ -213,17 +267,27 @@ jacob_double({X1, Y1, Z1}, _Curve) ->
     A = ?mul(X1, X1),
     B = ?mul(Y1, Y1),
     C = ?mul(B, B),
-    D1 = ?add(X1, B),
+    X1B = X1 + B,
+    D1 = ?add_mod(X1B),
+    %D1 = ?add(X1, B),
     D2 = ?mul(D1, D1),
-    D3 = ?sub(D2, ?add(A, C)),
-    D = 2 *D3,
+    AC = A + C,
+    ACb = ?add_mod(AC),
+    D3 = ?sub2(D2, ACb),
+    %D3 = ?sub(D2, ?add(A, C)),
+    D = 2 * D3,
     E = 3 * A,
     F = ?mul(E, E),
-    X3 = ?sub(F, ?mul(2, D)),
+    %X3 = ?sub(F, ?mul(2, D)),
+    X3 = ?sub(F, 2*D),
     C8 = 8*C,
+    %C8 = ?mul(8, C),
+    %Y3 = ?sub(?mul(E, ?sub(D, X3)),
     Y3 = ?sub(?mul(E, ?sub(D, X3)),
                 C8),
-    Z3 = ?mul(2, ?mul(Y1, Z1)),
+                %C * 8),
+    %Z3 = ?mul(2, ?mul(Y1, Z1)),
+    Z3 = ?mul(Y1*2, Z1),
     {X3, Y3, Z3}.
     
 %addition(infinity, P2, _) -> P2;
@@ -597,8 +661,49 @@ range(A, B) when A < B ->
 
 mul_test(_, _, 0) -> ok;
 mul_test(A, B, N) -> 
-    C = (A * B) div ?order,
+    C = ?mul(A, B),
     mul_test(A, C, N-1).
+mul_test2(_, _, 0) -> ok;
+mul_test2(A, B, N) -> 
+    C = 3*B,
+    mul_test2(A, B, N-1).
+add5_test(_, _, 0) -> ok;
+add5_test(A, B, N) -> 
+    C = A+B,
+    D = ?add_mod(C),
+    add5_test(A, D, N-1).
+    
+add4_test(_, _, 0) -> ok;
+add4_test(A, B, N) -> 
+    D = ?neg(B),
+    C = ?sub2(A, D),
+    %C = ?add2(A, B),
+    add4_test(A, C, N-1).
+add3_test(_, _, 0) -> ok;
+add3_test(A, B, N) -> 
+    C = add2(A, B),
+    add3_test(A, C, N-1).
+add2_test(_, _, 0) -> ok;
+add2_test(A, B, N) -> 
+    C = add(A, B),
+    add2_test(A, C, N-1).
+add_test(_, _, 0) -> ok;
+add_test(A, B, N) -> 
+    C = ?add(A, B),
+    add_test(A, C, N-1).
+sub4_test(_, _, 0) -> ok;
+sub4_test(A, B, N) -> 
+    C = ?sub2(B, A),
+    sub4_test(A, C, N-1).
+sub_test(_, _, 0) -> ok;
+sub_test(A, B, N) -> 
+    C = ?sub(B, A),
+    sub_test(A, C, N-1).
+empty_test(_, _, 0) ->  ok;
+empty_test(A, B, N) -> 
+    empty(A, B),
+    empty_test(0, 0, N-1).
+
 
 test(1) ->
     %testing to see if a random number can be used to make a generator of the group.
@@ -838,10 +943,23 @@ test(14) ->
 test(15) ->
     %finite field multiplication test
     <<X:256>> = crypto:strong_rand_bytes(32),
+    %<<X:256>> = <<(-1):256>>,
+    Many = 500000,
     T1 = erlang:timestamp(),
-    mul_test(X, X, 25500),
+    %mul_test(X, X, Many),%0.51
+    mul_test2(X, X, Many),%0.08
+    %add_test(X, X, Many),%0.13
+    %add2_test(X, X, Many),%0.11
+    %add3_test(X, X, Many),%0.14
+    %add4_test(X, X, Many),%0.12
+    %add5_test(X, X, Many),%0.095
+    %sub_test(X, X, Many),%0.16
+    %sub2_test(X, X, Many),%0.12
+    %sub3_test(X, X, Many),%0.12
+    %sub4_test(X, X, Many),%0.075
+    %empty_test(X, X, Many),%0.02
     T2 = erlang:timestamp(),
-    timer:now_diff(T2, T1).
+    timer:now_diff(T2, T1)/Many.
     
 
     

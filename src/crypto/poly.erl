@@ -40,11 +40,15 @@ add([], []) -> [];
 %add([], X) -> X;
 add(X, []) -> X;
 add([A|AT], [B|BT]) ->
-    [?add(A, B)|
+    %[?add(A, B)|
+    C = A + B,
+    [?add_mod(C)|
       add(AT, BT)].
 evaluation_add([], []) -> [];
 evaluation_add([A|AT], [B|BT]) ->
-    [?add(A, B)|
+    %[?add(A, B)|
+    C = A+B,
+    [?add_mod(C)|
       evaluation_add(AT, BT)].
 sub(A, B, Base) ->
     %add(A, ?neg(B), Base).
@@ -65,7 +69,9 @@ mul_scalar(S, [A|T], Base)
      mul_scalar(S, T, Base)].
 add_all([P]) -> P;
 add_all([A, B|T]) -> 
-    add_all([?add(A, B)|T]).
+    %add_all([?add(A, B)|T]).
+    C = A+B,
+    add_all([?add_mod(C)|T]).
 mul_c_all([X], _) -> X;
 mul_c_all([A, B|T], Base) ->
     mul_c_all([mul_c(A, B, Base)|T], Base).
@@ -75,7 +81,9 @@ add_c([], B, _) -> B;
 add_c(B, [], _) -> B;
 add_c([A|AT], [B|BT], Base) ->
     %[ff:add(A, B, Base)|
-    [?add(A, B)|
+    %[?add(A, B)|
+    C = A+B,
+    [?add_mod(C)|
       add_c(AT, BT, Base)].
 
 %coefficient form
@@ -141,7 +149,7 @@ div_e_parameters(Domain, DA, M) ->
     Dividends = 
         lists:map(
           fun(D) -> 
-                  X = ?sub(D, M),
+                  X = ?sub2(D, M),
                   case X of
                       0 -> 1;
                       _ -> X
@@ -153,7 +161,7 @@ div_e_parameters(Domain, DA, M) ->
                   if
                       (D == M) -> 1;
                       true ->
-                          ?mul(A, ?sub(M, D))
+                          ?mul(A, ?sub2(M, D))
                   end
           end, Domain, Dividends, DA),
     {IDs, IDs2} = 
@@ -202,7 +210,6 @@ div_e(Ps, Domain, DA, M, DivEAll, DivEAll2) ->
                        tuple_to_list(IDAs)),
                 {As, Cs}
         end,
-    %DA_M = lists:nth(M, DA),%only works if the domain is the positive integers.
     {Poly1, Zeroth0} =
         div_e3(Ps, 1, IDs, IDs2, M, [], 0),
     Zeroth = ?mul(Zeroth0, DA_M),
@@ -256,11 +263,13 @@ base_polynomial_c(Intercept, Base) ->
 
 %coefficient format
 eval_c(X, P, Base) -> 
-    eval_poly2(X, 1, P, Base).
-eval_poly2(_, _, [], _) -> 0;
-eval_poly2(X, XA, [H|T], Base) ->
-    ?add(?mul(H, XA),
-         eval_poly2(X, ?mul(X, XA), T, Base)).
+    eval_poly2(X, 1, P, Base, 0).
+eval_poly2(_, _, [], _, Acc) -> Acc;
+eval_poly2(X, XA, [H|T], Base, Acc) ->
+    C = ?mul(H, XA) + Acc,
+    eval_poly2(X, ?mul(X, XA), T, Base,
+               ?add_mod(C)).
+
 
 %evaluation format
 eval_e(X, [P|_], [X|_], Base) -> P;
@@ -273,7 +282,7 @@ eval_outside_v(Z, Domain, A, DA, Base) ->
     AZ = eval_c(Z, A, Base),
     Divisors = 
         lists:zipwith(
-          fun(D, Dai) -> ?mul(Dai, ?sub(Z, D))
+          fun(D, Dai) -> ?mul(Dai, ?sub2(Z, D))
           end, Domain, DA),
     IDs = ff:batch_inverse(Divisors, Base),
     lists:map(

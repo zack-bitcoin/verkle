@@ -29,11 +29,11 @@ Benchmark.
 
 I loaded 5000 elements into the database. I made a proof of all 5000 of them, and then verified that proof.
 
-Loading took 7.0 seconds.
+Loading took 7.1 seconds.
 
-Making the proof with 1 cpu took 6.5 seconds.
+Making the proof with 1 cpu took 5.8 seconds.
 
-Verifying took 3.4 seconds.
+Verifying took 3.0 seconds.
 
 to run the benchmark test `test_trie:test().`
 time is measured in millionths of a second. 6 decimals.
@@ -42,11 +42,11 @@ time is measured in millionths of a second. 6 decimals.
 
 benchmark of 20k elements. (it takes 5.5 seconds to load a normal merkle tree with this many elements)
 
-loading: 16
+loading: 15.4
 
-making proof: 16
+making proof: 14.9
 
-verifying: 6.9
+verifying: 6.3
 
 40k
 
@@ -54,7 +54,7 @@ loading: 26
 
 proving: 33
 
-verifying: 11
+verifying: 10
 
 80k
 
