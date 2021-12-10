@@ -12,7 +12,7 @@ doit(1) ->
     verkle_app:start(normal, []),
     CFG = trie:cfg(?ID),
     Loc = 1,
-    Times = 40000,
+    Times = 20000,
     %Times = 3,
     %Many = range(1, min(100, Times)),
     %Many = range(1, Times - 2),
@@ -20,8 +20,9 @@ doit(1) ->
     Leaves = 
         lists:map(
           fun(N) -> 
-                  Key0 = Times + 1 - N,
-                  <<Key:256>> = <<(-Key0):256>>,%todo. this shouldnt make it crash.
+                  %Key0 = Times + 1 - N,
+                  %<<Key:256>> = <<(-Key0):256>>,
+                  Key0 = 1234567*N,
                   #leaf{key = Key0, value = <<N:16>>}
           %end, Many),
           end, range(1, Times+1)),

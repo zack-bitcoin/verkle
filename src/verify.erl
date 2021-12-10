@@ -71,6 +71,7 @@ proof(Root0, {Tree, CommitG, Open}, CFG) ->
     %io:fwrite({Tree, Commits0}),
     
     %[root, [{1, p1}, [{0, L1},{1, L2}], [{3, p2},{0,L3}]]]
+    io:fwrite("verify get parameters \n"),
     [Root|Rest] = Tree,
     P = parameters:read(),
     %B = secp256k1:jacob_equal(Root0, Root, ?p#p.e),
@@ -78,24 +79,30 @@ proof(Root0, {Tree, CommitG, Open}, CFG) ->
     if
         not(B) -> false;
         true ->
+            io:fwrite("verify unfold \n"),
             Tree2 = unfold(Root, Rest, [], CFG),
     %[{elliptic, index, hash}, ...]
             %io:fwrite({Rest}),%[[{1, 35}, [{0, l1}],[{1,l5}]], [{2, 10},{0,l2}, {3, 17},{0, l3}]]
             %error is in "l2}, {3,", there should be a list seperation here.
+            io:fwrite("verify split 3 parts \n"),
             {Commits, Zs0, Ys} = 
                 get:split3parts(Tree2, [],[],[]),
+            io:fwrite("veirfy index2domain \n"),
             Zs = get:index2domain(
                    %Zs0, ?p#p.domain),
                    Zs0, P#p.domain),
             %io:fwrite({Zs}),%[1,4,1,3,2,1,2]
             %io:fwrite({Commits}),%[17,10,10,88,35,35,88]
             %should be [17,88,10,88,35,35,88]
+            io:fwrite("verify decode Ys \n"),
             Ys2 = lists:map(
                     fun(<<X:256>>) -> X end,
                     Ys),
+            io:fwrite("verify multiproof \n"),
             B2 = multiproof:verify(
                    {CommitG, Open}, 
                    Commits, Zs, Ys2, P),
+            io:fwrite("verify done \n"),
             if
                 not(B) -> false;
                 not(B2) -> false;

@@ -60,7 +60,7 @@ verifying: 11
 
 loading: 180
 
-proving: 90
+proving: 88
 
 verifying: 23
 

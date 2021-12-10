@@ -466,6 +466,7 @@ bucketify([], _Buckets, BucketsETS, [], E,
                   end
           end, range(1, ManyBuckets)),
     T2 = lists:reverse(T),
+    %io:fwrite("bucketify part 2 \n"),
     bucketify2(tl(T2), hd(T2), hd(T2), E);
 bucketify([0|T], _Buckets, BucketsETS, [_|Gs], E, 
           ManyBuckets) ->
@@ -515,13 +516,13 @@ simple_exponent([R|RT], [G|GT], E, Acc) ->
     A2 = jacob_add(Acc, jacob_mul(G, R, E), E),
     simple_exponent(RT, GT, E, A2).
 multi_exponent(Rs0, Gs0, E) ->
-    %output T.
-    %T = R1*G1 + R2*G2 + ...
-    Base = field_prime(E),
+    %Result = R1*G1 + R2*G2 + ...
     {Rs1, Gs} = 
         remove_zero_terms(Rs0, Gs0, [], []),
     if
-        length(Rs1) < 17 ->
+        %length(Rs1) < 17 ->
+        %length(Rs1) < 6 ->
+        length(Rs1) < 2 ->
             simple_exponent(
               Rs1, Gs, E, jacob_zero());
         true ->
@@ -531,9 +532,9 @@ multi_exponent(Rs0, Gs0, E) ->
     %io:fwrite(" "),
     %io:fwrite(integer_to_list(length(Rs0))),
     %io:fwrite("\n"),
-            Rs = lists:map(fun(X) -> mod(X, Base) end,
-                           Rs1),
-            multi_exponent2(Rs, Gs, E)
+    %Rs = lists:map(fun(X) -> mod(X, Base) end,
+    %               Rs1),
+            multi_exponent2(Rs1, Gs, E)
     end.
 multi_exponent2([], [], _E) ->
     jacob_zero();
@@ -542,13 +543,13 @@ multi_exponent2(Rs, Gs, E) ->
     %C1 = min(C0, 10),%more than 10 gets slow.
     C1 = min(C0, 16),%more than 10 gets slow.
     C = max(1, C1),
-    if
-        (C1 > 9) ->
-            io:fwrite("C is "),
-            io:fwrite(integer_to_list(C)),
-            io:fwrite("\n");
-        true -> ok
-    end,
+%    if
+%        (C1 > 9) ->
+%            io:fwrite("C is "),
+%            io:fwrite(integer_to_list(C)),
+%            io:fwrite("\n");
+%        true -> ok
+%    end,
     F = det_pow(2, C),
     %write each integer in R in binary. partition the binaries into chunks of C bits.
     B = 256,
@@ -563,11 +564,11 @@ multi_exponent2(Rs, Gs, E) ->
     Ts = matrix_diagonal_flip(R_chunks),
     %Buckets = list_to_tuple(
     %            many(jacob_zero(), F)),
-    if
-        (C1 > 9) ->
-            io:fwrite("start bucketify \n");
-        true -> ok
-    end,
+%    if
+%        (C1 > 9) ->
+%            io:fwrite("start bucketify \n");
+%        true -> ok
+%    end,
     Ss = lists:map(
            fun(X) -> 
                    BucketsETS = ets:new(buckets, [set]),
@@ -575,11 +576,11 @@ multi_exponent2(Rs, Gs, E) ->
                    ets:delete(BucketsETS),
                    Result
            end, Ts),
-    if
-        (C1 > 9) ->
-            io:fwrite("end bucketify \n");
-        true -> ok
-    end,
+%    if
+%        (C1 > 9) ->
+%            io:fwrite("end bucketify \n");
+%        true -> ok
+%    end,
     Result = me3(Ss, jacob_zero(), F, E),
     Result.
 me3([H], A, _, E) -> 

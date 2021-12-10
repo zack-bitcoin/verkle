@@ -149,48 +149,44 @@ prove(As, %committed data
 
     %todo. instead of accepting the entire list of As, we should receive a tree structure that allows us to stream the As. that way the memory requirement doesn't get so big.
 
-    io:fwrite("multiprove 0\n"),
+    io:fwrite("multiprove Ys from As \n"),
     Base = secp256k1:order(E),
     Ys = lists:zipwith(
            fun(F, Z) ->
                    poly:eval_e(Z, F, Domain, Base)
            end, As, Zs),%this should be streamed with calculating the As.
-    io:fwrite("multiprove 1\n"),
+    io:fwrite("multiprove calc random R\n"),
     AffineCommits = 
         secp256k1:to_affine_batch(
           Commits_e),
-    io:fwrite("multiprove 2\n"),
     R = calc_R(AffineCommits, Zs, Ys, <<>>),
     %io:fwrite("multiprove 3\n"),
     %spends lots of time here.
-    io:fwrite("multiprove 3\n"),
-    %freezes here.
+    io:fwrite("multiprove calc G\n"),
+    %this part is slowing down with big batches. todo.
     %G2 = calc_G_e(R, As, Ys, Zs, Domain, DA, Base),
-    G2 = calc_G_e(R, As, Ys, Zs, Domain, DA),%this needs to be streamed with the creation of the As, so we collapse the memory down.
+    G2 = calc_G_e(R, As, Ys, Zs, Domain, DA),
     %io:fwrite("multiprove 4\n"),
-    io:fwrite("multiprove 4\n"),
+    io:fwrite("multiprove commit to G\n"),
     CommitG_e = ipa:commit(G2, Gs, E),
-    io:fwrite("multiprove 5\n"),
+    io:fwrite("multiprove calc random T\n"),
     T = calc_T(secp256k1:to_affine(CommitG_e), R),
     %io:fwrite("multiprove 6\n"),
     %spend very little time here.
-    io:fwrite("multiprove 6\n"),
-    He = calc_H(R, 1, T, As, Zs, Base),%this needs to be streamed with the creation of As, so we collaps the memory requirement.
-
-
+    io:fwrite("multiprove calc polynomial h\n"),
+    He = calc_H(R, 1, T, As, Zs, Base),
     %io:fwrite("multiprove 7\n"),
-    io:fwrite("multiprove 7\n"),
+    io:fwrite("multiprove calc commit to G-E\n"),
     G_sub_E_e = poly:sub(G2, He, Base),
-    io:fwrite("multiprove 8\n"),
+    io:fwrite("multiprove evaluate G-E outside the domain\n"),
     EV = poly:eval_outside_v(T, Domain, PA, DA, Base),
     %io:fwrite("multiprove 9\n"),
-    io:fwrite("multiprove 9\n"),
+    io:fwrite("multiprove create ipa opening to G-E\n"),
     %spend a little time here.
     IPA = ipa:make_ipa(G_sub_E_e, EV, 
                        Gs, Hs, Q, E),
-    io:fwrite("multiprove 10\n"),
+    io:fwrite("multiprove finished\n"),
     {CommitG_e, 
-     %Commits_e, %this was an input. doesn't make sense to have it as an output too. todo.
      IPA}.
 verify({CommitG, Open_G_E}, Commits, Zs, Ys,
        #p{g = Gs, h = Hs, q = Q, e = E,
@@ -202,6 +198,7 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys,
 %                      [CommitG0|Commits0] ++ Cs0)),
    
 %    Open_G_E = setelement(3, Open_G_E0, Cs),
+    io:fwrite("multiproof verify calc r\n"),
     T1 = erlang:timestamp(),
     Base = secp256k1:order(E),
     [ACG|AffineCommits] = 
@@ -209,26 +206,37 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys,
           [CommitG|Commits]),
     T2 = erlang:timestamp(),
     R = calc_R(AffineCommits, Zs, Ys, <<>>),
+    io:fwrite("multiproof verify calc t\n"),
     T3 = erlang:timestamp(),
     T = calc_T(ACG, R),
+    io:fwrite("multiproof verify eval outside v\n"),
     EV = poly:eval_outside_v(
            T, Domain, PA, DA, Base),
     T4 = erlang:timestamp(),
+    io:fwrite("multiproof verify ipa\n"),
     true = ipa:verify_ipa(
              Open_G_E, EV, Gs, Hs, Q, E),
     T5 = erlang:timestamp(),
+    io:fwrite("multiproof verify g2\n"),
     {RIDs, G2} = calc_G2_2(R, T, Ys, Zs, Base),
     T6 = erlang:timestamp(),
     %sum_i  Ci*(R^i/(T-Zi))
-    CommitNegE = secp256k1:multi_exponent(lists:map(fun(X) -> ff:neg(X, Base) end, RIDs), Commits, E), %this one got slower. todo
+    io:fwrite("multiproof verify commit neg e\n"),
+    %CommitNegE = secp256k1:multi_exponent(lists:map(fun(X) -> ff:neg(X, Base) end, RIDs), Commits, E), %this one got slower. todo
+    CommitE = secp256k1:multi_exponent(lists:map(fun(X) -> X end, RIDs), Commits, E), %this is the slowest step.
+    CommitNegE = secp256k1:jacob_negate(CommitE, E),
+    %true = secp256k1:jacob_equal(CommitNegE, CommitNegE2, E),
     T7 = erlang:timestamp(),
     
     %CommitG_sub_E = ipa:add(CommitG, CommitNegE, E),
+    io:fwrite("multiproof verify commit G-E\n"),
     CommitG_sub_E = secp256k1:jacob_add(CommitG, CommitNegE, E),
     T8 = erlang:timestamp(),
+    io:fwrite("multiproof verify ipa eq\n"),
     true = ipa:eq(CommitG_sub_E, element(1, Open_G_E), E),
     T9 = erlang:timestamp(),
     NegE = timer:now_diff(T7, T6),
+    io:fwrite("multiproof verify done\n"),
     %io:fwrite(integer_to_list(timer:now_diff(T4, T3))),
     %io:fwrite("\n"),
     %io:fwrite("proofs per second: "),

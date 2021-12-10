@@ -67,46 +67,47 @@ batch(Keys, Root, CFG) ->
                  hashes = binary2int2(
                             tuple_to_list(
                               RootStem0#stem.hashes))},
-    io:fwrite("get 0\n"),
-    Paths = keys2paths(Keys, CFG),
+    io:fwrite("get keys2paths\n"),
+    Paths0 = keys2paths(Keys, CFG),
+    Paths = lists:sort(fun(A, B) -> A < B end, 
+                       Paths0),
     %Paths example: [[1,4,3,2],[1,1,1,2],[1,1,1,1],[2,1,1,1]]
-    io:fwrite("get 0.5\n"),
+    io:fwrite("get paths2tree\n"),
     Tree = paths2tree(Paths),
     %Tree example [[1|[[4,3,2], [1,1|[[1], [2]]]]], [2,1,1,1]],
     %list of lists means or. list of integers means and.
-    io:fwrite("get 1\n"),
-    %a little slow.
+    io:fwrite("get lookup stems and leaves\n"),
+    %slow. todo
     %[[1,0,0,0],[2,0,0,0]...
     Tree2 = points_values(Tree, RootStem, CFG),
     %io:fwrite(Tree2),
     %obtains the stems and leaves by reading from the database.
     %[stem, {I, stem}, [{I, leaf}], [{I, stem}, {I, leaf}], [{I, stem}, [{I, leaf}], [{I, leaf}]]]
     %list of things is AND, list of lists is OR.
-    io:fwrite("get 2\n"),
+    io:fwrite("get remove duplicate elliptic points\n"),
     Tree3 = withdraw_points(Tree2),%removing duplicate elliptic points by shifting all the points one step towards the root.
     %looks the same, just changes which elliptic point is written where.
-    io:fwrite("get 3\n"),
+    io:fwrite("get remove hashes\n"),
     Tree4 = remove_hashes(Tree3),%the hashes in each stem aren't needed to verify the verkle proof, so they are removed.
     %[El, {I, El}, [{I, leaf}], [{I, El}, {I, El}], [{I, El}, [{I, El}], [{I, El}]]]
 
-    io:fwrite("get 4\n"),
+    io:fwrite("get flatten\n"),
 
     Lookups = flatten(Tree2, []),
-    io:fwrite("get 5\n"),
+    io:fwrite("get split3\n"),
     {Zs0, Commits, As0} = split3parts(Lookups, [], [], []),
-    io:fwrite("get 6\n"),
+    io:fwrite("get lookup parameters\n"),
     P = parameters:read(),
-    io:fwrite("get 7\n"),
+    io:fwrite("get index to domain conversion\n"),
     Zs = index2domain2(
            Zs0, list_to_tuple(P#p.domain)),
-    io:fwrite("get 8\n"),
     As = As0,
 
-    io:fwrite("get 9\n"),
+    io:fwrite("get make multiproof\n"),
     %the slow step.
     {CommitG, Opening} = 
         multiproof:prove(As, Zs, Commits, P),%this is the slow step.
-    io:fwrite("get 10\n"),
+    io:fwrite("get done\n"),
 
     %sanity checks
     %Tree5 = verify:unfold(Root4, Tl4, [], CFG),
@@ -207,7 +208,8 @@ split3parts([{X, Y, Z}|T], A, B, C) ->
 
 index2domain2([], _Domain) -> [];
 index2domain2([H|T], Domain) ->
-    [element(H+1, Domain)|
+    [%element(H+1, Domain)|
+     H+1|%for domain that is the integers.
      index2domain2(T, Domain)].
 
 index2domain(Zs, Domain) ->
@@ -219,10 +221,7 @@ setup_domain_dict(I, [A|T], D) ->
     setup_domain_dict(I+1, T, D2).
     
 paths2tree([Path]) -> Path;
-paths2tree(Paths0) ->
-    Paths = lists:sort(
-              fun([A|_], [B|_]) -> A < B end, 
-              Paths0),
+paths2tree(Paths) ->
     {Same, Others} = starts_same_split(Paths),
     H = hd(hd(Same)),
     Same2 = lists:map(fun(S) -> tl(S) end,
