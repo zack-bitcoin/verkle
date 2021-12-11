@@ -40,19 +40,16 @@ add([], []) -> [];
 %add([], X) -> X;
 add(X, []) -> X;
 add([A|AT], [B|BT]) ->
-    %[?add(A, B)|
     C = A + B,
     [?add_mod(C)|
       add(AT, BT)].
 evaluation_add([], []) -> [];
 evaluation_add([A|AT], [B|BT]) ->
-    %[?add(A, B)|
-    C = A+B,
+    C = A + B,
     [?add_mod(C)|
       evaluation_add(AT, BT)].
 sub(A, B, Base) ->
-    %add(A, ?neg(B), Base).
-    %?add(A, ?neg(B)).
+    %A and B are polynomials.
     add(A, neg(B, Base)).
 neg([], _Base) -> [];
 neg([H|T], Base) -> 

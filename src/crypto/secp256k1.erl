@@ -514,11 +514,8 @@ matrix_diagonal_flip(M) ->
     Tls = lists:map(fun(X) -> tl(X) end, M),
     [Col|matrix_diagonal_flip(Tls)].
 
-bucketify([], _Buckets, BucketsETS, [], E, 
+bucketify([], BucketsETS, [], E, 
           ManyBuckets) -> 
-    %for each bucket, sum up the points inside. [S1, S2, S3, ...
-    %T_i = S1 + 2*S2 + 3*S3 ... (this is another multi-exponent. a simpler one this time.)
-    %compute starting at the end. S7 + (S7 + S6) + (S7 + S6 + S5) ...
     %io:fwrite(Buckets),
     %T = tuple_to_list(Buckets),
     T = lists:map(
@@ -532,11 +529,11 @@ bucketify([], _Buckets, BucketsETS, [], E,
     T2 = lists:reverse(T),
     %io:fwrite("bucketify part 2 \n"),
     bucketify2(tl(T2), hd(T2), hd(T2), E);
-bucketify([0|T], _Buckets, BucketsETS, [_|Gs], E, 
+bucketify([0|T], BucketsETS, [_|Gs], E, 
           ManyBuckets) ->
-    bucketify(T, 0, BucketsETS, Gs, E, 
+    bucketify(T, BucketsETS, Gs, E, 
               ManyBuckets);
-bucketify([BucketNumber|T], _Buckets, BucketsETS, 
+bucketify([BucketNumber|T], BucketsETS, 
           [G|Gs], E, ManyBuckets) ->
     %to calculate each T_i.
     %6*G1 + 2*G2 + 5*G3 ... 6th, then 2nd, then 5th buckets.
@@ -549,13 +546,17 @@ bucketify([BucketNumber|T], _Buckets, BucketsETS,
             [] -> jacob_zero();
             [{_, X}] -> X
         end,
-    Bucket2 = jacob_add(G, Bucket, E),%todo, instead of adding here, we should build up a list. so we can do efficient addition later with simplified format numbers. this can potentially make it twice as fast.
+    Bucket2 = jacob_add(G, Bucket, E),%todo, instead of adding here, we should build up a list. so we can do efficient addition later with simplified format numbers. this can potentially make it twice as fast. This was tried, and it made it slower. but it still seems possible.
             
     ets:insert(BucketsETS, {BucketNumber, Bucket2}),
-    bucketify(T, 0, BucketsETS, Gs, E, 
+    bucketify(T, BucketsETS, Gs, E, 
               ManyBuckets).
 bucketify2([], _L, T, _E) -> T;
 bucketify2([S|R], L, T, E) -> 
+    %for each bucket, sum up the points inside. [S1, S2, S3, ...
+    %T_i = S1 + 2*S2 + 3*S3 ... (this is another multi-exponent. a simpler one this time.)
+    %compute starting at the end. S7 + (S7 + S6) + (S7 + S6 + S5) ...
+    %todo. maybe simplify, multiply, simplify and add? something like that should be faster if there are lots of buckets.
     L2 = jacob_add(S, L, E),
     T2 = jacob_add(L2, T, E),
     bucketify2(R, L2, T2, E).
@@ -568,18 +569,14 @@ remove_zero_terms(R, G, A, B) ->
     remove_zero_terms(
       tl(R), tl(G), [hd(R)|A], [hd(G)|B]).
 
-
-%multi_exponent([Rs], [Gs], E) ->
-%    jacob_mul(Gs, Rs, E);
-%multi_exponent([Rs0, Rs1], [Gs0, Gs1], E) ->
-%    jacob_add(jacob_mul(Gs0, Rs0, E),
-%              jacob_mul(Gs1, Rs1, E),
-%              E);
 simple_exponent([], [], _, A) -> A;
 simple_exponent([R|RT], [G|GT], E, Acc) -> 
     A2 = jacob_add(Acc, jacob_mul(G, R, E), E),
     simple_exponent(RT, GT, E, A2).
 multi_exponent(Rs0, Gs0, E) ->
+    %it looks more like multiplication for us, because that is a nice syntax for elliptic point arithmetic.
+    %G is elliptic base points.
+    %R are 256-bit integers.
     %Result = R1*G1 + R2*G2 + ...
     {Rs1, Gs} = 
         remove_zero_terms(Rs0, Gs0, [], []),
@@ -590,31 +587,15 @@ multi_exponent(Rs0, Gs0, E) ->
             simple_exponent(
               Rs1, Gs, E, jacob_zero());
         true ->
-
-    %io:fwrite("multi exponent length "),
-    %io:fwrite(integer_to_list(length(Rs1))),
-    %io:fwrite(" "),
-    %io:fwrite(integer_to_list(length(Rs0))),
-    %io:fwrite("\n"),
-    %Rs = lists:map(fun(X) -> mod(X, Base) end,
-    %               Rs1),
             multi_exponent2(Rs1, Gs, E)
     end.
 multi_exponent2([], [], _E) ->
     jacob_zero();
 multi_exponent2(Rs, Gs, E) ->
     C0 = floor(math:log(length(Rs))/math:log(2))-2,
-    %C1 = min(C0, 10),%more than 10 gets slow.
-    C1 = min(C0, 16),%more than 10 gets slow.
+    C1 = min(C0, 16),
     C = max(1, C1),
-%    if
-%        (C1 > 9) ->
-%            io:fwrite("C is "),
-%            io:fwrite(integer_to_list(C)),
-%            io:fwrite("\n");
-%        true -> ok
-%    end,
-    F = det_pow(2, C),
+    F = det_pow(2, C),%this is how many buckets we have, and is the constant factor between elements in a bucket.
     %write each integer in R in binary. partition the binaries into chunks of C bits.
     B = 256,
     R_chunks = 
@@ -623,34 +604,27 @@ multi_exponent2(Rs, Gs, E) ->
                           R, F, 1+(B div C)),
                     lists:reverse(L)
           end, Rs),
-    %this break the problem up into 256/C instances of multi-exponentiation.
+    %Now the problem is broken into 256/C instances of multi-exponentiation.
     %each multi-exponentiation has length(Gs) parts. What is different is that instead of the Rs having 256 bits, they only have C bits. each multi-exponentiation makes [T1, T2, T3...]
+    %Each T_i is a multi-exponent for a single base point G from Gs.
     Ts = matrix_diagonal_flip(R_chunks),
-    %Buckets = list_to_tuple(
-    %            many(jacob_zero(), F)),
-%    if
-%        (C1 > 9) ->
-%            io:fwrite("start bucketify \n");
-%        true -> ok
-%    end,
+    %flip the matrix, so now each row has lots of different base points G, but
+    %Each row is an instance of a multi-exponential problem, with C-bit exponents, and the same base value. We will bucketify each of these rows.
     Ss = lists:map(
            fun(X) -> 
-                   BucketsETS = ets:new(buckets, [set]),
-                   Result = bucketify(X, 0, BucketsETS, Gs, E, F),
+                   BucketsETS = ets:new(buckets, [set]),%this ETS database has constant access time reading and editing. It is indexed by an integer, from 1 to F.
+                   Result = bucketify(X, BucketsETS, Gs, E, F),
                    ets:delete(BucketsETS),
                    Result
            end, Ts),
-%    if
-%        (C1 > 9) ->
-%            io:fwrite("end bucketify \n");
-%        true -> ok
-%    end,
-    Result = me3(Ss, jacob_zero(), F, E),
-    Result.
+    %to combine the Ss into the final sum, F is the factor seperating each S.
+    % Ss are elliptic points, F is the integer 2^C.
+    % S_0*F^0 + S_1*F^1 + S_2*F^2 + ...
+    me3(Ss, jacob_zero(), F, E).
 me3([H], A, _, E) -> 
     jacob_add(H, A, E);
 me3([H|T], A, F, E) -> 
-    %maybe do all the multiplications first, then simplify, then do additions.
+    %maybe do all the multiplications first, then simplify, then do additions. todo
     X = jacob_add(H, A, E),
     X2 = jacob_mul(X, F, E),
     me3(T, X2, F, E).

@@ -25,12 +25,10 @@ dot([A|AT], [B|BT], Acc) ->
     %dot product of two scalar vectors.
     Acc2 = ?mul(A, B),
     Acc3 = Acc + Acc2,
-    %dot(AT, BT, ?add(Acc, Acc2)).
     dot(AT, BT, ?add_mod(Acc3)).
 fv_add(As, Bs) ->
     %adding 2 scalar vectors by adding each component.
     lists:zipwith(
-      %fun(A, B) -> ?add(A, B) end,
       fun(A, B) -> C = A+B, ?add_mod(C) end,
       As, Bs).
 fv_mul(S, Bs) ->

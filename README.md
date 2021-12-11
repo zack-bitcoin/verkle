@@ -42,19 +42,19 @@ time is measured in millionths of a second. 6 decimals.
 
 benchmark of 20k elements. (it takes 5.5 seconds to load a normal merkle tree with this many elements)
 
-loading: 15.4
+loading: 16
 
-making proof: 14.9
+making proof: 16
 
-verifying: 6.3
+verifying: 6.7
 
 40k
 
 loading: 26
 
-proving: 33
+proving: 31
 
-verifying: 10
+verifying: 10.5
 
 80k
 

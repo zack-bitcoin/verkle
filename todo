@@ -1,5 +1,3 @@
-we are in the middle of an exploration of faster finite field operations. found a much faster subtraction. in secp256k1.
-
 
 for storage, we are computing multi-exponents for the same Gs every time. so we can pre-compute multiples of each G to make this faster. pre-computing the first part of the bucket algorithm.
 
