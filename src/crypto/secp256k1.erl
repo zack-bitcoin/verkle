@@ -3,14 +3,17 @@
          multiplication/3, gen_point/1,
          field_prime/1, order/1,
          on_curve/2,
-         mod/2, 
+         mod/2, det_pow/2,
 
          to_jacob/1, to_affine/1, to_affine_batch/1,
          jacob_mul/3, jacob_add/3, jacob_zero/0,
          jacob_equal/3, jacob_negate/2, jacob_sub/3,
          hash_point/1,
+         
+         chunkify/3,
 
          multi_exponent/3, simplify_Zs_batch/1,
+         me3/4,
 
          compress/1, decompress/1
 ]).
@@ -24,7 +27,9 @@
 -define(prime, 115792089237316195423570985008687907853269984665640564039457584007908834671663).
 -define(prime_over4, 28948022309329048855892746252171976963317496166410141009864396001977208667916).%(?prime + 1) div 4
 -define(sub(A, B), ((A - B + ?prime) rem ?prime)).%assumes B less than ?prime
+%-define(sub(A, B), (((A - B) rem ?prime))).%assumes B less than ?prime
 -define(neg(A), (?prime - A)).%assumes A less than ?prime
+%-define(neg(A), (-A)).
 -define(add(A, B), ((A + B) rem ?prime)).
 %-define(add(A, B), if ((A+B) > ?prime) -> A+B - ?prime; true -> A+B end ).
 -define(mul(A, B), ((A * B) rem ?prime)).
@@ -229,10 +234,11 @@ jacob_add({X1, Y1, Z1}, {X2, Y2, Z2}, E) ->
     S2 = ?mul(Y2, ?mul(Z1, Z1Z1)),
     H = ?sub2(U2, U1),
     HH = ?mul(H, H),
-    I = 4*HH,
+    I = 4 * HH,
     J = ?mul(H, I),
-    R = 2 * ?sub2(S2, S1),
-    %R = ?mul(2, ?sub(S2, S1)),
+    R0 = ?sub2(S2, S1),
+    R1 = R0 + R0,
+    R = ?add_mod(R1),
     if
         (H == 0) and (R == 0) -> 
             %io:fwrite("same point\n"),
@@ -242,23 +248,31 @@ jacob_add({X1, Y1, Z1}, {X2, Y2, Z2}, E) ->
         true ->
             V = ?mul(U1, I),
             RR = ?mul(R, R),
-            V2 = 2*V,
-            JV2 = ?add(J, V2),
+            V2a = V + V,
+            V2 = ?add_mod(V2a),
+            %V2 = 2*V,
+            JV2a = J + V2,
+            JV2 = ?add_mod(JV2a),
+            %JV2 = ?add(J, V2),
             X3 = ?sub2(RR, JV2),
-            RVX3 = ?mul(R, ?sub2(V, X3)),
+            VX3 = ?sub2(V, X3),
+            RVX3 = ?mul(R, VX3),
+            %RVX3 = ?mul(R, ?sub(V, X3)),
             %S1J = ?mul(2, ?mul(S1, J)),
             S1J = ?mul(S1*2, J),
+            %Y3 = ?sub2(RVX3, S1J),
             Y3 = ?sub2(RVX3, S1J),
             Z1pZ2a = Z1 + Z2,
             Z1pZ2 = ?add_mod(Z1pZ2a),
             %Z1pZ2 = ?add(Z1, Z2),
-            Z1Z1Z2Z2a = Z1Z1 + Z2Z2,
-            Z1Z1Z2Z2 = ?add_mod(Z1Z1Z2Z2a),
-            %Z1Z1Z2Z2 = ?add(Z1Z1, Z2Z2),
+            %Z1Z1Z2Z2a = Z1Z1 + Z2Z2,
+            %Z1Z1Z2Z2 = ?add_mod(Z1Z1Z2Z2a),
+            Z1Z1Z2Z2 = ?add(Z1Z1, Z2Z2),
             ZZmul = ?mul(Z1pZ2, Z1pZ2),
+            ZZsub = ?sub2(ZZmul, Z1Z1Z2Z2),
             %Z3 = ?mul(H, ?sub(?mul(Z1pZ2, Z1pZ2),
             %                  ?add(Z1Z1, Z2Z2))),
-            Z3 = ?mul(H, ?sub2(ZZmul, Z1Z1Z2Z2)),
+            Z3 = ?mul(H, ZZsub),
             {X3, Y3, Z3}
     end.
 jacob_double({X1, Y1, Z1}, _Curve) ->
@@ -275,17 +289,24 @@ jacob_double({X1, Y1, Z1}, _Curve) ->
     ACb = ?add_mod(AC),
     D3 = ?sub2(D2, ACb),
     %D3 = ?sub(D2, ?add(A, C)),
-    D = 2 * D3,
-    E = 3 * A,
+    Da = D3 + D3,
+    D = ?add_mod(Da),
+    %D = 2 * D3,
+    E = ?mul(3, A),
     F = ?mul(E, E),
-    %X3 = ?sub(F, ?mul(2, D)),
-    X3 = ?sub(F, 2*D),
-    C8 = 8*C,
-    %C8 = ?mul(8, C),
+    D2a = D + D,
+    D2b = ?add_mod(D2a),
+    X3 = ?sub2(F, D2b),
+    %X3 = ?sub(F, (2*D) rem ?prime),
+    %C8 = (8*C) rem ?prime,
+    C8 = ?mul(8, C),
     %Y3 = ?sub(?mul(E, ?sub(D, X3)),
-    Y3 = ?sub(?mul(E, ?sub(D, X3)),
-                C8),
-                %C * 8),
+    DX3 = ?sub2(D, X3),
+    EDX3 = ?mul(E, DX3),
+    Y3 = ?sub2(EDX3, C8),
+%    Y3 = ?sub(?mul(E, ?sub(D, X3)),
+             %C8),
+%              C * 8),
     %Z3 = ?mul(2, ?mul(Y1, Z1)),
     Z3 = ?mul(Y1*2, Z1),
     {X3, Y3, Z3}.
@@ -531,8 +552,7 @@ bucketify([], BucketsETS, [], E,
     bucketify2(tl(T2), hd(T2), hd(T2), E);
 bucketify([0|T], BucketsETS, [_|Gs], E, 
           ManyBuckets) ->
-    bucketify(T, BucketsETS, Gs, E, 
-              ManyBuckets);
+    bucketify(T, BucketsETS, Gs, E, ManyBuckets);
 bucketify([BucketNumber|T], BucketsETS, 
           [G|Gs], E, ManyBuckets) ->
     %to calculate each T_i.
@@ -604,12 +624,10 @@ multi_exponent2(Rs, Gs, E) ->
                           R, F, 1+(B div C)),
                     lists:reverse(L)
           end, Rs),
-    %Now the problem is broken into 256/C instances of multi-exponentiation.
-    %each multi-exponentiation has length(Gs) parts. What is different is that instead of the Rs having 256 bits, they only have C bits. each multi-exponentiation makes [T1, T2, T3...]
-    %Each T_i is a multi-exponent for a single base point G from Gs.
     Ts = matrix_diagonal_flip(R_chunks),
-    %flip the matrix, so now each row has lots of different base points G, but
-    %Each row is an instance of a multi-exponential problem, with C-bit exponents, and the same base value. We will bucketify each of these rows.
+    %Now the problem has been broken into 256/C instances of multi-exponentiation.
+    %each multi-exponentiation has length(Gs) parts. What is different is that instead of the exponents having 256 bits, they only have C bits. each multi-exponentiation makes [T1, T2, T3...]
+    %Each row is an instance of a multi-exponential problem, with C-bit exponents. We will bucketify each of these rows.
     Ss = lists:map(
            fun(X) -> 
                    BucketsETS = ets:new(buckets, [set]),%this ETS database has constant access time reading and editing. It is indexed by an integer, from 1 to F.
@@ -641,6 +659,10 @@ mul_test2(_, _, 0) -> ok;
 mul_test2(A, B, N) -> 
     C = 3*B,
     mul_test2(A, B, N-1).
+mul_test3(_, _, 0) -> ok;
+mul_test3(A, B, N) -> 
+    C = ?mul(3, B),
+    mul_test3(A, C, N-1).
 add5_test(_, _, 0) -> ok;
 add5_test(A, B, N) -> 
     C = A+B,
@@ -906,13 +928,13 @@ test(14) ->
               Gs, G2s),
     T8 = erlang:timestamp(),
     
-    {{affine_double, timer:now_diff(T7, T6)},
-     {affine_add, timer:now_diff(T8, T7)},
-      {add_simple, timer:now_diff(T2, T1)},%0.006
-     {add_half, timer:now_diff(T4, T3)},%0.01
-     {add_full, timer:now_diff(T3, T2)},%0.014
-     {double_simple, timer:now_diff(T5, T4)},%0.005
-     {double_full, timer:now_diff(T6, T5)}%0.005
+    {{affine_double, timer:now_diff(T7, T6)},%0.039
+     {affine_add, timer:now_diff(T8, T7)},%0.044
+      {add_simple, timer:now_diff(T2, T1)},%0.0046
+     {add_half, timer:now_diff(T4, T3)},%0.010
+     {add_full, timer:now_diff(T3, T2)},%0.013
+    {double_simple, timer:now_diff(T5, T4)},%0.0045
+     {double_full, timer:now_diff(T6, T5)}%0.0044
     };
 test(15) ->
     %finite field multiplication test
@@ -921,19 +943,33 @@ test(15) ->
     Many = 500000,
     T1 = erlang:timestamp(),
     %mul_test(X, X, Many),%0.51
-    mul_test2(X, X, Many),%0.08
+    %mul_test2(X, X, Many),%0.08
+    %mul_test3(X, X, Many),%0.159
     %add_test(X, X, Many),%0.13
-    %add2_test(X, X, Many),%0.11
-    %add3_test(X, X, Many),%0.14
-    %add4_test(X, X, Many),%0.12
-    %add5_test(X, X, Many),%0.095
-    %sub_test(X, X, Many),%0.16
-    %sub2_test(X, X, Many),%0.12
-    %sub3_test(X, X, Many),%0.12
-    %sub4_test(X, X, Many),%0.075
+    add5_test(X, X, Many),%0.09
+    %sub_test(X, X, Many),%0.18
+    %sub4_test(X, X, Many),%0.09
     %empty_test(X, X, Many),%0.02
     T2 = erlang:timestamp(),
     timer:now_diff(T2, T1)/Many.
+
+%in always positive format, we lose 0.08 per normal multiplicaiton.
+%in either sign format, we lose 0.09 per sub, and 0.04 per add.
+
+%jacob add has
+%4 normal multiplications. 0.32
+%3 additions  0.12
+%6 subtractions 0.54
+% 3 normal muls can be converted to adds. saves 0.21
+% all together, positive format is 0.55 faster.
+
+%jacob double has
+%5 normal multiplications. 0.40
+%2 additions  0.08
+%4 subtractions 0.36
+% 3 normal muls can be converted to adds. saves 0.21
+% all together, positive is 0.25 faster.
+%0.00000055 seconds
     
 
     

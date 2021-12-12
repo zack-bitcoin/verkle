@@ -1,5 +1,9 @@
 
+benchmark with 1000 elements is not working.
+
+
 for storage, we are computing multi-exponents for the same Gs every time. so we can pre-compute multiples of each G to make this faster. pre-computing the first part of the bucket algorithm.
+wrote a first draft in store:precomputed_multi_exponents, but it still doesn't work.
 
 
 

@@ -1,6 +1,9 @@
 -module(store).
 -export([store/3, %non-batched store is not needed.
-         batch/3]).
+         batch/3,
+         multi_exponent_parameters/1,
+         test/0
+        ]).
 -include("constants.hrl").
 
 store(Leaf, RP, CFG) ->
@@ -79,9 +82,11 @@ batch(Leaves, RP, stem, Depth, CFG) ->
                            0 -> 0
                        end
                end, Types20),
-    EllDiff = 
-        secp256k1:multi_exponent(
-          Rs, ?p#p.g, ?p#p.e),
+%    EllDiff = 
+%        secp256k1:multi_exponent(
+%          Rs, ?p#p.g, ?p#p.e),
+    EllDiff = precomputed_multi_exponent(Rs),
+%    true = secp256k1:jacob_equal(EllDiff, EllDiff2, ?p#p.e),
     NewRoot = secp256k1:jacob_add(
                 EllDiff, Root, ?p#p.e),
     %[{location, type, #stem{}/#leaf{}}, ...]
@@ -158,3 +163,139 @@ sort_by_path2(L, CFG) ->
               K2 = leaf:path(B, CFG),
               K1 < K2
       end, L).
+multi_exponent_parameters2(_, X, 0) -> [X];
+multi_exponent_parameters2(Base, X, Times) ->
+    [X|multi_exponent_parameters2(
+         Base, 
+         secp256k1:jacob_add(Base, X, ?p#p.e),
+         Times - 1)].
+multi_exponent_parameters(C) ->
+    Gs = ?p#p.g,
+    F = secp256k1:det_pow(2, C),
+    L = lists:map(
+          fun(G) ->
+                  X = multi_exponent_parameters2(
+                        G, secp256k1:jacob_zero(), 
+                        F),
+                  X3 = 
+                      secp256k1:simplify_Zs_batch(
+                        X),
+                  list_to_tuple(X3)
+          end, Gs),
+    list_to_tuple(L).
+chunkify(_, _, 0) -> [];
+chunkify(R, C, Many) -> 
+    [(R rem C)|
+     chunkify(R div C, C, Many-1)].
+matrix_diagonal_flip([[]|_]) -> [];
+matrix_diagonal_flip(M) ->
+    Col = lists:map(fun(X) -> hd(X) end, M),
+    Tls = lists:map(fun(X) -> tl(X) end, M),
+    [Col|matrix_diagonal_flip(Tls)].
+get_domain([], [], D, R) ->
+    {lists:reverse(D),
+     lists:reverse(R)};
+get_domain([D|DT], [0|RT], Ds, Rs) ->
+    get_domain(DT, RT, Ds, Rs);
+get_domain([D|DT], [R|RT], Ds, Rs) ->
+    get_domain(DT, RT, [D|Ds], [R|Rs]).
+
+precomputed_multi_exponent(Rs0) ->
+    %we want to do part of the bucket algorithm, but since the generator points are all known ahead of time, we want to use precalculated values where possible.
+    %in bucketify/5, instead of storing G3 in the 5th bucket, look up G3*5, and just add that to the running sum. 
+    %so we don't need bucketify2. saving 2*2^c additions.
+    %but, bucketify has 1 extra addition per bucket, so 2^c extra additions.
+
+    %normal bucket algorithm costs (256/c)(n + 2^c).
+
+    %c=10, n=2, -> 25.6*(2+1024) -> 26000
+
+
+    %compare bucket efficiency to another strategy:
+
+    %n = many things multi-exponentiating.
+
+    %n=1. double and add.
+    %256 doubles, 128 adds.
+    
+    %n = 2. double and add, with simultanious doubling.
+    %256 doubles, 256 adds.
+
+    %if we remember 2^C multiples of each G.
+    %256 doubles, 128*n/c adds
+
+    %n = 2, C = 10 -> 128*2/8 -> 32.
+    {Domain, Rs} = get_domain(
+                     ?p#p.domain, Rs0, [], []),
+    C = 8,
+    F = secp256k1:det_pow(2, C),
+    B = 256,
+    %bitcoin has 19 leading zeros in hexidecimal format. around 80 bits per block.
+    Lim = ceil(B / C),
+    R_chunks = 
+        lists:map(
+          fun(R) -> L = chunkify(R, F, Lim),
+                    lists:reverse(L),
+                    L
+          end, Rs),
+    Ts = matrix_diagonal_flip(R_chunks),
+    Ss = lists:map(
+           fun(T) ->
+                   %this is the slow part.
+                   pme2(T, Domain, 0, 
+                        secp256k1:jacob_zero())
+           end, Ts),
+    Result = secp256k1:me3(lists:reverse(Ss), 
+                  secp256k1:jacob_zero(), 
+                           F, ?p#p.e),
+    Result.
+                      
+    %Now the problem has been broken into 256/C instances of multi-exponentiation.
+    %each multi-exponentiation has length(Gs) parts. What is different is that instead of the exponents having 256 bits, they only have C bits. each multi-exponentiation makes [T1, T2, T3...]
+    %Each row is an instance of a multi-exponential problem, with C-bit exponents. We will use the precalculated parameters for this.
+%io:fwrite(Ts),
+
+    %    secp256k1:multi_exponent(
+    %      Rs, ?p#p.g, ?p#p.e),
+%    lists:zipwith(fun(D, R) ->
+%                      pme2(D, R)
+%              end, ?p#p.domain, Rs),
+    %then sum up the results.
+%    ok.
+pme2([], [], _MEP, Acc) -> Acc;
+pme2([0|T], [_|Domain], MEP, Acc) ->
+    pme2(T, Domain, MEP, Acc);
+pme2([Power|T], [Gid|Domain], MEP, Acc) ->
+%    X = element(
+%          Power+1,
+%          element(
+%            Gid, MEP)),
+    X = parameters:multi_exp(Gid, Power+1),
+    Acc2 = secp256k1:jacob_add(
+             X, Acc, ?p#p.e),
+    pme2(T, Domain, MEP, Acc2).
+    
+
+many(_, 0) -> [];
+many(A, N) when N > 0 -> 
+    [A|many(A, N-1)].
+
+test() ->
+    verkle_app:start(normal, []),
+    R1 = [1|many(0, 255)],
+    R2 = [0,1|many(0, 254)],
+    R3 = [2|many(0, 255)],
+    R4 = [0,2|many(0, 254)],
+    R = R4,
+    Old0 = secp256k1:multi_exponent(
+            R, ?p#p.g, ?p#p.e),
+    Old = secp256k1:to_affine(Old0),
+    New = precomputed_multi_exponent(R), 
+    MEP = parameters:multi_exp(),
+    %Saved0 = element(2, element(1, MEP)),
+    Saved0 = element(2, element(2, MEP)),
+    Saved = secp256k1:to_affine(secp256k1:jacob_add(Saved0, Saved0, ?p#p.e)),
+    %Saved1 = element(2, element(2, MEP)),
+    %io:fwrite({Old, New, Saved0}),
+    secp256k1:jacob_equal(Old0, New, ?p#p.e).
+    

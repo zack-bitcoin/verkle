@@ -188,6 +188,7 @@ div_e(Ps, Domain, DA, M, DivEAll, DivEAll2) ->
     {DA_M, IDs, IDs2} = 
         if
             true -> element(M, DivEAll);
+                %parameters:div_e(M);
             true ->
                 %to use this version, uncomment these parameters from calc_G_e.
                 {IAs, IBs, IDAs} = DivEAll2,

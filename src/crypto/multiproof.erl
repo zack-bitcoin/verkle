@@ -69,6 +69,7 @@ calc_G_e(R, As, Ys, Zs, Domain, DA) ->
     %polynomial h from dankrad's paper.
 
     DivEAll = parameters:div_e(),
+    %DivEAll = 0,
     %DivEAll2 = poly:all_div_e_parameters2(),
     DivEAll2 = 0,
     calc_G_e2(1, R, As, Ys, Zs,

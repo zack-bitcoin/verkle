@@ -42,27 +42,27 @@ time is measured in millionths of a second. 6 decimals.
 
 benchmark of 20k elements. (it takes 5.5 seconds to load a normal merkle tree with this many elements)
 
-loading: 16
+loading: 11
 
-making proof: 16
+making proof: 17
 
-verifying: 6.7
+verifying: 6.8
 
 40k
 
-loading: 26
+loading: 19
 
 proving: 31
 
-verifying: 10.5
+verifying: 11.4
 
 80k
 
-loading: 180
+loading: 138
 
-proving: 88
+proving: 86
 
-verifying: 23
+verifying: 22
 
 It is also possible to run the database in RAM instead of the hard drive, but it doesn't seem to make it any faster. The bottleneck is on CPU computation of the cryptography, not on accessing memory.
 
