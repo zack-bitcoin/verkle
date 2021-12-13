@@ -45,7 +45,8 @@ elliptic multiplication is estimated in secp256k1:test(9). speedup in context of
 | Operation | should be | is | how many times slower this is than the ideal |
 |----------|-------------|-------|------|
 | field multiplication | 3*10^-8 | 5.1*10^-7 | 17 |
-| elliptic multiplication for ipa | 4*10^-5 | 2.6*10^-4 | 6.5 |
+| elliptic multiplication | 4*10^-5 | 2.6*10^-3 | 65 |
+| elliptic multiplication fixed base | 5*10^-6 | 2.6*10^-4 | 52 |
 | prover time | 4.22 | 15 | 3.4 |
 | verify proof | 0.572 | 8.0 | 14 |
 | verify updates | 0.766 | 6.4 | 8.4 |

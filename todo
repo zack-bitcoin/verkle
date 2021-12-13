@@ -1,3 +1,7 @@
+for better benchmarking we should count how many finite field operations are done during a calculation.
+
+
+
 we need a plan for exactly which parts should be re-written in c/rust to make it fast.
 
 * for storage. store:pme2 + secp256k1:me3. We want to pass in a list of points, and have it add them all up fast.
