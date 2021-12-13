@@ -1,3 +1,13 @@
+we need a plan for exactly which parts should be re-written in c/rust to make it fast.
+
+* for storage. store:pme2 + secp256k1:me3. We want to pass in a list of points, and have it add them all up fast.
+
+* for proving. multiproof:calc_G_e. it is important not to list the entire As, it has a lot of repetitions. Have a compact non-repeating list of As, and a seperate list of pointers to show which of these corresponds to which Zs0/commit combination. Don't calculate R in C, pass the R as an argument instead of Commits_e. It may make sense to speed up calc_H eventually as well. parameters:div_e can be made shorter if we are willing to do a few extra elliptic multiplications. This will be a good investment once elliptic multiplications are faster.
+
+* for verifying: secp256k1:multi_exponent
+
+
+
 we can make inner product arguments around 2x faster by using the same pre-compute strategy that we use for storage. Store powers of the base point, so we can skip that step of the bucket strategy.
 
 

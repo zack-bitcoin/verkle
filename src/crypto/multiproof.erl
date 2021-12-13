@@ -172,8 +172,7 @@ prove(As, %committed data
     %io:fwrite("multiprove 3\n"),
     %spends lots of time here.
     io:fwrite("multiprove calc G\n"),
-    %this part is slowing down with big batches. todo.
-    %G2 = calc_G_e(R, As, Ys, Zs, Domain, DA, Base),
+    %the slow step.
     G2 = calc_G_e(R, As, Ys, Zs, Domain, DA),
     %io:fwrite("multiprove 4\n"),
     io:fwrite("multiprove commit to G\n"),
@@ -183,6 +182,7 @@ prove(As, %committed data
     %io:fwrite("multiprove 6\n"),
     %spend very little time here.
     io:fwrite("multiprove calc polynomial h\n"),
+    %a little slow.
     He = calc_H(R, 1, T, As, Zs, Base),
     %io:fwrite("multiprove 7\n"),
     io:fwrite("multiprove calc commit to G-E\n"),

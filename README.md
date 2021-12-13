@@ -40,12 +40,12 @@ To test out this 20k example, slightly modify the benchmark so that it uses sequ
 
 finite field multiplication is estimated in secp256k1.erl, test 15.
 
-elliptic multiplication is estimated in secp256k1:test(9).
+elliptic multiplication is estimated in secp256k1:test(9). speedup in context of ipa is measured in ipa:test(4).
 
 | Operation | should be | is | how many times slower this is than the ideal |
 |----------|-------------|-------|------|
 | field multiplication | 3*10^-8 | 5.1*10^-7 | 17 |
-| elliptic multiplication | 4*10^-5 | 0.0026 | 65 |
+| elliptic multiplication for ipa | 4*10^-5 | 2.6*10^-4 | 6.5 |
 | prover time | 4.22 | 15 | 3.4 |
 | verify proof | 0.572 | 8.0 | 14 |
 | verify updates | 0.766 | 6.4 | 8.4 |
@@ -56,11 +56,11 @@ Benchmark.
 
 I loaded 5000 elements into the database. I made a proof of all 5000 of them, and then verified that proof.
 
-Loading took 4.7 seconds.
+Loading took 4.5 seconds.
 
-Making the proof with 1 cpu took 6.2 seconds.
+Making the proof with 1 cpu took 6.0 seconds.
 
-Verifying took 3.2 seconds.
+Verifying took 3.0 seconds.
 
 to run the benchmark `benchmark:doit(1).`
 time is measured in millionths of a second. 6 decimals.

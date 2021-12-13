@@ -288,8 +288,13 @@ test(4) ->
                           store:precomputed_multi_exponent(V, MEP)
               end, range(0, Many)),
     T3 = erlang:timestamp(),
+    lists:map(fun(_) ->
+                       secp256k1:simple_exponent(V, Gs, E, secp256k1:jacob_zero())
+              end, range(0, Many)),
+    T4 = erlang:timestamp(),
     {timer:now_diff(T2, T1)/Many,%0.115
-     timer:now_diff(T3, T2)/Many}.%0.066
+     timer:now_diff(T3, T2)/Many,%0.066
+     timer:now_diff(T4, T3)/Many}.%
     
                      
     

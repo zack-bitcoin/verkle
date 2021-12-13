@@ -191,12 +191,7 @@ multi_exponent_parameters(C) ->
     list_to_tuple(L).
 batch_chunkify2(_Rs, _, 0) -> [];
 batch_chunkify2(Rs, C, Lim) -> 
-    %the slow part.
     {N, Rs2} = batch_chunkify3(Rs, C, [], []),
-    %N = lists:map(fun(<<A:C, R/binary>>) ->
-    %                      A end, Rs),
-    %Rs2 = lists:map(fun(<<_:C, R/binary>>) ->
-    %                        R end, Rs),
     [N|batch_chunkify2(Rs2, C, Lim-1)].
 batch_chunkify3([], C, N, A) -> 
     {lists:reverse(N), lists:reverse(A)};
@@ -246,7 +241,6 @@ precomputed_multi_exponent(Rs0, MEP) ->
 %                    lists:reverse(L),
 %                    L
 %          end, Rs),
-    %Ts = matrix_diagonal_flip(R_chunks),%this is the slow part 
     %Rs2 = lists:map(fun(R) -> <<R:256>> end, Rs),
     %Rs2 = to_binaries(Rs),%almost 0.
     %Ts = lists:reverse(

@@ -15,6 +15,8 @@
          multi_exponent/3, simplify_Zs_batch/1,
          me3/4,
 
+         simple_exponent/4,
+
          compress/1, decompress/1
 ]).
 
@@ -265,9 +267,9 @@ jacob_add({X1, Y1, Z1}, {X2, Y2, Z2}, E) ->
             Z1pZ2a = Z1 + Z2,
             Z1pZ2 = ?add_mod(Z1pZ2a),
             %Z1pZ2 = ?add(Z1, Z2),
-            %Z1Z1Z2Z2a = Z1Z1 + Z2Z2,
-            %Z1Z1Z2Z2 = ?add_mod(Z1Z1Z2Z2a),
-            Z1Z1Z2Z2 = ?add(Z1Z1, Z2Z2),
+            Z1Z1Z2Z2a = Z1Z1 + Z2Z2,
+            Z1Z1Z2Z2 = ?add_mod(Z1Z1Z2Z2a),
+            %Z1Z1Z2Z2 = ?add(Z1Z1, Z2Z2),
             ZZmul = ?mul(Z1pZ2, Z1pZ2),
             ZZsub = ?sub2(ZZmul, Z1Z1Z2Z2),
             %Z3 = ?mul(H, ?sub(?mul(Z1pZ2, Z1pZ2),
@@ -803,8 +805,8 @@ test(9) ->
     D1 = timer:now_diff(T2, T1),
     D2 = timer:now_diff(T3, T2),
     %D3 = timer:now_diff(T4, T3),
-    {{affine, D1/M}, 
-     {jacob, D2/M}%, 
+    {{affine, D1/M},%0.017
+     {jacob, D2/M}%0.0026
      %{endo, D3/M}
     };
 test(10) ->
