@@ -12,20 +12,24 @@ doit(1) ->
     verkle_app:start(normal, []),
     CFG = trie:cfg(?ID),
     Loc = 1,
-    Times = 60000,
+    Times = 80000,
     %Times = 3,
     %Many = range(1, min(100, Times)),
     %Many = range(1, Times - 2),
     %Many = [1,2],
+    io:fwrite("making leaves\n"),
     Leaves = 
         lists:map(
           fun(N) -> 
                   %Key0 = Times + 1 - N,
                   %<<Key:256>> = <<(-Key0):256>>,
-                  Key0 = 1234567*N,
+                  %Key0 = 1234567*N,
+                  <<Key0:256>> = 
+                      crypto:strong_rand_bytes(32),
                   #leaf{key = Key0, value = <<N:16>>}
           %end, Many),
           end, range(1, Times+1)),
+    io:fwrite("made leaves \n"),
     Many = lists:map(fun(#leaf{key = K}) -> K end,
                      Leaves),
     io:fwrite("benchmark for "),
