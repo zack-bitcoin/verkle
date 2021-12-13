@@ -665,6 +665,10 @@ mul_test3(_, _, 0) -> ok;
 mul_test3(A, B, N) -> 
     C = ?mul(3, B),
     mul_test3(A, C, N-1).
+mul_test4(_, _, 0) -> ok;
+mul_test4(A, B, N) -> 
+    C = ?mul(0, B),
+    mul_test4(A, B, N-1).
 add5_test(_, _, 0) -> ok;
 add5_test(A, B, N) -> 
     C = A+B,
@@ -953,8 +957,9 @@ test(15) ->
     %mul_test(X, X, Many),%0.51
     %mul_test2(X, X, Many),%0.08
     %mul_test3(X, X, Many),%0.159
+    mul_test4(X, X, Many),%0.023
     %add_test(X, X, Many),%0.13
-    add5_test(X, X, Many),%0.09
+    %add5_test(X, X, Many),%0.09
     %sub_test(X, X, Many),%0.18
     %sub4_test(X, X, Many),%0.09
     %empty_test(X, X, Many),%0.02

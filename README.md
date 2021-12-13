@@ -33,7 +33,9 @@ https://docs.google.com/spreadsheets/d/1740XUDJ89aSRE-4HBD44brjGake_MRAqC4YF7YcE
 
 Lets look at how this software is falling short of the ideal.
 
-to use this calculator to get an idea of tree proof speed, im plugging in 20 000 branch accesses, 60 000 chunk accesses, 20 000 branches updated, 60 000 chunks updated, and 60 000 chunks newly created.
+to use this calculator to get an idea of tree proof speed, im plugging in 20 000 branch accesses, 60 000 chunk accesses, 20 000 branches updated, 60 000 chunks updated, and 60 000 chunks newly created. and I changed the number of elements to 20 000
+
+
 The calculator gives: prover time, verify proof, verify updates.
 
 To test out this 20k example, slightly modify the benchmark so that it uses sequential instead of random keys for the leaves. then do a benchmark of 20k
@@ -47,9 +49,9 @@ elliptic multiplication is estimated in secp256k1:test(9). speedup in context of
 | field multiplication | 3*10^-8 | 5.1*10^-7 | 17 |
 | elliptic multiplication | 4*10^-5 | 2.6*10^-3 | 65 |
 | elliptic multiplication fixed base | 5*10^-6 | 2.6*10^-4 | 52 |
-| prover time | 4.22 | 15 | 3.4 |
-| verify proof | 0.572 | 8.0 | 14 |
-| verify updates | 0.766 | 6.4 | 8.4 |
+| prover time | 2.86 | 15 | 5.24 |
+| verify proof | 0.265 | 8.0 | 30 |
+| verify updates | 0.545 | 6.4 | 11.7 |
 
 
 Benchmark.
