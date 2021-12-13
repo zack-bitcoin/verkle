@@ -29,11 +29,11 @@ Benchmark.
 
 I loaded 5000 elements into the database. I made a proof of all 5000 of them, and then verified that proof.
 
-Loading took 7.1 seconds.
+Loading took 3.5 seconds, used 4.1 M
 
-Making the proof with 1 cpu took 5.8 seconds.
+Making the proof with 1 cpu took 6.0 seconds.
 
-Verifying took 3.0 seconds.
+Verifying took 3.1 seconds.
 
 to run the benchmark test `test_trie:test().`
 time is measured in millionths of a second. 6 decimals.
@@ -42,27 +42,35 @@ time is measured in millionths of a second. 6 decimals.
 
 benchmark of 20k elements. (it takes 5.5 seconds to load a normal merkle tree with this many elements)
 
-loading: 11
+loading: 8.5
 
-making proof: 17
+making proof: 15
 
-verifying: 6.8
+verifying: 6.3
 
 40k
 
-loading: 19
+loading: 15
 
-proving: 31
+proving: 28
 
-verifying: 11.4
+verifying: 10.2
+
+60k
+
+loading: 23
+
+proving: 55
+
+verifying: 15.8
 
 80k
 
-loading: 138
+loading: 120
 
-proving: 86
+proving: 79
 
-verifying: 22
+verifying: 21.2
 
 It is also possible to run the database in RAM instead of the hard drive, but it doesn't seem to make it any faster. The bottleneck is on CPU computation of the cryptography, not on accessing memory.
 

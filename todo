@@ -1,10 +1,10 @@
+matrix_diagonal_flip is _very_ inefficient. We should change the code so this isn't needed.
+in both store.erl and secp256k1.erl
 
-benchmark with 1000 elements is not working.
 
 
-for storage, we are computing multi-exponents for the same Gs every time. so we can pre-compute multiples of each G to make this faster. pre-computing the first part of the bucket algorithm.
-wrote a first draft in store:precomputed_multi_exponents, but it still doesn't work.
-
+it seems like storage has some inefficiency.
+compare the new store:precompute_multi_exponent speed vs the bucket method from secp256k1. if it only takes 10/16th the executition time, then it is already efficient. if it is faster than that, then there is some inefficiency to take care of.
 
 
 maybe stems should store their data as lists, because in store.erl we only access the data in order.
