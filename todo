@@ -1,21 +1,11 @@
-matrix_diagonal_flip is _very_ inefficient. We should change the code so this isn't needed.
-in both store.erl and secp256k1.erl
-
-
-
-it seems like storage has some inefficiency.
-compare the new store:precompute_multi_exponent speed vs the bucket method from secp256k1. if it only takes 10/16th the executition time, then it is already efficient. if it is faster than that, then there is some inefficiency to take care of.
+we can make inner product arguments around 2x faster by using the same pre-compute strategy that we use for storage. Store powers of the base point, so we can skip that step of the bucket strategy.
 
 
 maybe stems should store their data as lists, because in store.erl we only access the data in order.
+This could potentially make storage about 1 second faster.
+but it looks like it would make it slower to look up data.
 
 there are a couple todo notes in store.erl
-
-we need to find a way to measure which parts of store are slowing us down.
-
-
-it gets slow if we do more than 40k in a batch
-a todo note in get.erl and in multiprove.
 
 
 We need a more secure way to generate the 512 base points.

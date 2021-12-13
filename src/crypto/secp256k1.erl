@@ -709,9 +709,10 @@ test(2) ->
     E = make(),
     G = gen_point(E),
     T1 = erlang:timestamp(),
-    add_times(G, G, E, 500000),
-    T2 = erlang:timestamp(),%23 seconds for 1/2 million.
-    timer:now_diff(T2, T1);
+    Many = 50000,
+    add_times(G, G, E, Many),
+    T2 = erlang:timestamp(),
+    timer:now_diff(T2, T1) / Many;%0.0000476
 test(3) ->
     E = make(),
     G = gen_point(E),
@@ -779,8 +780,10 @@ test(9) ->
     G2 = gen_point(E),
     G = to_jacob(G2),
     Base = field_prime(E),
-    P = ff:inverse(ff:neg(1000000000000000, Base), Base),
-    Many = many(0, 50),
+    %P = ff:inverse(ff:neg(1000000000000000, Base), Base),
+    <<P:256>> = crypto:strong_rand_bytes(32),
+    M = 100,
+    Many = many(0, M),
     T1 = erlang:timestamp(),
     io:fwrite("normal multiplication \n"),
     lists:map(fun(_) ->
@@ -792,15 +795,18 @@ test(9) ->
                       jacob_mul(G, P, E)
               end, Many),
     T3 = erlang:timestamp(),
-    io:fwrite("endo multiplication \n"),
-    lists:map(fun(_) ->
-                      endo_mul(G, P, E)
-              end, Many),
-    T4 = erlang:timestamp(),
+    %io:fwrite("endo multiplication \n"),
+    %lists:map(fun(_) ->
+    %                  endo_mul(G, P, E)
+    %          end, Many),
+    %T4 = erlang:timestamp(),
     D1 = timer:now_diff(T2, T1),
     D2 = timer:now_diff(T3, T2),
-    D3 = timer:now_diff(T4, T3),
-    {D1, D2, D3};
+    %D3 = timer:now_diff(T4, T3),
+    {{affine, D1/M}, 
+     {jacob, D2/M}%, 
+     %{endo, D3/M}
+    };
 test(10) ->
     %multi exponent test
     E = make(),

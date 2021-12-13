@@ -12,7 +12,7 @@ doit(1) ->
     verkle_app:start(normal, []),
     CFG = trie:cfg(?ID),
     Loc = 1,
-    Times = 80000,
+    Times = 20000,
     %Times = 3,
     %Many = range(1, min(100, Times)),
     %Many = range(1, Times - 2),
@@ -26,7 +26,8 @@ doit(1) ->
                   %Key0 = 1234567*N,
                   <<Key0:256>> = 
                       crypto:strong_rand_bytes(32),
-                  #leaf{key = Key0, value = <<N:16>>}
+                  #leaf{key = Key0, value = <<N:16>>}%random version
+                  %#leaf{key = N, value = <<N:16>>}%sequential version
           %end, Many),
           end, range(1, Times+1)),
     io:fwrite("made leaves \n"),

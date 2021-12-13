@@ -24,6 +24,33 @@ To run the software: ```sh start.sh```
 
 Then, to run the benchmark: `benchmark:doit(1).`
 
+Speed comparison.
+===========
+
+Here is a calculator to get an idea for how much it should cost to do different things with the verkle tree and libraries.
+
+https://docs.google.com/spreadsheets/d/1740XUDJ89aSRE-4HBD44brjGake_MRAqC4YF7YcEScE/edit
+
+Lets look at how this software is falling short of the ideal.
+
+to use this calculator to get an idea of tree proof speed, im plugging in 20 000 branch accesses, 60 000 chunk accesses, 20 000 branches updated, 60 000 chunks updated, and 60 000 chunks newly created.
+The calculator gives: prover time, verify proof, verify updates.
+
+To test out this 20k example, slightly modify the benchmark so that it uses sequential instead of random keys for the leaves. then do a benchmark of 20k
+
+finite field multiplication is estimated in secp256k1.erl, test 15.
+
+elliptic multiplication is estimated in secp256k1:test(9).
+
+| Operation | should be | is | how many times slower this is than the ideal |
+|----------|-------------|-------|------|
+| field multiplication | 3*10^-8 | 5.1*10^-7 | 17 |
+| elliptic multiplication | 4*10^-5 | 0.0026 | 65 |
+| prover time | 4.22 | 15 | 3.4 |
+| verify proof | 0.572 | 8.0 | 14 |
+| verify updates | 0.766 | 6.4 | 8.4 |
+
+
 Benchmark.
 ===========
 
@@ -42,9 +69,9 @@ time is measured in millionths of a second. 6 decimals.
 
 benchmark of 20k elements. (it takes 5.5 seconds to load a normal merkle tree with this many elements)
 
-loading: 25
+loading: 25 
 
-making proof: 18
+making proof: 18  
 
 verifying: 7.3
 

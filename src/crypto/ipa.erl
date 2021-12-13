@@ -9,15 +9,13 @@
 
 %uses the secp256k1 library.
 
--define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
+-include("../constants.hrl").
+%-define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
 
--define(sub(A, B), ((A - B + ?order) rem ?order)).%assumes B less than ?order
--define(neg(A), ((?order - A) rem ?order)).%assumes A less than ?order
--define(add(A, B), ((A + B) rem ?order)).
--define(mul(A, B), ((A * B) rem ?order)).
--define(add_mod(C), %assumes C is positive and less than ?prime
-        if (C>= ?order ) -> C - ?order;
-           true -> C end).
+%-define(mul(A, B), ((A * B) rem ?order)).
+%-define(add_mod(C), %assumes C is positive and less than ?prime
+%        if (C>= ?order ) -> C - ?order;
+%           true -> C end).
 
 dot(A, B) -> dot(A, B, 0).
 dot([], [], Acc) -> Acc;
@@ -267,7 +265,35 @@ test(3) ->
     P2 = compress(Proof),
     Proof2 = decompress(P2),%non-identical because jacobian format is not deterministic.
     P2 = compress(Proof2),
-    success.
+    success;
+test(4) ->
+    %speed test.
+    verkle_app:start(normal, []),
+    Gs = ?p#p.g,
+    E = ?p#p.e,
+    Many = 10,
+    V = lists:map(fun(_) ->
+                          <<R:256>> = 
+                              crypto:strong_rand_bytes(32),
+                          R
+                  end, range(0, 256)),
+    256 = length(V),
+    MEP = parameters:multi_exp(),
+    T1 = erlang:timestamp(),
+    lists:map(fun(_) ->
+                          commit(V, Gs, E)
+              end, range(0, Many)),
+    T2 = erlang:timestamp(),
+    lists:map(fun(_) ->
+                          store:precomputed_multi_exponent(V, MEP)
+              end, range(0, Many)),
+    T3 = erlang:timestamp(),
+    {timer:now_diff(T2, T1)/Many,%0.115
+     timer:now_diff(T3, T2)/Many}.%0.066
+    
+                     
+    
+
 
     
     

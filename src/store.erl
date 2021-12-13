@@ -2,7 +2,8 @@
 -export([store/3, %non-batched store is not needed.
          batch/3,
          multi_exponent_parameters/1,
-         test/1
+         test/1,
+         precomputed_multi_exponent/2
         ]).
 -include("constants.hrl").
 
@@ -57,7 +58,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
                         element(I, Pointers),
                         element(I, Types)}
              end, range(1, size(Hashes))),
-    %maybe we can't zip over batch here if batch is returning the entire stem and leaf. because this ends up filling the ram with all the stems and leaves we will be writing. TODO, stream the rest of the function into this zipwith.
+    %maybe we can't zip over batch here if batch is returning the entire stem and leaf. because this ends up filling the ram with all the stems and leaves we will be writing. consider streaming the rest of the function into this zipwith.
     %io:fwrite({HPT1, Leaves2}),
     RHPT = lists:zipwith(
            fun(Leaves3, {H, P, T}) -> 
@@ -69,8 +70,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
                    <<HN:256>> = H,
                    <<HN2:256>> = H2,
                    Sub = ?sub2(HN2, HN),
-                   {Sub, %often times this is calculating 0. we should know it is zero without doing the subtraction. todo 
-                    H2, P2, Type}
+                   {Sub, H2, P2, Type}
            end,
             Leaves2, HPT1),
     {Rs, Hashes2, Pointers2, Types20} = 
@@ -114,7 +114,6 @@ range(X, Y) when (X < Y) ->
 clump_by_path(D, Leaves, CFG) ->
     Paths = lists:map(
               fun(L) -> 
-                      %todo, instead of doing nth here, maybe we should look at the key as an integer and do some modulus and division to get the part we want.
                       <<B:?nindex>> = 
                           lists:nth(
                             D+1, leaf:path(
