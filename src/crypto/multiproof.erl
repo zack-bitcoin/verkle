@@ -231,6 +231,7 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys,
     T6 = erlang:timestamp(),
     %sum_i  Ci*(R^i/(T-Zi))
     io:fwrite("multiproof verify commit neg e\n"),
+    %the slow step.
     CommitE = secp256k1:multi_exponent(lists:map(fun(X) -> X end, RIDs), Commits, E), %this is the slowest step.
     CommitNegE = secp256k1:jacob_negate(CommitE, E),
     %true = secp256k1:jacob_equal(CommitNegE, CommitNegE2, E),

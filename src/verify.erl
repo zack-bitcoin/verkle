@@ -1,5 +1,7 @@
 -module(verify).
--export([proof/3, update_proof/3, update_proofs/2, unfold/4]).
+-export([proof/3%, 
+         %update_proof/3, update_proofs/2, unfold/4
+        ]).
 -include("constants.hrl").
 
 
@@ -26,12 +28,14 @@ update_proofs(X, CFG) ->
     update_proofs(X, CFG, dict:new(), []).
 update_proofs([], _, D, L) ->
     L2 = lists:reverse(L),
-    lists:map(fun(X) ->%do this to every list in the list of lists.
-		      lists:map(fun(Y) ->%update every element of the list
-					merge_find_helper(Y, D)
-
-				end, X)
-	      end, L2);
+    lists:map(
+      fun(X) ->%do this to every list in the list of lists.
+              lists:map(
+                fun(Y) ->%update every element of the list
+                        merge_find_helper(Y, D)
+                            
+                end, X)
+      end, L2);
 update_proofs([{Leaf, Proof}|T], CFG, D, L) ->
     %use D to remember which stems have been updated already.
     LP = leaf:path(Leaf, CFG),

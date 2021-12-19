@@ -294,7 +294,7 @@ test(4) ->
     T4 = erlang:timestamp(),
     {timer:now_diff(T2, T1)/Many,%0.115
      timer:now_diff(T3, T2)/Many,%0.066
-     timer:now_diff(T4, T3)/Many}.%
+     timer:now_diff(T4, T3)/Many}.%0.69
     
                      
     

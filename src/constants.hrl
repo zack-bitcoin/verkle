@@ -7,10 +7,10 @@
 -define(neg(A), (?order - A)).%assumes A less than ?order
 -define(add(A, B), ((A + B) rem ?order)).
 -define(mul(A, B), ((A * B) rem ?order)).
--define(add_mod(C), %assumes C is positive and less than ?prime
+-define(add_mod(C), %assumes C is positive and less than ?order
         if (C>= ?order ) -> C - ?order;
            true -> C end).
--define(sub2(A, B), %assumes A and B are positive and less than ?prime
+-define(sub2(A, B), %assumes A and B are positive and less than ?order
         (if(A>=B) -> (A - B); 
            true -> (A + ?order - B) end)).
 

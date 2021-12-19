@@ -87,6 +87,8 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
 %    EllDiff = 
 %        secp256k1:multi_exponent(
 %          Rs, ?p#p.g, ?p#p.e),
+    %4.71
+    %43% of total. (impossible, because inside it was 70%
     EllDiff = precomputed_multi_exponent(Rs, MEP),
 %    true = secp256k1:jacob_equal(EllDiff, EllDiff2, ?p#p.e),
     NewRoot = secp256k1:jacob_add(
@@ -247,11 +249,16 @@ precomputed_multi_exponent(Rs0, MEP) ->
     %        batch_chunkify2(Rs2, C, Lim)),%8.9
 
     Ts = batch_chunkify(Rs, F, Lim),%  1.8%
-    Ss = lists:map(%  58%
+
+    %4.5
+
+    Ss = lists:map(%  30% of storage
            fun(T) ->
                    pme2(T, Domain, MEP, 
                         secp256k1:jacob_zero())
            end, Ts),
+
+    %40% of storage
     Result = secp256k1:me3(lists:reverse(Ss), 
                   secp256k1:jacob_zero(), 
                            F, ?p#p.e),%  5%

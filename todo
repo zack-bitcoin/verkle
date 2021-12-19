@@ -1,15 +1,35 @@
-for better benchmarking we should count how many finite field operations are done during a calculation.
+working on a jubjub implementation, since it will give us private reading and
 
 
 
 we need a plan for exactly which parts should be re-written in c/rust to make it fast.
 
 * for storage. store:pme2 + secp256k1:me3. We want to pass in a list of points, and have it add them all up fast.
+ - pme2 accepts a matrix as input, it is looking up points from a precompute, and then summing them all. the precompute is powers of the generator points.
+ - me3 is alternatively adding, and then (doubling the accumulated amount 8 times).
 
-* for proving. multiproof:calc_G_e. it is important not to list the entire As, it has a lot of repetitions. Have a compact non-repeating list of As, and a seperate list of pointers to show which of these corresponds to which Zs0/commit combination. Don't calculate R in C, pass the R as an argument instead of Commits_e. It may make sense to speed up calc_H eventually as well. parameters:div_e can be made shorter if we are willing to do a few extra elliptic multiplications. This will be a good investment once elliptic multiplications are faster.
+* for proving. multiproof:calc_G_e. it is important not to list the entire As, it has a lot of repetitions. Have a compact non-repeating list of As, and a seperate list of pointers to show which of these corresponds to which Zs/Y combination. parameters:div_e can be made shorter if we are willing to do a few extra finite field multiplications. This will be a good investment because then the parameters fit into the L1 cache.
+involves a polynomial addition, multiplying the polynomials by scalars, multiplying precompute vectors together.
 
-* for verifying: secp256k1:multi_exponent
+* for verifying: secp256k1:multi_exponent. The bucket method. involves adding up lots of generator points, then doing me3.
+  - we specifically want to implement the calculation of Ss. this is very similar to pme2 from storage, but instead of looking up precomputed powers of generator points, we do that in step bucketify2/4
 
+libraries we need in a fast language:
+
+* finite field over the prime
+  - secp256k1 sub2, add_mod, mul, neg
+
+* elliptic calculator
+  - jacob_add
+  - jacob_double
+
+* finite field over the group order
+  - constants.hrl neg, mul, add_mod, sub2
+
+* group order polynomials
+  - vector addition.
+  - vector multiplied by scalar.
+  - div_e, looking up constants and lots of multiplication.
 
 
 we can make inner product arguments around 2x faster by using the same pre-compute strategy that we use for storage. Store powers of the base point, so we can skip that step of the bucket strategy.

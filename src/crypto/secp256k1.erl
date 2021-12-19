@@ -35,7 +35,7 @@
 -define(add(A, B), ((A + B) rem ?prime)).
 %-define(add(A, B), if ((A+B) > ?prime) -> A+B - ?prime; true -> A+B end ).
 -define(mul(A, B), ((A * B) rem ?prime)).
--define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
+%-define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
 
 -define(add_mod(C), %assumes C is positive and less than ?prime
         if (C>=?prime) -> C - ?prime;
@@ -196,11 +196,14 @@ compress(L = [_|_]) ->
     lists:map(fun(X) -> compress(X) end, L2);
 compress(J) ->
     compress(to_affine(J)).
+sqrt(X) ->
+    ff:pow(X, (?prime + 1) div 4, ?prime).
 decompress(<<S, X:256>>) ->
     %since the exponent and the modulus are the same every time, it seems like we should be able to precompute a lot of stuff.
     %Y*Y = X*X*X + 7
     YY = 7 + ?mul(X, ?mul(X, X)),
-    Y = ff:pow(YY, (?prime + 1) div 4, ?prime),
+    %Y = ff:pow(YY, (?prime + 1) div 4, ?prime),
+    Y = sqrt(YY),
     Y2 = if
              ((Y rem 2) == (S rem 2)) -> Y;
              true -> ?prime - Y
@@ -228,6 +231,7 @@ jacob_add({_, 0, _}, P, _E) -> P;
 jacob_add({X1, Y1, Z1}, {X2, Y2, Z2}, E) ->
     %http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#addition-add-2007-bl 
     %Base = field_prime(E),
+    %5 squares, 11 multiplications.
     Z1Z1 = ?mul(Z1, Z1),
     Z2Z2 = ?mul(Z2, Z2),
     U1 = ?mul(X1, Z2Z2),
@@ -787,7 +791,8 @@ test(9) ->
     G = to_jacob(G2),
     Base = field_prime(E),
     %P = ff:inverse(ff:neg(1000000000000000, Base), Base),
-    <<P:256>> = crypto:strong_rand_bytes(32),
+    <<P:128>> = crypto:strong_rand_bytes(16),
+    %P = 1000000000000000,
     M = 100,
     Many = many(0, M),
     T1 = erlang:timestamp(),
@@ -801,17 +806,17 @@ test(9) ->
                       jacob_mul(G, P, E)
               end, Many),
     T3 = erlang:timestamp(),
-    %io:fwrite("endo multiplication \n"),
-    %lists:map(fun(_) ->
-    %                  endo_mul(G, P, E)
-    %          end, Many),
-    %T4 = erlang:timestamp(),
+    io:fwrite("endo multiplication \n"),
+    lists:map(fun(_) ->
+                      endo_mul(G, P, E)
+              end, Many),
+    T4 = erlang:timestamp(),
     D1 = timer:now_diff(T2, T1),
     D2 = timer:now_diff(T3, T2),
-    %D3 = timer:now_diff(T4, T3),
+    D3 = timer:now_diff(T4, T3),
     {{affine, D1/M},%0.017
-     {jacob, D2/M}%0.0026
-     %{endo, D3/M}
+     {jacob, D2/M},%0.0026
+     {endo, D3/M}
     };
 test(10) ->
     %multi exponent test

@@ -20,47 +20,6 @@ keys2paths(Keys, CFG) ->
       end, Paths0),
     Paths0.
 
-batch_stream(Keys, Root, CFG) ->
-    %This strategy uses a lot less memory, but we would need to read everything from the tree 3 times instead of just once. it is probably a lot better for the ram version, and might be worse for the hard drive version.
-    E = ?p#p.e,
-    Gs = ?p#p.g,
-    RootStem = stem:get(Root, CFG),
-    Paths = keys2paths(Keys, CFG),
-    Tree = paths2tree(Paths),
-    {R, Ys, Zs, Commits} = 
-        batch_stream2(Tree, RootStem),
-    DivEAll = parameters:div_e(),
-    {G2} = batch_stream3(Tree, RootStem, DivEAll),
-
-    CommitG_e = ipa:commit(G2, Gs, E),
-    %T = calc_T(secp256k1:to_affine(CommitG_e), R),
-    ok.
-    
-    
-batch_stream2(Tree, RootStem) ->
-    %Tree: [[1|[[4,3,2], [1,1|[[1], [2]]]]], [2,1,1,1]],
-    %tree2: [stem, {I, stem}, [{I, leaf}], [{I, stem}, {I, leaf}], [{I, stem}, [{I, leaf}], [{I, leaf}]]]
-    %tree3: [El, {I, El}, [{I, leaf}], [{I, El}, {I, El}], [{I, El}, [{I, El}], [{I, El}]]]
-
-    %{hash, Z, commit} for every relationship in tree2. Hash is in integer form, committed data being proved at this index. Z is an element of the domain, the index being looked up. commit is the elliptic point of the child, in simplified format.
-    %Y = hash
-
-    %Affinecommit: commit in affine format
-
-    %accumulating into R using affinecommit, Z, and Y. appends binary data, we eventually hash it all.
-
-    %{R, Ys, Zs, Commits}
-    ok.
-batch_stream3(Tree, RootStem, DivEAll) ->
-    %{hashes, Y, Z, commit} for every relationship in tree2. Hashes are in integer form, committed data of the parent. Z is an element of the domain, the index being looked up. commit is the elliptic point of the child, in simplified format.
-    %A is hashes.
-    %Y is the hash we are looking up.
-
-    %accumulate into G2 with R, A, Y, Z, Domain, DA). basically, one iteration of calc_G_e2.
-
-    %{G2}.
-    ok.
-
 batch(Keys, Root, CFG) ->
     RootStem0 = stem:get(Root, CFG),
     RootStem = RootStem0#stem{
