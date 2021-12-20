@@ -58,10 +58,6 @@ redc(R, N, IN, T) ->
      %returns S in [0, N] such that S = T/R rem N.
     <<Tb:?r_bits>> = <<T:?r_bits>>,
     <<M:?r_bits>> = <<(Tb*IN):?r_bits>>,
-    %<<M:?r_bits>> = binary:part(<<(Tb*IN):?r_bits2>>, {32, 32}),
-    %<<T2:?r_bits>> = binary:part(<<(T + (M*N)):?r_bits2>>, {0, 32}),
-    %<<_:?r_bits, Tb:?r_bits>> = <<T:?r_bits2>>,
-    %<<_:?r_bits, M:?r_bits>> = <<(Tb*IN):?r_bits2>>,
     <<T2:?r_bits, _/binary>> = <<(T + (M*N)):?r_bits2>>,
     %M = ((T rem R)*IN) rem R,
     %T2 = (T + (M*N)) div R,
@@ -109,7 +105,7 @@ test(1) ->
 test(2) ->
     %speed test
     {true, true, true} = test(1),
-    Many = 5000,
+    Many = 100000,
     <<A0:256>> = crypto:strong_rand_bytes(32),
     <<B0:256>> = crypto:strong_rand_bytes(32),
     <<C0:256>> = crypto:strong_rand_bytes(32),
@@ -121,17 +117,23 @@ test(2) ->
     T1 = erlang:timestamp(),
     lists:map(fun(X) ->
                       ((A+X)*(B+X)) rem ?n
-                      %((A+X)*(B+X)) rem ?n
               end, range(0, Many)),
     T2 = erlang:timestamp(),
     lists:map(fun(X) ->
                       multiply((AM+X), (BM+X))
+                      %redc((AM+X)*(BM+X))
               end, range(0, Many)),
     T3 = erlang:timestamp(),
+    lists:map(fun(X) ->
+                      (A+X)*(B+X)
+              end, range(0, Many)),
+    T4 = erlang:timestamp(),
     true = ((A*B) rem ?n) == decode(multiply(AM, BM)),
     Normal = timer:now_diff(T2, T1)/Many,
     Montgomery = timer:now_diff(T3, T2)/Many,
-    {{normal, Normal},
-     {montgomery, Montgomery},
-     {frac, Montgomery/Normal}}.
+    Empty = timer:now_diff(T4, T3)/Many,
+    {{normal, Normal-Empty},
+     {montgomery, Montgomery-Empty},
+     {empty, Empty},
+     {frac, (Montgomery-Empty)/(Normal-Empty)}}.
 
