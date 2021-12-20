@@ -1,7 +1,8 @@
 -module(jubjub).
 -export([test/1,
          sqrt/2,
-         gen_point/0
+         gen_point/0,
+         multiply/2
         ]).
 
 %this jubjub module is based on this: https://github.com/zkcrypto/jubjub/blob/main/src/lib.rs
@@ -340,8 +341,10 @@ small_order(E = #extended_point{}) ->
     E2#extended_point.u == ?zero.
 
 is_torsion_free(E = #extended_point{}) ->
-    S = ?FR_MODULUS,
+    %S = ?FR_MODULUS,
+    S = ?r,
     E2 = multiply(S, E),
+    %io:fwrite({extended2affine(E2), E2}),
     identity(E2).
 
 %prime order means that ?r is the smallest scalar that you can multiply by this point to produce the identity.
@@ -375,7 +378,13 @@ gen_point(U) ->
     case V of
         no_sqrt -> gen_point(U+1);
         _ ->
-            #affine_point{u = U, v = V}
+            A = #affine_point{u = U, v = V},
+            G = affine2extended(A),
+            Prime = is_prime_order(G),
+            if
+                Prime -> A;
+                true -> gen_point(U+1)
+            end
     end.
     
 
@@ -472,10 +481,17 @@ sub(E = #extended_point{},
     sub(E, A2).
 
 
+multiply(N, Base = #extended_point{}) ->
+    multiply(N, extended2extended_niels(Base));
 multiply(1, Base = #affine_niels_point{}) -> 
     multiply(1, affine_niels2extended_niels(Base));
 multiply(1, Base = #extended_niels_point{}) ->
     extended_niels2extended(Base);
+multiply(1, Base = #affine_point{}) ->
+    multiply(1, affine2affine_niels(Base));
+multiply(1, _) ->
+    io:fwrite("can only multiply points.\n"),
+    ok;
 multiply(S, Base) %base is some kind of niels point
   when ((S rem 2) == 0) -> 
     X = multiply(S div 2, Base),
@@ -538,4 +554,13 @@ test(3) ->
               end, Many),
     T2 = erlang:timestamp(),
     D1 = timer:now_diff(T2, T1),
-    {mul, D1 / M}.
+    {mul, D1 / M};
+test(4) ->
+    %cofactor tests
+    A = gen_point(),
+    G = multiply(1, A),
+    {is_torsion_free(G),
+     not(identity(G)),
+     is_prime_order(G),
+    A}.
+

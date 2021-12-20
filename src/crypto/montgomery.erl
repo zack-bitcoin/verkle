@@ -58,7 +58,9 @@ redc(R, N, IN, T) ->
      %returns S in [0, N] such that S = T/R rem N.
     <<Tb:?r_bits>> = <<T:?r_bits>>,
     <<M:?r_bits>> = <<(Tb*IN):?r_bits>>,
+    %<<M:?r_bits>> = <<(T*IN):?r_bits>>,
     <<T2:?r_bits, _/binary>> = <<(T + (M*N)):?r_bits2>>,
+    Tb = T2,
     %M = ((T rem R)*IN) rem R,
     %T2 = (T + (M*N)) div R,
     if
