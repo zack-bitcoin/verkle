@@ -791,7 +791,9 @@ test(9) ->
     G = to_jacob(G2),
     Base = field_prime(E),
     %P = ff:inverse(ff:neg(1000000000000000, Base), Base),
-    <<P:128>> = crypto:strong_rand_bytes(16),
+    %<<P:128>> = crypto:strong_rand_bytes(16),
+    <<P:256>> = crypto:strong_rand_bytes(32),
+    P2 = P rem det_pow(2, 128),
     %P = 1000000000000000,
     M = 100,
     Many = many(0, M),
@@ -808,7 +810,7 @@ test(9) ->
     T3 = erlang:timestamp(),
     io:fwrite("endo multiplication \n"),
     lists:map(fun(_) ->
-                      endo_mul(G, P, E)
+                      endo_mul(G, P2, E)
               end, Many),
     T4 = erlang:timestamp(),
     D1 = timer:now_diff(T2, T1),

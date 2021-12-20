@@ -1,13 +1,19 @@
 -module(jubjub).
 -export([test/1,
-         sqrt/2
+         sqrt/2,
+         gen_point/0
         ]).
 
 %this jubjub module is based on this: https://github.com/zkcrypto/jubjub/blob/main/src/lib.rs
+%I am not storing numbers in montgomery format currently.
 
 %modulus for building jubjub. this is the modulus for the scalar group on top of BLS12-381.
 %q = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
 -define(q, 52435875175126190479447740508185965837690552500527637822603658699938581184513).
+
+-define(i2, 26217937587563095239723870254092982918845276250263818911301829349969290592257).
+
+
 %the modulus for the scalar group on top of jubjub.
 -define(r, 6554484396890773809930967563523245729705921265872317281365359162392183254199).
 
@@ -29,13 +35,22 @@
 
 
 %2^256 mod ?r
--define(R,  4365854490173040654744536428792730448269323145811170256246478247246014318553).
+-define(R,  %4365854490173040654744536428792730448269323145811170256246478247246014318553).
+        10920338887063814464675503992315976177888879664585288394250266608035967270910).
+
+-define(IR, 12549076656233958353659347336803947287922716146853412054870763148006372261952).
+        
+
+%1/(2^256) mod ?q
 
 %R^2 mod ?r
--define(R2, 2244478849891746936202736009816130624903096691796347063256129649283183245105).
+-define(R2, %2244478849891746936202736009816130624903096691796347063256129649283183245105).
+        3294906474794265442129797520630710739278575682199800681788903916070560242797).
 
 %R^3 mod ?r
--define(R3, 2500637408964451122979126917521009379857064207447470548189037276238799111492).
+-define(R3, %2500637408964451122979126917521009379857064207447470548189037276238799111492).
+        %45206882162899404125528140160728975319198890590864298389525709841616422531380).
+        49829253988540319354550742249276084460127446355315915089527227471280320770991).
 
 %edwards d = -(10240/10241) mod ?q
 -define(D,  
@@ -58,18 +73,22 @@
         %2672099634510202192799706042155019131092883632947654003486024265500182119545).
 
 -define(zero, 0).
--define(rone, ?R).
--define(one, 10920338887063814464675503992315976177888879664585288394250266608035967270910).%2^256 mod ?q
+%-define(rone, ?R).
+%-define(one, 10920338887063814464675503992315976177888879664585288394250266608035967270910).%2^256 mod ?q. montgomery form of 1.
+-define(one, 1).%2^256 mod ?q. montgomery form of 1.
 
 -define(neg(A), (?q - A)).
 -define(mul(A, B), ((A * B) rem ?q)).
-
 -define(add_mod(C),
         if (C>=?q) -> C - ?q;
            true -> C end).
 -define(sub(A, B),
         (if(A>=B) -> (A - B);
            true -> (A + ?q - B) end)).
+montgomery_mul(A, B) ->
+    %multiplication in montgomery form.
+    AB = ?mul(A, B),
+    ?mul(?IR, AB).
 fadd(A, B) ->
     C = A + B,
     ?add_mod(C).
@@ -80,7 +99,6 @@ finverse_batch(L) ->
 fpow(A, B) ->
     basics:rlpow(A, B, ?q).
 sqrt_C(S, P) ->
-    io:fwrite("sqrt c\n"),
     <<X0:256>> = crypto:strong_rand_bytes(32),
     C = X0 rem P,
     if
@@ -100,7 +118,6 @@ factors_of_two(X) when ((X rem 2) == 0) ->
 factors_of_two(_) -> 0.
     
 sqrt(A, P) ->    
-    io:fwrite("sqrt\n"),
     %fpow(A, (?q + 1) div 4).%this strategy doesn't work, because ?q+1 is not divisible by 4.
     %using tonelli-shanks. page 12 algorithm 5. https://eprint.iacr.org/2012/685.pdf
     %?q - 1 has 2^32 as a factor.
@@ -115,9 +132,6 @@ sqrt(A, P) ->
     P = (T * basics:rlpow(2, S, P)) + 1,
     %<<X0:256>> = crypto:strong_rand_bytes(32),
     C = sqrt_C(S, P),
-    io:fwrite("C is "),
-    io:fwrite(integer_to_list(C)),
-    io:fwrite("\n"),
     %Z = fpow(C, T),
     Z = basics:rlpow(C, T, P),
     %W = fpow(A, (T-1) div 2),
@@ -131,8 +145,8 @@ sqrt(A, P) ->
     Bool = (A0 == (P - 1)),
     if
         Bool ->
-            io:fwrite("that number has no square root.\n"),
-            1=2;
+            %io:fwrite("that number has no square root.\n"),
+            no_sqrt;
         true ->
     V = S,
             %X = ?mul(A, W),
@@ -163,9 +177,7 @@ sqrt2(A, V, X, B, W, Z, P) ->
     X2 = (X * W2) rem P,
     V2 = K,
     case B2 of
-        1 -> 
-            io:fwrite("sqrt done\n"),
-            X2;
+        1 -> X2;
         _ -> sqrt2(A, V2, X2, B2, W2, Z2, P)
     end
     end.
@@ -245,6 +257,13 @@ generator() ->
 affine2extended(#affine_point{u = U, v = V}) ->
     #extended_point{u = U, v = V, z = ?one, t1 = U,
                     t2 = V}.
+extended2affine(
+  E = #extended_point{z = Z}) ->
+    extended2affine(E, finverse(Z)).
+extended2affine(
+  #extended_point{u = U, v = V}, IZ) ->
+    #affine_point{u = ?mul(U, IZ),
+                  v = ?mul(V, IZ)}.
 affine2affine_niels(#affine_point{u = U, v = V}) ->
     UV = ?mul(U, V),
     T = ?mul(UV, ?D2),
@@ -264,13 +283,20 @@ extended2extended_niels(
                z = Z,
                t2d = ?mul(T3, ?D2)
                       }.
-extended2affine(
-  E = #extended_point{z = Z}) ->
-    extended2affine(E, finverse(Z)).
-extended2affine(
-  #extended_point{u = U, v = V}, IZ) ->
-    #affine_point{u = ?mul(U, IZ),
-                  v = ?mul(V, IZ)}.
+extended_niels2extended(
+  #extended_niels_point{
+     v_plus_u = VPU,
+     v_minus_u = VSU,
+     z = Z,
+     t2d = T}) -> 
+    V2 = fadd(VPU, VSU),
+    U2 = ?sub(VPU, VSU),
+    V = ?mul(V2, ?i2),%divide by 2.
+    U = ?mul(U2, ?i2),
+    A = #affine_point{u = U, v = V},
+    affine2extended(A).
+    
+     
 affine_niels2extended_niels(
     #affine_niels_point{
                     v_plus_u = VPU2,
@@ -337,6 +363,7 @@ gen_point() ->
     <<X0:256>> = crypto:strong_rand_bytes(32),
     X = X0 rem ?q,
     G = gen_point(X),
+    true = is_on_curve(G),
     G.
 gen_point(U) ->
     UU = ?mul(U, U),
@@ -345,7 +372,11 @@ gen_point(U) ->
     T = fadd(?one, UU),
     VV = ?mul(T, B),
     V = sqrt(VV, ?q),
-    #affine_point{u = U, v = V}.
+    case V of
+        no_sqrt -> gen_point(U+1);
+        _ ->
+            #affine_point{u = U, v = V}
+    end.
     
 
 -record(completed_point, {u, v, z, t}).
@@ -441,7 +472,10 @@ sub(E = #extended_point{},
     sub(E, A2).
 
 
-multiply(0, _) -> #extended_point{};
+multiply(1, Base = #affine_niels_point{}) -> 
+    multiply(1, affine_niels2extended_niels(Base));
+multiply(1, Base = #extended_niels_point{}) ->
+    extended_niels2extended(Base);
 multiply(S, Base) %base is some kind of niels point
   when ((S rem 2) == 0) -> 
     X = multiply(S div 2, Base),
@@ -453,18 +487,20 @@ multiply(S, Base) ->
 %from_raw(N) ->    
 %    ?mul(N, ?R2).
 
-
+many(_, 0) -> [];
+many(A, N) when N > 0 -> 
+    [A|many(A, N-1)].
 
 
 check_rs() ->
     %R = ?R,
-    R = basics:rlpow(2, 256, ?r),
-    R2 = (R*R) rem ?r,
-    R3 = (R2*R) rem ?r,
-    QR = basics:rlpow(2, 256, ?q),
+    R = basics:rlpow(2, 256, ?q),
+    R2 = (R*R) rem ?q,
+    R3 = (R2*R) rem ?q,
+    %QR = basics:rlpow(2, 256, ?q),
     %io:fwrite({QR}),
     {{?R, ?R2, ?R3, ?one},
-     {R, R2, R3, QR}}.
+     {R, R2, R3, 1}}.
 
 test(1) ->
     {X, X} = check_rs(),
@@ -474,30 +510,32 @@ test(1) ->
     {?D == (?neg(?mul(10240, finverse(10241)))),
     ?D2 == ?mul(2, ?D)};
 test(2) ->
-    A = generator(),
-    E = affine2affine_niels(A),
+    %A = generator(),
     G = gen_point(),
-    {G,
+    G2 = extended2affine(affine2extended(G)),
+    if
+        not(G == G2) ->
+            io:fwrite({G, G2});
+        true -> ok
+    end,
+    E = affine2affine_niels(G),
+    G = extended2affine(multiply(1, E)),
+    {
+      %A,
       is_on_curve(G),
-      A,
-     is_on_curve(A),
-     extended2affine(multiply(1, E))
+      is_on_curve(extended2affine(multiply(2000000, E)))
     };
 test(3) ->
-    %understanding raw format.
-    %D in decimal:  4613292015700488001365336802839132430399402449409985642425691713946182686872
-
-    %here is the bytes for D from zcash code.
-    %01065fd6d6343eb1292d7f6d37579d26f5fd9207e6bd7fd42a9318e74bfa2b48
-    %which makes this in decimal:
-    %A = 463575388861791286679386052962409037024404189887549159224978478986358827848,
-
-    %here is the bytes with the 4 words in reverse order.
-    %2a9318e74bfa2b48f5fd9207e6bd7fd4292d7f6d37579d2601065fd6d6343eb1
-    %which  makes this in decimal:
-    A = 19257038036680949359750312669786877991949435402254120286184196891950884077233,
-    A = ?D,
-    success.
-
-   
-%success.
+    %speed test.
+    M = 100,
+    Many = many(0, M),
+    <<P:256>> = crypto:strong_rand_bytes(32),
+    T1 = erlang:timestamp(),
+    G = gen_point(),
+    E = affine2affine_niels(G),
+    lists:map(fun(_) ->
+                      multiply(P, E)
+              end, Many),
+    T2 = erlang:timestamp(),
+    D1 = timer:now_diff(T2, T1),
+    {mul, D1 / M}.
