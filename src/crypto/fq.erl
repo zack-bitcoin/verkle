@@ -1,6 +1,6 @@
 -module(fq).
 -export([
-         mul/2, add/2, sub/2, inverse/1,
+         mul/2, add/2, sub/2, sub2/2, inverse/1,
          encode/1, decode/1,
          setup/1,
          test/1

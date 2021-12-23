@@ -102,10 +102,16 @@ test(2) ->
     Bf = fq:encode(B1),
     <<A2:256>> = Af,
     <<B2:256>> = Bf,
+%    true = reverse_bytes(sub(A, B)) ==
+%        fq:sub(Af, Bf),
+    S1 = reverse_bytes(sub(A, B)),
+    S2 = fq:sub(Af, Bf),
     {
       Af > Bf,
-      reverse_bytes(sub(A, B)),
-      fq:sub(Af, Bf),
+      S1 == S2,
+      S1,
+      S2,
+      fq:sub2(Af, Bf),
       <<(?sub3(A2, B2)):256>>};
 %    true = sub(A, B) == reverse_bytes(fq:sub(A, B)),
 %    success;
