@@ -60,7 +60,6 @@ redc(R, N, IN, T) ->
     <<M:?r_bits>> = <<(Tb*IN):?r_bits>>,
     %<<M:?r_bits>> = <<(T*IN):?r_bits>>,
     <<T2:?r_bits, _/binary>> = <<(T + (M*N)):?r_bits2>>,
-    Tb = T2,
     %M = ((T rem R)*IN) rem R,
     %T2 = (T + (M*N)) div R,
     if

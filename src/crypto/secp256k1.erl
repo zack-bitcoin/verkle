@@ -964,11 +964,11 @@ test(15) ->
     %mul_test(X, X, Many),%0.51
     %mul_test2(X, X, Many),%0.08
     %mul_test3(X, X, Many),%0.159
-    mul_test4(X, X, Many),%0.023
+    %mul_test4(X, X, Many),%0.023
     %add_test(X, X, Many),%0.13
     %add5_test(X, X, Many),%0.09
     %sub_test(X, X, Many),%0.18
-    %sub4_test(X, X, Many),%0.09
+    sub4_test(X, X, Many),%0.11
     %empty_test(X, X, Many),%0.02
     T2 = erlang:timestamp(),
     timer:now_diff(T2, T1)/Many.
