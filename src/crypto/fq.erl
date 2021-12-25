@@ -1,6 +1,6 @@
 -module(fq).
 -export([
-         mul/2, add/2, sub/2, sub2/2, inverse/1,
+         mul/2, add/2, add2/2, sub/2, sub2/2, inverse/1,
          encode/1, decode/1,
          setup/1,
          test/1
@@ -95,6 +95,9 @@ redc(<<Q:?q_bits>>, <<IQ:?q_bits>>, <<T:?q_bits2>>) ->
 mul(<<A:?q_bits>>, <<B:?q_bits>>) ->
     redc(<<(A*B):?q_bits2>>).
 add(<<A:?q_bits>>, <<B:?q_bits>>) ->
+    %the version in c.
+    ok.
+add2(<<A:?q_bits>>, <<B:?q_bits>>) ->
     C = A+B,
     D = if
             C > ?q -> C-?q;
@@ -174,9 +177,9 @@ test(4) ->
     B = encode(B1),
     Ar = fq2:encode(A1),
     Br = fq2:encode(B1),
-    T1 = erlang:timestamp(),
     R = range(B1, Many+B1),
     R2 = lists:map(fun(I) -> <<I:256>> end, R),
+    T1 = erlang:timestamp(),
     lists:map(fun(I) ->
                       sub(A, I)
               %end, R2),
@@ -196,16 +199,56 @@ test(4) ->
               end, R2),
     T5 = erlang:timestamp(),
     {
-      %{c, timer:now_diff(T2, T1)/Many},%0.36
+      %{c, timer:now_diff(T2, T1)/Many},%
     %{erlang, timer:now_diff(T3, T2)/Many},%0.6
      {erl_int, timer:now_diff(T4, T3)/Many},
       {c_rev, timer:now_diff(T5, T4)/Many}
+    };%0.16
+
+%sub is 0.11 from secp256k1.
+% is 0.524 here.
+
+
+test(5) ->
+    <<A0:256>> = crypto:strong_rand_bytes(32),
+    <<B0:256>> = crypto:strong_rand_bytes(32),
+    Many = 100000,
+    B1 = (B0 div 1) rem ?q,
+    A1 = (B1 - (Many div 2)) rem ?q,
+    A = encode(A1),
+    B = encode(B1),
+    Ar = fq2:encode(A1),
+    Br = fq2:encode(B1),
+    R = range(B1, Many+B1),
+    R2 = lists:map(fun(I) -> <<I:256>> end, R),
+    T1 = erlang:timestamp(),
+    lists:map(fun(I) ->
+                      %add2(A, I)
+                      C = A1 + I,
+                      if
+                          C > ?q -> C - ?q;
+                          true -> C
+                      end
+              end, R),
+    T2 = erlang:timestamp(),
+    lists:map(fun(I) ->
+                      fq2:add(Ar, I)
+              end, R2),
+    T3 = erlang:timestamp(),
+    {
+      %{c, timer:now_diff(T2, T1)/Many},%
+    %{erlang, timer:now_diff(T3, T2)/Many},%0.6
+     {erl, timer:now_diff(T2, T1)/Many},
+      {c, timer:now_diff(T3, T2)/Many}
     }.%0.16
 
 %sub is 0.11 from secp256k1.
 % is 0.524 here.
 
 
+
+    
+    
     
 
     

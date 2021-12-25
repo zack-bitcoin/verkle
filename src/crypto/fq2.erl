@@ -1,6 +1,7 @@
 -module(fq2).
 -export([
-         %mul/2, add/2, 
+         mul/2, 
+         add/2, 
          sub/2, %inverse/1,
          encode/1, decode/1,
          setup/1,
@@ -62,6 +63,7 @@ power_of_2(N) when ((N rem 2) == 0) ->
     power_of_2(N div 2);
 power_of_2(_) -> false.
 
+%todo. binary:encode_unsigned(X, little) is probably faster.
 reverse_bytes(X) ->
     reverse_bytes(X, <<>>).
 reverse_bytes(<<A, B/binary>>, R) ->
@@ -75,11 +77,12 @@ decode(<<A:256>>) ->
     %<<A:256>> = reverse_bytes(B),
     %fq:mul(<<A:256>>, <<1:256>>).
     ok.
-    
+   
+%these functions are defined in c. 
+add(_, _) -> ok.
+sub(_, _) -> ok.
+mul(_, _) -> ok.
 
-sub(_, _) ->
-    %defined in C.
-    ok.
 -define(sub3(A, B),
     if
         B>A -> A + ?q - B;
@@ -134,4 +137,37 @@ test(4) ->
                       sub(A, B)
               end, range(0, Many)),
     T2 = erlang:timestamp(),
-    {c, timer:now_diff(T2, T1)/Many}.
+    {c, timer:now_diff(T2, T1)/Many};
+test(5) ->
+    %testing addition.
+    <<A0:256>> = crypto:strong_rand_bytes(32),
+    <<B0:256>> = crypto:strong_rand_bytes(32),
+    A1 = A0 rem ?q,
+    B1 = B0 rem ?q,
+    A = encode(A1),
+    B = encode(B1),
+    Af = fq:encode(A1),
+    Bf = fq:encode(B1),
+    <<A2:256>> = Af,
+    <<B2:256>> = Bf,
+    S1 = reverse_bytes(add(A, B)),
+    S2 = fq:add2(Af, Bf),
+    {S1 == S2, S1, S2};
+test(6) ->
+    %testing multiplication.
+    <<A0:256>> = crypto:strong_rand_bytes(32),
+    <<B0:256>> = crypto:strong_rand_bytes(32),
+    %A0 = 2,
+    %B0 = 3,
+    A1 = A0 rem ?q,
+    B1 = B0 rem ?q,
+    A = encode(A1),
+    B = encode(B1),
+    Af = fq:encode(A1),
+    Bf = fq:encode(B1),
+    <<A2:256>> = Af,
+    <<B2:256>> = Bf,
+    S1 = reverse_bytes(mul(A, B)),
+    S2 = fq:mul(Af, Bf),
+    {S1 == S2, S1, S2, fq:decode(S1)}.
+
