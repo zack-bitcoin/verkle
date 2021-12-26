@@ -35,6 +35,8 @@ Lets look at how this software is falling short of the ideal.
 
 to use this calculator to get an idea of tree proof speed, im plugging in 20 000 branch accesses, 60 000 chunk accesses, 20 000 branches updated, 60 000 chunks updated, and 60 000 chunks newly created. and I changed the number of elements to 20 000
 
+I changed the field multiplication speed to 6*10^-8, because that is how fast the bitcoin core secp256k1 benchmarks run on my computer. I similarly halved the elliptic cure speed to 8*10-5, because it is bottlenecked by finite field multiplications.
+
 
 The calculator gives: prover time, verify proof, verify updates.
 
@@ -46,12 +48,12 @@ elliptic multiplication is estimated in secp256k1:test(9). speedup in context of
 
 | Operation | should be | is | how many times slower this is than the ideal |
 |----------|-------------|-------|------|
-| field multiplication | 3*10^-8 | 5.1*10^-7 | 17 |
-| elliptic multiplication | 4*10^-5 | 2.6*10^-3 | 65 |
-| elliptic multiplication fixed base | 5*10^-6 | 2.6*10^-4 | 52 |
-| prover time | 2.86 | 15 | 5.24 |
-| verify proof | 0.265 | 8.0 | 30 |
-| verify updates | 0.545 | 6.4 | 11.7 |
+| field multiplication | 6*10^-8 | 6*10^-7 | 10 |
+| elliptic multiplication | 8*10^-5 | 2.6*10^-3 | 33 |
+| elliptic multiplication fixed base | 1*10^-5 | 2.6*10^-4 | 26 |
+| prover time | 5.72 | 15 | 2.622 |
+| verify proof | 0.53 | 8.0 | 15.1 |
+| verify updates | 1.09 | 6.4 | 5.87 |
 
 
 Benchmark.

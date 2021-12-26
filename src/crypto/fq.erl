@@ -128,7 +128,8 @@ inverse(<<A:?q_bits>>) ->
 encode(A) when ((A < ?q) and (A > -1)) -> 
     redc(<<(?r2 * A):?q_bits2>>).
 decode(<<A:256>>) ->
-    mul(<<A:256>>, <<1:256>>).
+    <<B:256>> = mul(<<A:256>>, <<1:256>>),
+    B.
 
 setup(_) ->
     ok.
@@ -198,6 +199,7 @@ test(4) ->
                       fq2:sub(Ar, I)
               end, R2),
     T5 = erlang:timestamp(),
+    io:fwrite("subtracting speed test \n"),
     {
       %{c, timer:now_diff(T2, T1)/Many},%
     %{erlang, timer:now_diff(T3, T2)/Many},%0.6
@@ -208,8 +210,8 @@ test(4) ->
 %sub is 0.11 from secp256k1.
 % is 0.524 here.
 
-
 test(5) ->
+%addition speed test.
     <<A0:256>> = crypto:strong_rand_bytes(32),
     <<B0:256>> = crypto:strong_rand_bytes(32),
     Many = 100000,
@@ -235,15 +237,14 @@ test(5) ->
                       fq2:add(Ar, I)
               end, R2),
     T3 = erlang:timestamp(),
+    io:fwrite("adding speed test \n"),
     {
       %{c, timer:now_diff(T2, T1)/Many},%
     %{erlang, timer:now_diff(T3, T2)/Many},%0.6
      {erl, timer:now_diff(T2, T1)/Many},
       {c, timer:now_diff(T3, T2)/Many}
-    }.%0.16
+    }.
 
-%sub is 0.11 from secp256k1.
-% is 0.524 here.
 
 
 
