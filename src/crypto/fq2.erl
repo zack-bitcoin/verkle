@@ -160,7 +160,7 @@ test(5) ->
     Bf = fq:encode(B1),
     <<A2:256>> = Af,
     <<B2:256>> = Bf,
-    add(<<0:256>>, <<0:256>>),
+    %add(<<0:256>>, <<0:256>>),
     S1 = reverse_bytes(add(A, B)),
     S2 = fq:add2(Af, Bf),
     {S1 == S2, S1, S2};

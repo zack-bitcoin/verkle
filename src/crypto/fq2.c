@@ -38,6 +38,19 @@ const uint64_t INV = 18446744069414584319U;
 //subtract borrow
 #define SUB(A, B, car) (A - B - car)
 
+//uint64_t x;
+static void print32
+(uint64_t * x)
+{
+  printf(" %lu %lu %lu %lu \n", x[0], x[1], x[2], x[3]);
+}
+static void print64
+(uint64_t * x)
+{
+  printf(" %lu %lu %lu %lu %lu %lu %lu %lu \n", x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7]);
+
+}
+
 static int greater_than
 (const uint64_t * a, const uint64_t * b)
 {
@@ -66,25 +79,16 @@ static void subtract64
 (const uint64_t * a,
  const uint64_t * b,
  uint64_t * c){
-  int carry = 0;
-  int nextcarry = 0;
-  carry = 0;
-  nextcarry = (a[0] < b[0]);
-  c[0] = SUB(a[0], b[0], carry);
-  carry = nextcarry;
-  nextcarry = (a[1] < b[1]);
-  c[1] = SUB(a[1], b[1], carry);
-  carry = nextcarry;
-  nextcarry = (a[2] < b[2]);
-  c[2] = SUB(a[2], b[2], carry);
-  carry = nextcarry;
-  nextcarry = (a[3] < b[3]);
-  c[3] = SUB(a[3], b[3], carry);
-  //stores a-b in c.
-  //c[0] = SUB(a[0], b[0], 0);
-  //c[1] = SUB(a[1], b[1], a[0] < b[0]);
-  //c[2] = SUB(a[2], b[2], a[1] < b[1]);
-  //c[3] = SUB(a[3], b[3], a[2] < b[2]);
+  //sometimes a and b are the same array, so we need to calculate the carries first.
+
+  int carry1 = a[0] < b[0];
+  int carry2 = a[1] < b[1];
+  int carry3 = a[2] < b[2];
+  
+  c[0] = SUB(a[0], b[0], 0);
+  c[1] = SUB(a[1], b[1], carry1);
+  c[2] = SUB(a[2], b[2], carry2);
+  c[3] = SUB(a[3], b[3], carry3);
 };
 static void addition64
 (const uint64_t * a,
@@ -138,7 +142,7 @@ static void sub2
 (uint64_t * a, uint64_t * b, uint64_t * c)
 {
   //c = (a-b) mod ?q
-  //int subcarry = 0;
+
   if(greater_than(a, b)){
     subtract64(a, b, c);//c=a-b
   } else {
@@ -152,11 +156,10 @@ static void add2
 (uint64_t * a, uint64_t * b, uint64_t * c)
 {
   //c = (a+b) mod ?q
+
   int addcarry = 0;
-  //addition64(a, b, c, 0);//c = a+b;
   addition64(a, b, c, &addcarry);//c = a+b;
   if(addcarry || greater_than(c, q)){
-    //addcarry = 0;
     subtract64(c, q, c);//c = c-q
   }
 }
@@ -192,18 +195,6 @@ static void multiply64
   mac(c[6], a[3], b[3], mulcarry, &c[6],&c[7]);
 }
 
-//uint64_t x;
-static void print32
-(uint64_t * x)
-{
-  printf(" %lu %lu %lu %lu \n", x[0], x[1], x[2], x[3]);
-}
-static void print64
-(uint64_t * x)
-{
-  printf(" %lu %lu %lu %lu %lu %lu %lu %lu \n", x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7]);
-
-}
 
 static void redc2(uint64_t * r, uint64_t * c)
 {
