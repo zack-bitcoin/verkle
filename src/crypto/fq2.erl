@@ -5,7 +5,8 @@
          sub/2, %inverse/1,
          encode/1, decode/1,
          setup/1,
-         test/1
+         test/1,
+         ctest/1
         ]).
 -on_load(init/0).
 init() ->
@@ -92,6 +93,9 @@ mul(_, _) -> ok.
         true -> A - B
     end).
 
+ctest(_) ->
+    ok.
+
 range(N, N) -> [N];
 range(A, B) when (A < B) -> 
     [A|range(A+1, B)].
@@ -114,12 +118,13 @@ test(2) ->
     S1 = reverse_bytes(sub(A, B)),
     S2 = fq:sub(Af, Bf),
     {
-      Af > Bf,
+      %Af > Bf,
       S1 == S2,
-      S1,
-      S2,
-      fq:sub2(Af, Bf),
-      <<(?sub3(A2, B2)):256>>};
+      S1
+      %S2,
+      %fq:sub2(Af, Bf),
+      %<<(?sub3(A2, B2)):256>>
+    };
 %    true = sub(A, B) == reverse_bytes(fq:sub(A, B)),
 %    success;
 test(3) ->
@@ -144,6 +149,7 @@ test(4) ->
     {c, timer:now_diff(T2, T1)/Many};
 test(5) ->
     %testing addition.
+    io:fwrite("addition test\n"),
     <<A0:256>> = crypto:strong_rand_bytes(32),
     <<B0:256>> = crypto:strong_rand_bytes(32),
     A1 = A0 rem ?q,
@@ -154,6 +160,7 @@ test(5) ->
     Bf = fq:encode(B1),
     <<A2:256>> = Af,
     <<B2:256>> = Bf,
+    add(<<0:256>>, <<0:256>>),
     S1 = reverse_bytes(add(A, B)),
     S2 = fq:add2(Af, Bf),
     {S1 == S2, S1, S2};
@@ -294,7 +301,11 @@ test(9) ->
     <<NB:256>> = B,
     C = <<((NA*NB) rem ?q):256>>,
 
-    {S1 == S2, S1, S2, fq:encode((A1*B1) rem ?q)}.
+    {S1 == S2, S1, S2, fq:encode((A1*B1) rem ?q)};
+test(10) ->
+    A = crypto:strong_rand_bytes(32),
+    test(A).
+
     
                           
 

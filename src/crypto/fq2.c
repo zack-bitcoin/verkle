@@ -127,17 +127,10 @@ static void addition64_double
   *carrystart = ADC(b[7], c[7], *carrystart);
 };
 
-ErlNifBinary BinA;
-ErlNifBinary BinB;
-ErlNifBinary resultnif;
 static ERL_NIF_TERM setup
 (ErlNifEnv* env, int argc,
  const ERL_NIF_TERM argv[])
 {
-  //only runs once at the beginning.
-  enif_alloc_binary(32, &BinA);
-  enif_alloc_binary(32, &BinB);
-  enif_alloc_binary(32, &resultnif);
   return(argv[0]);
 }
 
@@ -199,7 +192,7 @@ static void multiply64
   mac(c[6], a[3], b[3], mulcarry, &c[6],&c[7]);
 }
 
-uint64_t x;
+//uint64_t x;
 static void print32
 (uint64_t * x)
 {
@@ -257,57 +250,10 @@ static void redc2(uint64_t * r, uint64_t * c)
   }
 };
 
-static void redc(uint64_t * t, uint64_t * c)
-{
-  uint64_t redc_tbiq[8];
-  uint64_t redc_mq[8];
-  uint64_t tmq[8];
-  //this is montgomery reduction. c = t mod q
-  //t is 512 bytes.
-
-  //tb:256 = low(t)
-  //m:256 = low(tb*iq)
-  //t2 = high(t + m*q)
-
-  //t2 >= q -> c = t2-q
-  //true -> c = t2
-
-  multiply64(t,(uint64_t *)iq, redc_tbiq);
-  //redc_tbiq = low(t * iq);
-
-  multiply64((uint64_t *)redc_tbiq,
-             (uint64_t *)q, redc_mq);
-  //redc_mq = low(low(t * iq) * q)
-
-  int double_carry = 0;
-  
-  addition64_double
-    (t, redc_mq, tmq, &double_carry);
-  //carry = double_carry;
-  //tmq = t + redc_mq
-
-  //need the high 64 bits of tmq.
-  uint64_t * tmq2 = &tmq[4];
-  
-  //if(double_carry || greater_than(tmq2, q)){
-  if(greater_than(tmq2, q)){
-    //printf("greater than\n");
-    //print32(&tmq[4]);
-    //print32(q);
-    subtract64(tmq2, q, c);
-  } else {
-    //printf("less than\n");
-    memcpy(c, tmq2, 32);//there is probably a way to do this with only sending pointers around.
-  }
-}
-
-//uint64_t mul2_r[8];
 static void mul2
 (uint64_t * a, uint64_t * b, uint64_t * c)
 {
   //c = (a*b) mod ?q
-  //costs around 3 multiplications of 256 bit numbres.
-
   uint64_t mul2_r[8];
   multiply64(a, b, mul2_r);
   redc2(mul2_r, c);
@@ -318,48 +264,60 @@ static ERL_NIF_TERM sub
 (ErlNifEnv* env, int argc,
  const ERL_NIF_TERM argv[])
 {
-  enif_inspect_binary(env, argv[0], &BinA);//0.01
-  enif_inspect_binary(env, argv[1], &BinB);//0.01
-
+  ErlNifBinary BinAi;
+  ErlNifBinary BinBi;
+  enif_inspect_binary(env, argv[0], &BinAi);
+  enif_inspect_binary(env, argv[1], &BinBi);
   uint64_t C[4];
-
-  sub2((uint64_t *)BinA.data,
-       (uint64_t *)BinB.data, C);//~0.007
-  resultnif.data = (char *)C;
-
-  //0.03 is left unexplained.
-  
-  return enif_make_binary(env, &resultnif);//0.0125
+  sub2((uint64_t *)BinAi.data,
+       (uint64_t *)BinBi.data,
+       C);//~0.007
+  BinAi.data = (char *)C;
+  enif_release_binary(&BinBi);
+  return enif_make_binary(env, &BinAi);
 }
 
 static ERL_NIF_TERM add
 (ErlNifEnv* env, int argc,
  const ERL_NIF_TERM argv[])
 {
-  enif_inspect_binary(env, argv[0], &BinA);
-  enif_inspect_binary(env, argv[1], &BinB);
+  ErlNifBinary BinAi;
+  ErlNifBinary BinBi;
+  enif_inspect_binary(env, argv[0], &BinAi);
+  enif_inspect_binary(env, argv[1], &BinBi);
   uint64_t C[4];
-
-  add2((uint64_t *)BinA.data,
-       (uint64_t *)BinB.data, C);//0.0163
-  resultnif.data = (char *)C;
-
-  return enif_make_binary(env, &resultnif);
+  add2((uint64_t *)BinAi.data,
+       (uint64_t *)BinBi.data,
+       C);
+  BinAi.data = (char *)C;
+  enif_release_binary(&BinBi);
+  return enif_make_binary(env, &BinAi);
 }
 static ERL_NIF_TERM mul
 (ErlNifEnv* env, int argc,
  const ERL_NIF_TERM argv[])
 {
-  enif_inspect_binary(env, argv[0], &BinA);
-  enif_inspect_binary(env, argv[1], &BinB);
+  ErlNifBinary BinAi;
+  ErlNifBinary BinBi;
+  enif_inspect_binary(env, argv[0], &BinAi);
+  enif_inspect_binary(env, argv[1], &BinBi);
   uint64_t C[4];
-
-  mul2((uint64_t *)BinA.data,
-              (uint64_t *)BinB.data,
-       (uint64_t *)C);//0.058
-  resultnif.data = (char *)C;
-
-  return enif_make_binary(env, &resultnif);
+  mul2((uint64_t *)BinAi.data,
+       (uint64_t *)BinBi.data,
+       C);
+  BinAi.data = (char *)C;
+  enif_release_binary(&BinBi);
+  return enif_make_binary(env, &BinAi);
+}
+static ERL_NIF_TERM ctest
+(ErlNifEnv* env, int argc,
+ const ERL_NIF_TERM argv[])
+{
+  //enif_inspect_binary(env, argv[0], &BinA);
+  //resultnif.data = (char *)BinA.data;
+    //resultnif.data = (char *)C;
+  //return enif_make_binary(env, &resultnif);
+  return argv[0];
 }
 
 
@@ -368,6 +326,7 @@ static ErlNifFunc nif_funcs[] =
    {"sub", 2, sub},
    {"add", 2, add},
    {"mul", 2, mul},
+   {"ctest", 1, ctest},
    {"setup", 1, setup}
   };
 
