@@ -51,9 +51,9 @@ elliptic multiplication is estimated in secp256k1:test(9). speedup in context of
 | field multiplication | 6*10^-8 | 6*10^-7 | 10 |
 | elliptic multiplication | 8*10^-5 | 2.6*10^-3 | 33 |
 | elliptic multiplication fixed base | 1*10^-5 | 2.6*10^-4 | 26 |
-| prover time | 5.72 | 15 | 2.622 |
-| verify proof | 0.53 | 8.0 | 15.1 |
-| verify updates | 1.09 | 6.4 | 5.87 |
+| prover time | 8.45 | 15 | 1.775 |
+| verify proof | 1.145 | 8.0 | 6.99 |
+| verify updates | 1.53 | 6.4 | 4.18 |
 
 
 Benchmark.
