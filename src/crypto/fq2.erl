@@ -3,6 +3,7 @@
          mul/2, 
          add/2, 
          sub/2, %inverse/1,
+         inv/1,
          encode/1, decode/1,
          setup/1,
          test/1,
@@ -86,6 +87,8 @@ decode(C) ->
 add(_, _) -> ok.
 sub(_, _) -> ok.
 mul(_, _) -> ok.
+inv(_) -> ok.
+    
 
 -define(sub3(A, B),
     if
@@ -163,7 +166,7 @@ test(5) ->
     %add(<<0:256>>, <<0:256>>),
     S1 = reverse_bytes(add(A, B)),
     S2 = fq:add2(Af, Bf),
-    {S1 == S2, S1, S2};
+    {S1 == S2, new, S1, old, S2};
 test(6) ->
     %testing multiplication.
     io:fwrite("multiply test \n"),

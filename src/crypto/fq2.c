@@ -30,13 +30,10 @@ const uint64_t INV = 18446744069414584319U;
 //uint64_t arr[2];
 //int carry;
 
-//add carry
-#define ADD(A, B, car) (A + B + car)
-//the carry bit.
-#define ADC(B, C, car) ((C<B) ||(car && (C == B)))
-
 //subtract borrow
 #define SUB(A, B, car) (A - B - car)
+//add carry
+#define ADC(a, b, c, car) {c = a + b + car; car = ((c < b) || (car && (c == b)));}
 
 //uint64_t x;
 static void print32
@@ -51,7 +48,7 @@ static void print64
 
 }
 
-static int greater_than
+static inline int greater_than
 (const uint64_t * a, const uint64_t * b)
 {
   //actually greater than or equal to.
@@ -63,7 +60,7 @@ static int greater_than
 };
 
 //__uint128_t prod;
-static void mac
+static inline void mac
 (const uint64_t a, const uint64_t b,
  const uint64_t c, const uint64_t mac_carry,
  uint64_t * result, uint64_t * next_carry) {
@@ -75,7 +72,7 @@ static void mac
   *next_carry = prod >> 64;
 }
 
-static void subtract64
+static inline void subtract64
 (const uint64_t * a,
  const uint64_t * b,
  uint64_t * c){
@@ -90,45 +87,16 @@ static void subtract64
   c[2] = SUB(a[2], b[2], carry2);
   c[3] = SUB(a[3], b[3], carry3);
 };
-static void addition64
+static inline void addition64
 (const uint64_t * a,
  const uint64_t * b,
  uint64_t *c,
- int * carrystart){
+ uint * carrystart){
   //stores a+b in c.
-  c[0] = ADD(a[0], b[0], *carrystart);
-  *carrystart = ADC(b[0], c[0], *carrystart);
-  c[1] = ADD(a[1], b[1], *carrystart);
-  *carrystart = ADC(b[1], c[1], *carrystart);
-  c[2] = ADD(a[2], b[2], *carrystart);
-  *carrystart = ADC(b[2], c[2], *carrystart);
-  c[3] = ADD(a[3], b[3], *carrystart);
-  *carrystart = ADC(b[3], c[3], *carrystart);//for addition, we need this flag to be set correctly.
-};
-static void addition64_double
-(const uint64_t * a,
- const uint64_t * b,
- uint64_t *c,
- int * carrystart){
-  //stores a+b in c.
-  //carry bit stored in "carry"
-  //carry = *carrystart;
-  c[0] = ADD(a[0], b[0], *carrystart);
-  *carrystart = ADC(b[0], c[0], *carrystart);
-  c[1] = ADD(a[1], b[1], *carrystart);
-  *carrystart = ADC(b[1], c[1], *carrystart);
-  c[2] = ADD(a[2], b[2], *carrystart);
-  *carrystart = ADC(b[2], c[2], *carrystart);
-  c[3] = ADD(a[3], b[3], *carrystart);
-  *carrystart = ADC(b[3], c[3], *carrystart);
-  c[4] = ADD(a[4], b[4], *carrystart);
-  *carrystart = ADC(b[4], c[4], *carrystart);
-  c[5] = ADD(a[5], b[5], *carrystart);
-  *carrystart = ADC(b[5], c[5], *carrystart);
-  c[6] = ADD(a[6], b[6], *carrystart);
-  *carrystart = ADC(b[6], c[6], *carrystart);
-  c[7] = ADD(a[7], b[7], *carrystart);
-  *carrystart = ADC(b[7], c[7], *carrystart);
+  ADC(a[0], b[0], c[0], *carrystart);
+  ADC(a[1], b[1], c[1], *carrystart);
+  ADC(a[2], b[2], c[2], *carrystart);
+  ADC(a[3], b[3], c[3], *carrystart);
 };
 
 static ERL_NIF_TERM setup
@@ -138,7 +106,7 @@ static ERL_NIF_TERM setup
   return(argv[0]);
 }
 
-static void sub2
+static inline void sub2
 (uint64_t * a, uint64_t * b, uint64_t * c)
 {
   //c = (a-b) mod ?q
@@ -152,7 +120,7 @@ static void sub2
   } 
 }
 
-static void add2
+static inline void add2
 (uint64_t * a, uint64_t * b, uint64_t * c)
 {
   //c = (a+b) mod ?q
@@ -165,7 +133,7 @@ static void add2
 }
 
 //uint64_t mulcarry;
-static void multiply64
+static inline void multiply64
 (uint64_t * a, uint64_t * b, uint64_t * c)
 {
   //a is 256 bits, b is 256 bits, c is 512 bits.
@@ -196,10 +164,11 @@ static void multiply64
 }
 
 
-static void redc2(uint64_t * r, uint64_t * c)
+static inline void redc2(uint64_t * r, uint64_t * c)
 {
   uint64_t mulcarry = 0;
-  uint64_t mulcarry2 = 0;
+  //uint64_t mulcarry2 = 0;
+  uint mulcarry2 = 0;
   uint64_t k;
 
   k = r[0] * INV;
@@ -207,31 +176,28 @@ static void redc2(uint64_t * r, uint64_t * c)
   mac(r[1], k, q[1], mulcarry, &r[1], &mulcarry);
   mac(r[2], k, q[2], mulcarry, &r[2], &mulcarry);
   mac(r[3], k, q[3], mulcarry, &r[3], &mulcarry);
-  r[4] = ADD(r[4], mulcarry, 0);
-  mulcarry2 = ADC(mulcarry, r[4], mulcarry2);
+  ADC(r[4], mulcarry, r[4], mulcarry2);
 
   k = r[1] * INV;
   mac(r[1], k, q[0], 0, &c[0], &mulcarry);
   mac(r[2], k, q[1], mulcarry, &r[2], &mulcarry);
   mac(r[3], k, q[2], mulcarry, &r[3], &mulcarry);
   mac(r[4], k, q[3], mulcarry, &r[4], &mulcarry);
-  r[5] = ADD(r[5], mulcarry, mulcarry2);
-  mulcarry2 = ADC(mulcarry, r[5], mulcarry2);
+  ADC(r[5], mulcarry, r[5], mulcarry2);
 
   k = r[2] * INV;
   mac(r[2], k, q[0], 0, &c[0], &mulcarry);
   mac(r[3], k, q[1], mulcarry, &r[3], &mulcarry);
   mac(r[4], k, q[2], mulcarry, &r[4], &mulcarry);
   mac(r[5], k, q[3], mulcarry, &r[5], &mulcarry);
-  r[6] = ADD(r[6], mulcarry, mulcarry2);
-  mulcarry2 = ADC(mulcarry, r[6], mulcarry2);
+  ADC(r[6], mulcarry, r[6], mulcarry2);
 
   k = r[3] * INV;
   mac(r[3], k, q[0], 0, &c[0], &mulcarry);
   mac(r[4], k, q[1], mulcarry, &r[4], &mulcarry);
   mac(r[5], k, q[2], mulcarry, &r[5], &mulcarry);
   mac(r[6], k, q[3], mulcarry, &r[6], &mulcarry);
-  r[7] = ADD(r[7], mulcarry, mulcarry2);
+  ADC(r[7], mulcarry, r[7], mulcarry2);
 
   uint64_t * tmq2 = &r[4];
   if(greater_than(tmq2, q)){
@@ -241,13 +207,19 @@ static void redc2(uint64_t * r, uint64_t * c)
   }
 };
 
-static void mul2
+static inline void mul2
 (uint64_t * a, uint64_t * b, uint64_t * c)
 {
   //c = (a*b) mod ?q
   uint64_t mul2_r[8];
   multiply64(a, b, mul2_r);
   redc2(mul2_r, c);
+}
+
+static inline void inv2
+(uint64_t * a, uint64_t *c)
+{
+  printf("inverse not implemented\n");
 }
 
 //uint64_t C[4];
@@ -290,8 +262,10 @@ static ERL_NIF_TERM mul
 {
   ErlNifBinary BinAi;
   ErlNifBinary BinBi;
+                                       
   enif_inspect_binary(env, argv[0], &BinAi);
   enif_inspect_binary(env, argv[1], &BinBi);
+  //print32((uint64_t *)BinBi.data);
   uint64_t C[4];
   mul2((uint64_t *)BinAi.data,
        (uint64_t *)BinBi.data,
@@ -299,7 +273,21 @@ static ERL_NIF_TERM mul
   BinAi.data = (char *)C;
   enif_release_binary(&BinBi);
   return enif_make_binary(env, &BinAi);
-}
+};
+static ERL_NIF_TERM inv
+(ErlNifEnv* env, int argc,
+ const ERL_NIF_TERM argv[])
+{
+  ErlNifBinary BinAi;
+                                       
+  enif_inspect_binary(env, argv[0], &BinAi);
+  //print32((uint64_t *)BinBi.data);
+  uint64_t C[4];
+  inv2((uint64_t *)BinAi.data,
+       C);
+  BinAi.data = (char *)C;
+  return enif_make_binary(env, &BinAi);
+};
 static ERL_NIF_TERM ctest
 (ErlNifEnv* env, int argc,
  const ERL_NIF_TERM argv[])
@@ -317,6 +305,7 @@ static ErlNifFunc nif_funcs[] =
    {"sub", 2, sub},
    {"add", 2, add},
    {"mul", 2, mul},
+   {"inv", 1, inv},
    {"ctest", 1, ctest},
    {"setup", 1, setup}
   };
