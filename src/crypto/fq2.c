@@ -213,7 +213,8 @@ static inline void redc(uint64_t * r, uint64_t * c)
   }
 };
 
-static inline void square2(uint64_t * a)
+static inline void square2
+(uint64_t * a, uint64_t * b)
 {
   uint64_t r[8];
   uint64_t carry;
@@ -235,19 +236,15 @@ static inline void square2(uint64_t * a)
   r[1] = (r[1] << 1);
 
   mac(0, a[0], a[0], 0, &r[0], &carry);
-  //ADC(0, r[1], r[1], carry);
   ADC2(r[1], carry, 0, r[1], carry);
   mac(r[2], a[1], a[1], carry, &r[2], &carry);
-  //ADC(0, r[3], r[3], carry);
   ADC2(r[3], carry, 0, r[3], carry);
   mac(r[4], a[2], a[2], carry, &r[4], &carry);
-  //ADC(0, r[5], r[5], carry);
   ADC2(r[5], carry, 0, r[5], carry);
   mac(r[6], a[3], a[3], carry, &r[6], &carry);
-  //ADC(0, r[7], r[7], carry);
   ADC2(r[7], carry, 0, r[7], carry);
 
-  redc(r, a);
+  redc(r, b);
 }
 
 static inline void mul2
@@ -260,10 +257,122 @@ static inline void mul2
   redc(mul2_r, c);
 }
 
-static inline void inv2
-(uint64_t * a)
+static void square_multi
+(uint64_t * n, uint times)
 {
-  printf("inverse not implemented\n");
+  for(; times>0; times--){
+    square2(n, n);
+  };
+};
+
+static inline void inv2
+(uint64_t * a, uint64_t * b)
+{
+  uint64_t t0[4];
+  uint64_t t1[4];
+  uint64_t t2[4];
+  uint64_t t3[4];
+  uint64_t t4[4];
+  uint64_t t5[4];
+  uint64_t t6[4];
+  uint64_t t7[4];
+  uint64_t t8[4];
+  uint64_t t9[4];
+  uint64_t t11[4];
+  uint64_t t12[4];
+  uint64_t t13[4];
+  uint64_t t14[4];
+  uint64_t t15[4];
+  uint64_t t16[4];
+  uint64_t t17[4];
+  
+  square2(a, t0);
+  mul2(t0, a, t1);
+  square2(t0, t16);
+  square2(t16, t6);
+  mul2(t6, t0, t5);
+  mul2(t6, t16, t0);
+  mul2(t5, t16, t12);
+  square2(t6, t2);
+  mul2(t5, t6, t7);
+  mul2(t0, t5, t15);
+  square2(t12, t17);
+  mul2(t1, t17, t1);
+  mul2(t7, t2, t3);
+  mul2(t1, t17, t8);
+  mul2(t8, t2, t4);
+  mul2(t8, t7, t9);
+  mul2(t4, t5, t7);
+  mul2(t4, t17, t11);
+  mul2(t9, t17, t5);
+  mul2(t7, t15, t14);
+  mul2(t11, t12, t13);
+  mul2(t11, t17, t12);
+  mul2(t15, t12, t15);
+  mul2(t16, t15, t16);
+  mul2(t3, t16, t3);
+  mul2(t17, t3, t17);
+  mul2(t0, t17, t0);
+  mul2(t6, t0, t6);
+  mul2(t2, t6, t2);
+
+  square_multi(t0, 8);
+  mul2(t0, t17, t0);
+  square_multi(t0, 9);
+  mul2(t0, t16, t0);
+  square_multi(t0, 9);
+  mul2(t0, t15, t0);
+  square_multi(t0, 9);
+  mul2(t0, t15, t0);
+  square_multi(t0, 7);
+  mul2(t0, t14, t0);
+  square_multi(t0, 7);
+  mul2(t0, t13, t0);
+  square_multi(t0, 10);
+  mul2(t0, t12, t0);
+  square_multi(t0, 9);
+  mul2(t0, t11, t0);
+  square_multi(t0, 8);
+  mul2(t0, t8, t0);
+  square_multi(t0, 8);
+  mul2(t0, a, t0);
+  square_multi(t0, 14);
+  mul2(t0, t9, t0);
+  square_multi(t0, 10);
+  mul2(t0, t8, t0);
+  square_multi(t0, 15);
+  mul2(t0, t7, t0);
+  square_multi(t0, 10);
+  mul2(t0, t6, t0);
+  square_multi(t0, 8);
+  mul2(t0, t5, t0);
+  square_multi(t0, 16);
+  mul2(t0, t3, t0);
+  square_multi(t0, 8);
+  mul2(t0, t2, t0);
+  square_multi(t0, 7);
+  mul2(t0, t4, t0);
+  square_multi(t0, 9);
+  mul2(t0, t2, t0);
+  square_multi(t0, 8);
+  mul2(t0, t3, t0);
+  square_multi(t0, 8);
+  mul2(t0, t2, t0);
+  square_multi(t0, 8);
+  mul2(t0, t2, t0);
+  square_multi(t0, 8);
+  mul2(t0, t2, t0);
+  square_multi(t0, 8);
+  mul2(t0, t3, t0);
+  square_multi(t0, 8);
+  mul2(t0, t2, t0);
+  square_multi(t0, 8);
+  mul2(t0, t2, t0);
+  square_multi(t0, 5);
+  mul2(t0, t1, t0);
+  square_multi(t0, 5);
+  mul2(t0, t1, b);
+  
 }
 
 //uint64_t C[4];
@@ -322,7 +431,8 @@ static ERL_NIF_TERM square
 {
   ErlNifBinary BinAi;
   enif_inspect_binary(env, argv[0], &BinAi);
-  square2((uint64_t *)BinAi.data);
+  square2((uint64_t *)BinAi.data,
+          (uint64_t *)BinAi.data);
   /*
   mul2((uint64_t *)BinAi.data,
        (uint64_t *)BinAi.data,
@@ -339,7 +449,8 @@ static ERL_NIF_TERM inv
   enif_inspect_binary(env, argv[0], &BinAi);
   //print32((uint64_t *)BinBi.data);
   //uint64_t C[4];
-  inv2((uint64_t *)BinAi.data);
+  inv2((uint64_t *)BinAi.data,
+       (uint64_t *)BinAi.data);
   //BinAi.data = (char *)C;
   return enif_make_binary(env, &BinAi);
 };

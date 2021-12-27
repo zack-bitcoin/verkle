@@ -309,13 +309,47 @@ test(9) ->
     {S1 == S2, S1, S2, fq:encode((A1*B1) rem ?q)};
 test(10) ->
     io:fwrite("square test\n"),
-    %<<A0:256>> = crypto:strong_rand_bytes(32),
-    A0 = 3,
+    <<A0:256>> = crypto:strong_rand_bytes(32),
+    %A0 = 3,
     A = A0 rem ?q,
-    S1 = decode(square(encode(A))) rem ?q,
+    S1 = decode(square(encode(A))),
     S2 = (A*A rem ?q),
     B = S1 == S2,
-    {S1, S2, B}.
+    {S1, S2, B};
+test(11) ->
+    io:fwrite("inverse test\n"),
+    <<A0:256>> = crypto:strong_rand_bytes(32),
+    A = A0 rem ?q,
+    A = decode(inv(inv(encode(A)))),
+    IA = decode(inv(encode(A))),
+    {A, IA};
+test(12) ->
+    io:fwrite("inverse speed test\n"),
+    <<A0:256>> = crypto:strong_rand_bytes(32),
+    A = A0 rem ?q,
+    E = encode(A),
+    Many = 1000,
+    R = range(0, Many),
+    R2 = lists:map(
+           fun(_) -> 
+                   <<N0:256>> = 
+                       crypto:strong_rand_bytes(
+                         32),
+                   N0 rem ?q
+           end, R),
+    R3 = lists:map(
+           fun(X) -> encode(X) end, R2),
+    T1 = erlang:timestamp(),
+    lists:map(fun(I) -> inv(I) end, R3),
+    T2 = erlang:timestamp(),
+    lists:map(fun(I) ->
+                        basics:inverse(I, ?q)
+                end, R2),
+    T3 = erlang:timestamp(),
+    {{c, timer:now_diff(T2, T1)/Many},
+     {erl, timer:now_diff(T3, T2)/Many}}.
+                        
+    
 
 
     
