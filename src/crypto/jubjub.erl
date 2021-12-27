@@ -2,7 +2,14 @@
 -export([test/1,
          sqrt/2,
          gen_point/0,
-         multiply/2
+         multiply/2,
+         double/1,
+         affine2extended/1,
+         affine_niels2extended_niels/1,
+         affine2affine_niels/1,
+         eq/2,
+         add/2,
+         extended2affine/1
         ]).
 
 %this jubjub module is based on this: https://github.com/zkcrypto/jubjub/blob/main/src/lib.rs
@@ -402,8 +409,8 @@ completed_to_extended(
                    }.
 
 double(#extended_point{
-          u = U, v = V, z = Z, t1 = T1, 
-          t2 = T2}) ->
+          u = U, v = V, z = Z, t1 = _T1, 
+          t2 = _T2}) ->
     UU = ?mul(U, U),
     VV = ?mul(V, V),
     ZZ2 = ?mul(Z*2, Z),
@@ -417,6 +424,19 @@ double(#extended_point{
       z = VV_minus_UU,
       t = ?sub(ZZ2, VV_minus_UU)},
     completed_to_extended(CP).
+
+print32(N) ->
+    <<A:64, B:64, C:64, D:64>> = <<N:256>>,
+    io:fwrite("erl "),
+    io:fwrite(integer_to_list(A)),
+    io:fwrite(" "),
+    io:fwrite(integer_to_list(B)),
+    io:fwrite(" "),
+    io:fwrite(integer_to_list(C)),
+    io:fwrite(" "),
+    io:fwrite(integer_to_list(D)),
+    io:fwrite("\n").
+    
 
 add(#extended_point{
        u = U,

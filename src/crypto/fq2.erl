@@ -8,9 +8,15 @@
          encode/1, decode/1,
          setup/1,
          test/1,
-         ctest/1
+         ctest/1,
+
+         e_double/1,
+         e_add/2
         ]).
 -on_load(init/0).
+-record(extended_point, {u, v, z, t1, t2}).
+-record(extended_niels_point, 
+        {v_plus_u, v_minus_u, t2d, z}).
 init() ->
     ok = erlang:load_nif("./ebin/fq2", 0),
     setup(0),
@@ -83,6 +89,49 @@ decode(C) ->
     %<<A:256>> = reverse_bytes(B),
     %fq:mul(<<A:256>>, <<1:256>>).
     %ok.
+
+encode_extended(
+  #extended_point{
+    u = U, v = V, z = Z, t1 = T1, t2 = T2
+   }) ->
+    Ue = encode(U),
+    Ve = encode(V),
+    Ze = encode(Z),
+    T1e = encode(T1),
+    T2e = encode(T2),
+    <<Ue/binary, Ve/binary, Ze/binary,
+      T1e/binary, T2e/binary>>.
+
+decode_extended(<<U2:256, V2:256, Z2:256,
+      T12:256, T22:256>>) ->
+    #extended_point{
+                 u = decode(<<U2:256>>),
+                 v = decode(<<V2:256>>),
+                 z = decode(<<Z2:256>>),
+                 t1 = decode(<<T12:256>>),
+                 t2 = decode(<<T22:256>>)}.
+encode_extended_niels(
+  #extended_niels_point{
+     v_plus_u = VPU,
+     v_minus_u = VMU,
+     t2d = T2D,
+     z = Z}) ->
+    VPUe = encode(VPU),
+    VMUe = encode(VMU),
+    T2De = encode(T2D),
+    Ze = encode(Z),
+    <<VPUe/binary, VMUe/binary, T2De/binary,
+      Ze/binary>>.
+decode_extended_niels(<<VPU:256, VMU:256, T2D:256,
+                        Z:256>>) ->
+    #extended_niels_point
+        {v_plus_u = decode(<<VPU:256>>),
+         v_minus_u = decode(<<VMU:256>>),
+         t2d = decode(<<T2D:256>>),
+         z = decode(<<Z:256>>)}.
+   
+
+    
    
 %these functions are defined in c. 
 add(_, _) -> ok.
@@ -90,6 +139,8 @@ sub(_, _) -> ok.
 mul(_, _) -> ok.
 square(_) -> ok.
 inv(_) -> ok.
+e_double(_) -> ok.
+e_add(_, _) -> ok.
     
 
 -define(sub3(A, B),
@@ -325,9 +376,6 @@ test(11) ->
     {A, IA};
 test(12) ->
     io:fwrite("inverse speed test\n"),
-    <<A0:256>> = crypto:strong_rand_bytes(32),
-    A = A0 rem ?q,
-    E = encode(A),
     Many = 1000,
     R = range(0, Many),
     R2 = lists:map(
@@ -347,7 +395,88 @@ test(12) ->
                 end, R2),
     T3 = erlang:timestamp(),
     {{c, timer:now_diff(T2, T1)/Many},
-     {erl, timer:now_diff(T3, T2)/Many}}.
+     {erl, timer:now_diff(T3, T2)/Many}};
+test(13) ->
+    io:fwrite("jubjub double test\n"),
+    P0 = jubjub:affine2extended(
+           jubjub:gen_point()),
+    B = encode_extended(P0),
+    P = decode_extended(e_double(B)),
+    P2 = jubjub:double(P0),
+    true = jubjub:eq(P, P2),
+    success;
+test(14) ->
+    io:fwrite("jubjub double speed test\n"),
+    Many = 100,
+    R = range(0, Many),
+    R2 = lists:map(
+           fun(_) ->
+                   P0 = jubjub:double(
+                          jubjub:affine2extended(
+                          jubjub:gen_point())),
+                   B = encode_extended(P0),
+                   {P0, B}
+           end, R),
+    io:fwrite("made points\n"),
+    T1 = erlang:timestamp(),
+    lists:foldl(fun({P, _}, _) ->
+                        jubjub:double(jubjub:double(jubjub:double(P)))
+                end, 0, R2),
+    T2 = erlang:timestamp(),
+    lists:foldl(fun({_, P}, _) ->
+                        e_double(e_double(e_double(P)))
+                end, 0, R2),
+    T3 = erlang:timestamp(),
+    {{erl, timer:now_diff(T2, T1)/Many/3},
+     {c, timer:now_diff(T3, T2)/Many/3}};
+test(15) ->
+    io:fwrite("jubjub add\n"),
+    E0 = jubjub:affine2extended(
+           jubjub:gen_point()),
+    E = encode_extended(E0),
+    E0 = decode_extended(E),
+    N0 = jubjub:affine_niels2extended_niels(
+           jubjub:affine2affine_niels(
+             jubjub:gen_point())),
+    N = encode_extended_niels(N0),
+    E3 = jubjub:add(E0, N0),
+    E2 = decode_extended(e_add(E, N)),
+    true =jubjub:eq(E2, E3),
+    success;
+test(16) ->
+    io:fwrite("jubjub add speed\n"),
+    Many = 100,
+    R = range(0, Many),
+    R2 = lists:map(
+           fun(_) ->
+                   P0 = jubjub:double(
+                          jubjub:affine2extended(
+                          jubjub:gen_point())),
+                   B = encode_extended(P0),
+                   {P0, B}
+           end, R),
+    N0 = jubjub:affine_niels2extended_niels(
+           jubjub:affine2affine_niels(
+             jubjub:gen_point())),
+    N = encode_extended_niels(N0),
+    T1 = erlang:timestamp(),
+    lists:foldl(fun({P, _}, _) ->
+                        jubjub:add(P, N0)
+                end, 0, R2),
+    T2 = erlang:timestamp(),
+    lists:foldl(fun({_, P}, _) ->
+                        e_add(P, N)
+                end, 0, R2),
+    T3 = erlang:timestamp(),
+    {{erl, timer:now_diff(T2, T1)/Many},
+     {c, timer:now_diff(T3, T2)/Many}}.
+
+    
+    
+                   
+
+    
+    
                         
     
 
