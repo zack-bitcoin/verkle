@@ -4,6 +4,7 @@
          add/2, 
          sub/2, %inverse/1,
          inv/1,
+         square/1,
          encode/1, decode/1,
          setup/1,
          test/1,
@@ -87,6 +88,7 @@ decode(C) ->
 add(_, _) -> ok.
 sub(_, _) -> ok.
 mul(_, _) -> ok.
+square(_) -> ok.
 inv(_) -> ok.
     
 
@@ -306,8 +308,15 @@ test(9) ->
 
     {S1 == S2, S1, S2, fq:encode((A1*B1) rem ?q)};
 test(10) ->
-    A = crypto:strong_rand_bytes(32),
-    test(A).
+    io:fwrite("square test\n"),
+    %<<A0:256>> = crypto:strong_rand_bytes(32),
+    A0 = 3,
+    A = A0 rem ?q,
+    S1 = decode(square(encode(A))) rem ?q,
+    S2 = (A*A rem ?q),
+    B = S1 == S2,
+    {S1, S2, B}.
+
 
     
                           

@@ -35,6 +35,8 @@ const uint64_t INV = 18446744069414584319U;
 //add carry
 #define ADC(a, b, c, car) {c = a + b + car; car = ((c < b) || (car && (c == b)));}
 
+#define ADC2(a, b, car, c, car2) {c = a + b + car; car2 = ((c < b) || (car && (c == b)));}
+
 //uint64_t x;
 static void print32
 (uint64_t * x)
@@ -164,7 +166,7 @@ static inline void multiply64
 }
 
 
-static inline void redc2(uint64_t * r, uint64_t * c)
+static inline void redc(uint64_t * r, uint64_t * c)
 {
   uint64_t mulcarry = 0;
   //uint64_t mulcarry2 = 0;
@@ -176,21 +178,24 @@ static inline void redc2(uint64_t * r, uint64_t * c)
   mac(r[1], k, q[1], mulcarry, &r[1], &mulcarry);
   mac(r[2], k, q[2], mulcarry, &r[2], &mulcarry);
   mac(r[3], k, q[3], mulcarry, &r[3], &mulcarry);
-  ADC(r[4], mulcarry, r[4], mulcarry2);
+  //ADC(r[4], mulcarry, r[4], mulcarry2);
+  ADC2(r[4], mulcarry, 0, r[4], mulcarry2);
 
   k = r[1] * INV;
   mac(r[1], k, q[0], 0, &c[0], &mulcarry);
   mac(r[2], k, q[1], mulcarry, &r[2], &mulcarry);
   mac(r[3], k, q[2], mulcarry, &r[3], &mulcarry);
   mac(r[4], k, q[3], mulcarry, &r[4], &mulcarry);
-  ADC(r[5], mulcarry, r[5], mulcarry2);
+  //ADC(r[5], mulcarry, r[5], mulcarry2);
+  ADC2(r[5], mulcarry, mulcarry2, r[5], mulcarry2);
 
   k = r[2] * INV;
   mac(r[2], k, q[0], 0, &c[0], &mulcarry);
   mac(r[3], k, q[1], mulcarry, &r[3], &mulcarry);
   mac(r[4], k, q[2], mulcarry, &r[4], &mulcarry);
   mac(r[5], k, q[3], mulcarry, &r[5], &mulcarry);
-  ADC(r[6], mulcarry, r[6], mulcarry2);
+  //ADC(r[6], mulcarry, r[6], mulcarry2);
+  ADC2(r[6], mulcarry, mulcarry2, r[6], mulcarry2);
 
   k = r[3] * INV;
   mac(r[3], k, q[0], 0, &c[0], &mulcarry);
@@ -198,6 +203,7 @@ static inline void redc2(uint64_t * r, uint64_t * c)
   mac(r[5], k, q[2], mulcarry, &r[5], &mulcarry);
   mac(r[6], k, q[3], mulcarry, &r[6], &mulcarry);
   ADC(r[7], mulcarry, r[7], mulcarry2);
+  //ADC2(r[7], mulcarry2, mulcarry, r[7], mulcarry2);
 
   uint64_t * tmq2 = &r[4];
   if(greater_than(tmq2, q)){
@@ -207,17 +213,55 @@ static inline void redc2(uint64_t * r, uint64_t * c)
   }
 };
 
+static inline void square2(uint64_t * a)
+{
+  uint64_t r[8];
+  uint64_t carry;
+  mac(0, a[0], a[1], 0, &r[1], &carry);
+  mac(0, a[0], a[2], carry, &r[2], &carry);
+  mac(0, a[0], a[3], carry, &r[3], &r[4]);
+
+  mac(r[3], a[1], a[2], 0, &r[3], &carry);
+  mac(r[4], a[1], a[3], carry, &r[4], &r[5]);
+
+  mac(r[5], a[2], a[3], 0, &r[5], &r[6]);
+
+  r[7] = r[6] >> 63;
+  r[6] = (r[6] << 1) | (r[5] >> 63);
+  r[5] = (r[5] << 1) | (r[4] >> 63);
+  r[4] = (r[4] << 1) | (r[3] >> 63);
+  r[3] = (r[3] << 1) | (r[2] >> 63);
+  r[2] = (r[2] << 1) | (r[1] >> 63);
+  r[1] = (r[1] << 1);
+
+  mac(0, a[0], a[0], 0, &r[0], &carry);
+  //ADC(0, r[1], r[1], carry);
+  ADC2(r[1], carry, 0, r[1], carry);
+  mac(r[2], a[1], a[1], carry, &r[2], &carry);
+  //ADC(0, r[3], r[3], carry);
+  ADC2(r[3], carry, 0, r[3], carry);
+  mac(r[4], a[2], a[2], carry, &r[4], &carry);
+  //ADC(0, r[5], r[5], carry);
+  ADC2(r[5], carry, 0, r[5], carry);
+  mac(r[6], a[3], a[3], carry, &r[6], &carry);
+  //ADC(0, r[7], r[7], carry);
+  ADC2(r[7], carry, 0, r[7], carry);
+
+  redc(r, a);
+}
+
 static inline void mul2
 (uint64_t * a, uint64_t * b, uint64_t * c)
 {
+  //uint64_t * c = *C;
   //c = (a*b) mod ?q
   uint64_t mul2_r[8];
   multiply64(a, b, mul2_r);
-  redc2(mul2_r, c);
+  redc(mul2_r, c);
 }
 
 static inline void inv2
-(uint64_t * a, uint64_t *c)
+(uint64_t * a)
 {
   printf("inverse not implemented\n");
 }
@@ -248,11 +292,9 @@ static ERL_NIF_TERM add
   ErlNifBinary BinBi;
   enif_inspect_binary(env, argv[0], &BinAi);
   enif_inspect_binary(env, argv[1], &BinBi);
-  uint64_t C[4];
   add2((uint64_t *)BinAi.data,
        (uint64_t *)BinBi.data,
-       C);
-  BinAi.data = (char *)C;
+       (uint64_t *)BinAi.data);
   enif_release_binary(&BinBi);
   return enif_make_binary(env, &BinAi);
 }
@@ -266,12 +308,26 @@ static ERL_NIF_TERM mul
   enif_inspect_binary(env, argv[0], &BinAi);
   enif_inspect_binary(env, argv[1], &BinBi);
   //print32((uint64_t *)BinBi.data);
-  uint64_t C[4];
+  //  uint64_t C[4];
   mul2((uint64_t *)BinAi.data,
        (uint64_t *)BinBi.data,
-       C);
-  BinAi.data = (char *)C;
+       (uint64_t *)BinAi.data);
+  //BinAi.data = (char *)(C);
   enif_release_binary(&BinBi);
+  return enif_make_binary(env, &BinAi);
+};
+static ERL_NIF_TERM square
+(ErlNifEnv* env, int argc,
+ const ERL_NIF_TERM argv[])
+{
+  ErlNifBinary BinAi;
+  enif_inspect_binary(env, argv[0], &BinAi);
+  square2((uint64_t *)BinAi.data);
+  /*
+  mul2((uint64_t *)BinAi.data,
+       (uint64_t *)BinAi.data,
+       (uint64_t *)BinAi.data);
+  */
   return enif_make_binary(env, &BinAi);
 };
 static ERL_NIF_TERM inv
@@ -282,10 +338,9 @@ static ERL_NIF_TERM inv
                                        
   enif_inspect_binary(env, argv[0], &BinAi);
   //print32((uint64_t *)BinBi.data);
-  uint64_t C[4];
-  inv2((uint64_t *)BinAi.data,
-       C);
-  BinAi.data = (char *)C;
+  //uint64_t C[4];
+  inv2((uint64_t *)BinAi.data);
+  //BinAi.data = (char *)C;
   return enif_make_binary(env, &BinAi);
 };
 static ERL_NIF_TERM ctest
@@ -305,6 +360,7 @@ static ErlNifFunc nif_funcs[] =
    {"sub", 2, sub},
    {"add", 2, add},
    {"mul", 2, mul},
+   {"square", 1, square},
    {"inv", 1, inv},
    {"ctest", 1, ctest},
    {"setup", 1, setup}
