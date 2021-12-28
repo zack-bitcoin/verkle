@@ -2,6 +2,7 @@
 -export([
          mul/2, 
          add/2, 
+         neg/1,
          sub/2, %inverse/1,
          inv/1,
          square/1,
@@ -137,6 +138,7 @@ decode_extended_niels(<<VPU:256, VMU:256, T2D:256,
    
 %these functions are defined in c. 
 add(_, _) -> ok.
+neg(_) -> ok.
 sub(_, _) -> ok.
 mul(_, _) -> ok.
 square(_) -> ok.
@@ -518,7 +520,13 @@ test(19) ->
     C = decode(short_pow(encode(A), B)),
     D = basics:rlpow(A, B, ?q),
     C = D,
-    {A, B, C}.
+    {A, B, C};
+test(20) ->
+    io:fwrite("test neg\n"),
+    <<A0:256>> = crypto:strong_rand_bytes(32),
+    A = A0 rem ?q,
+    NA = ?q - A,
+    NA = decode(neg(encode(A))).
 %A = encode(2),
 %    B = reverse_bytes(<<3:256>>),
 %    decode(pow(A, B)).

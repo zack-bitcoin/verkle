@@ -122,6 +122,12 @@ static ERL_NIF_TERM setup
   return(argv[0]);
 }
 
+static inline void neg2
+(uint64_t * a)
+{
+  subtract64(q, a, a);
+};
+
 static inline void sub2
 (uint64_t * a, uint64_t * b, uint64_t * c)
 {
@@ -482,6 +488,15 @@ static inline void inv2
 }
 */
 
+static ERL_NIF_TERM neg
+(ErlNifEnv* env, int argc,
+ const ERL_NIF_TERM argv[])
+{
+  ErlNifBinary A;
+  enif_inspect_binary(env, argv[0], &A);
+  neg2((uint64_t *)A.data);
+  return enif_make_binary(env, &A);
+}
 static ERL_NIF_TERM sub
 (ErlNifEnv* env, int argc,
  const ERL_NIF_TERM argv[])
@@ -628,6 +643,7 @@ static ERL_NIF_TERM e_add
 
 static ErlNifFunc nif_funcs[] =
   {
+   {"neg", 1, neg},
    {"sub", 2, sub},
    {"add", 2, add},
    {"mul", 2, mul},
