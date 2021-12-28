@@ -907,17 +907,36 @@ test(14) ->
     G = gen_point(E),
     G2 = gen_point(E),
     Many = 1000,
-    Gs = many(G, Many),
-    G2s = many(G2, Many),
-    J = to_jacob(G),
-    J2 = to_jacob(G2),
+    R = range(0, Many),
+    Gs = lists:map(fun(_) ->
+                           gen_point(E)
+                   end, R),
     %Gs = many(G, Many),
-    Js = many(J, Many),
-    J2s = many(J2, Many),
-    K = jacob_add(J, J2, E),
-    K2 = jacob_add(J, K, E),
-    Ks = many(K, Many),
-    K2s = many(K2, Many),
+    G2s = lists:map(fun(_) ->
+                           gen_point(E)
+                   end, R),
+    Js = lists:map(fun(X) ->
+                           to_jacob(X)
+                   end, Gs),
+    J2s = lists:map(fun(X) ->
+                            to_jacob(X)
+                    end, G2s),
+    Ks = lists:zipwith(fun(X, Y) ->
+                              jacob_add(X, Y, E)
+                      end, Js, J2s),
+    K2s = lists:zipwith(fun(X, Y) ->
+                              jacob_add(X, Y, E)
+                      end, Js, Ks),
+    %G2s = many(G2, Many),
+    %J = to_jacob(G),
+    %J2 = to_jacob(G2),
+    %Gs = many(G, Many),
+    %Js = many(J, Many),
+    %J2s = many(J2, Many),
+    %K = jacob_add(J, J2, E),
+    %K2 = jacob_add(J, K, E),
+    %Ks = many(K, Many),
+    %K2s = many(K2, Many),
 
     T1 = erlang:timestamp(),
     %this version is like twice as fast.
@@ -947,16 +966,16 @@ test(14) ->
               Gs, G2s),
     T8 = erlang:timestamp(),
     
-    {{affine_double, timer:now_diff(T7, T6)},%0.039
-     {affine_add, timer:now_diff(T8, T7)},%0.044
-      {add_simple, timer:now_diff(T2, T1)},%0.0046
-     {add_half, timer:now_diff(T4, T3)},%0.010
-     {add_full, timer:now_diff(T3, T2)},%0.013
-    {double_simple, timer:now_diff(T5, T4)},%0.0045
-     {double_full, timer:now_diff(T6, T5)}%0.0044
+    {{affine_double, timer:now_diff(T7, T6)},%0.049
+     {affine_add, timer:now_diff(T8, T7)},%0.050
+      {add_simple, timer:now_diff(T2, T1)},%0.0059
+     {add_half, timer:now_diff(T4, T3)},%0.009
+     {add_full, timer:now_diff(T3, T2)},%0.011
+    {double_simple, timer:now_diff(T5, T4)},%0.0048
+     {double_full, timer:now_diff(T6, T5)}%0.0049
     };
 test(15) ->
-    %finite field multiplication test
+    %finite field speed tests.
     <<X:256>> = crypto:strong_rand_bytes(32),
     %<<X:256>> = <<(-1):256>>,
     Many = 500000,

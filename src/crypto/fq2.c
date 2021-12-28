@@ -20,6 +20,20 @@ const uint64_t iq[4] =
  1737030558577650694U,
  4414718065938212921U};
 
+
+//<<A:64, B:64, C:64, D:64>> = fq:encode(1).
+//{D, C, B, A}.
+const uint64_t one[4] =
+{8589934590U,
+ 6378425256633387010U,
+ 11064306276430008309U,
+ 1739710354780652911U};
+  
+//{8000017657123382296U,
+// 17676554788265757849U,
+// 164384689140237400U,
+// 18374686475393433600U};
+
 //-(q^-1 mod 2^64) mod 2^64
 //ffff_fffe_ffff_ffff
 //FFFFFFFEFFFFFFFF
@@ -250,6 +264,48 @@ static inline void mul2
   multiply64(a, b, mul2_r);
   redc(mul2_r, c);
 }
+static void short_pow2
+(uint64_t * a, uint32_t b)
+{
+  uint64_t acc[4];
+  memcpy(acc, one, 32);
+  while(b > 0){
+    if((b % 2) == 1){
+      mul2(acc, a, acc);
+    }
+    square2(a, a);
+    b = b >> 1;
+  };
+  memcpy(a, acc, 32);
+}
+static void pow3
+(uint64_t * c, uint64_t b, uint64_t * acc)
+{
+  for(int i = 64; i > 0; i--){
+    if((b % 2) == 1){
+      mul2(acc, c, acc);
+    }
+    square2(c, c);
+    b = b >> 1;
+  }
+};
+static void pow2
+(uint64_t * a, uint64_t * b)
+{
+  
+  uint64_t acc[4];
+  //uint64_t c[4];
+  memcpy(acc, one, 32);
+  //memcpy(c, a, 32);
+  pow3(a, b[0], acc);
+  pow3(a, b[1], acc);
+  pow3(a, b[2], acc);
+  pow3(a, b[3], acc);
+
+  memcpy(a, acc, 32);
+  //memcpy(a, one, 32);
+}
+
 static inline void e_double2
 (uint64_t * u, uint64_t * v, uint64_t * z,
  uint64_t * t1, uint64_t * t2)
@@ -481,6 +537,31 @@ static ERL_NIF_TERM square
           (uint64_t *)BinAi.data);
   return enif_make_binary(env, &BinAi);
 };
+static ERL_NIF_TERM power
+(ErlNifEnv* env, int argc,
+ const ERL_NIF_TERM argv[])
+{
+  ErlNifBinary A, B;
+  enif_inspect_binary(env, argv[0], &A);
+  enif_inspect_binary(env, argv[1], &B);
+  pow2((uint64_t *)A.data,
+       (uint64_t *)B.data);
+  enif_release_binary(&B);
+  return enif_make_binary(env, &A);
+};
+static ERL_NIF_TERM short_power
+(ErlNifEnv* env, int argc,
+ const ERL_NIF_TERM argv[])
+{
+  ErlNifBinary A;
+  ErlNifUInt64 B;
+  enif_inspect_binary(env, argv[0], &A);
+  enif_get_uint64(env, argv[1], &B);
+  short_pow2((uint64_t *)A.data,
+             (uint32_t) B);
+  //enif_release_binary(&B);
+  return enif_make_binary(env, &A);
+};
 /*
 static ERL_NIF_TERM inv
 (ErlNifEnv* env, int argc,
@@ -551,6 +632,8 @@ static ErlNifFunc nif_funcs[] =
    {"add", 2, add},
    {"mul", 2, mul},
    {"square", 1, square},
+   {"pow", 2, power},
+   {"short_pow", 2, short_power},
    //{"inv", 1, inv},
 
    {"e_double", 1, e_double},

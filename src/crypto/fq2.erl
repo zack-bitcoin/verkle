@@ -5,6 +5,8 @@
          sub/2, %inverse/1,
          inv/1,
          square/1,
+         pow/2,
+         short_pow/2,
          encode/1, decode/1,
          setup/1,
          test/1,
@@ -139,6 +141,8 @@ sub(_, _) -> ok.
 mul(_, _) -> ok.
 square(_) -> ok.
 inv(_) -> ok.
+pow(_, _) -> ok.
+short_pow(_, _) -> ok.
 e_double(_) -> ok.
 e_add(_, _) -> ok.
     
@@ -469,7 +473,57 @@ test(16) ->
                 end, 0, R2),
     T3 = erlang:timestamp(),
     {{erl, timer:now_diff(T2, T1)/Many},
-     {c, timer:now_diff(T3, T2)/Many}}.
+     {c, timer:now_diff(T3, T2)/Many}};
+test(17) ->
+    io:fwrite("test pow\n"),
+    <<A0:256>> = crypto:strong_rand_bytes(32),
+    A = A0 rem ?q,
+    <<B0:256>> = crypto:strong_rand_bytes(32),
+    B = B0 rem ?q,
+    New = decode(pow(encode(A), 
+                     reverse_bytes(<<B:256>>))),
+    Old = basics:rlpow(A, B, ?q),
+    New = Old,
+    success;
+test(18) ->
+    io:fwrite("test pow speed\n"),
+    Many = 100,
+    R = range(0, Many),
+    R2 = lists:map(
+           fun(_) ->
+                   <<A0:256>> = crypto:strong_rand_bytes(32),
+                   <<B0:256>> = crypto:strong_rand_bytes(32),
+                   A = A0 rem ?q,
+                   B = B0 rem ?q,
+                   Ae = encode(A),
+                   Be = reverse_bytes(<<B:256>>),
+                   {A, B, Ae, Be}
+           end, R),
+    T1 = erlang:timestamp(),
+    lists:foldl(fun({A, B, _, _}, _) ->
+                        basics:rlpow(A, B, ?q)
+                end, 0, R2),
+    T2 = erlang:timestamp(),
+    lists:foldl(fun({_, _, A, B}, _) ->
+                        pow(A, B)
+                end, 0, R2),
+    T3 = erlang:timestamp(),
+    {{erl, timer:now_diff(T2, T1)/Many},
+     {c, timer:now_diff(T3, T2)/Many}};
+test(19) ->
+    io:fwrite("test short_pow\n"),
+    <<A0:256>> = crypto:strong_rand_bytes(32),
+    A = A0 rem ?q,
+    <<B:16>> = crypto:strong_rand_bytes(2),
+    C = decode(short_pow(encode(A), B)),
+    D = basics:rlpow(A, B, ?q),
+    C = D,
+    {A, B, C}.
+%A = encode(2),
+%    B = reverse_bytes(<<3:256>>),
+%    decode(pow(A, B)).
+
+
 
     
     

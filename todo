@@ -1,9 +1,14 @@
 working on a jubjub implementation, since it will give us private reading and
-* implement inv in fq2.c
 * implement neg in fq2.c
-* implement jacobian point addition and doubling and multiplication in c using fq2.c
-* implement fr.c, the finite field on top of jubjub.
+* multiplication in fq2.c
+* implement fr.c, the finite field on top of jubjub. should be almsot the same as fq2.c
 * redo the verkle tree using jubjub instead of secp256k1.
+-bucket method from secp256k1.
+-ipa.erl
+-poly.erl
+-multiproof:prove
+-multiproof:verify
+-redo precomputes for the new format of points.
 * make a SNARK of a verkle proof.
 
 
