@@ -562,7 +562,7 @@ test(22) ->
                    {N0, N, B}
     
            end, R),
-
+    io:fwrite("generated randomness\n"),
     T1 = erlang:timestamp(),
     lists:foldl(fun({N0, _, B}, _) ->
                         jubjub:multiply(B, N0)

@@ -351,23 +351,19 @@ static inline void e_add2
  uint64_t * vpu2, uint64_t * vmu2,
  uint64_t * td2, uint64_t * z2)
 {
-  uint64_t vmu1[4];
-  uint64_t vpu1[4];
   uint64_t a[4];
   uint64_t b[4];
-  uint64_t td1[4];
   uint64_t c[4];
   uint64_t d[4];
-  uint64_t zdup[4];
 
-  sub2(v, u, vmu1);
-  mul2(vmu1, vmu2, a);
-  add2(v, u, vpu1);
-  mul2(vpu1, vpu2, b);
-  mul2(t1, t2, td1);
-  mul2(td1, td2, c);
-  add2(z1, z1, zdup);
-  mul2(zdup, z2, d);
+  sub2(v, u, a);
+  mul2(a, vmu2, a);
+  add2(v, u, b);
+  mul2(b, vpu2, b);
+  mul2(t1, t2, c);
+  mul2(c, td2, c);
+  add2(z1, z1, d);
+  mul2(d, z2, d);
 
   sub2(b, a, t1);//completed u.
   add2(b, a, t2);//completed v.
