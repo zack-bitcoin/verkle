@@ -20,6 +20,13 @@ const uint64_t iq[4] =
  1737030558577650694U,
  4414718065938212921U};
 
+// inverse(2)
+const uint64_t i2[4] =
+  {4294967295U,
+   12412584665171469313U,
+   14755525175069779962U,
+   869855177390326455U};
+
 
 //<<A:64, B:64, C:64, D:64>> = fq:encode(1).
 //{D, C, B, A}.
@@ -28,6 +35,9 @@ const uint64_t one[4] =
  6378425256633387010U,
  11064306276430008309U,
  1739710354780652911U};
+
+const uint64_t zero[4] =
+  {0U,0U,0U,0U};
   
 //{8000017657123382296U,
 // 17676554788265757849U,
@@ -271,7 +281,7 @@ static inline void mul2
   redc(mul2_r, c);
 }
 static void short_pow2
-(uint64_t * a, uint32_t b)
+(uint64_t * a, uint64_t b)
 {
   uint64_t acc[4];
   memcpy(acc, one, 32);
@@ -367,7 +377,35 @@ static inline void e_add2
   mul2(t1, a, u);
   mul2(t2, z1, v);
   mul2(z1, a, z1);
-}
+};
+static inline void e_mul2
+(uint64_t * vpu, uint64_t * vmu,//niels points
+ uint64_t * td, uint64_t * z2,
+ uint64_t b,//exponent
+ uint64_t * u, uint64_t * v, uint64_t * z1,//resulting extended point.
+ uint64_t * t1, uint64_t * t2)
+{
+  if(b == 1){
+    //extended_niels2extended
+    add2(vpu, vmu, v);
+    sub2(vpu, vmu, u);
+    mul2(v, (uint64_t *)i2, v);
+    mul2(u, (uint64_t *)i2, u);
+    memcpy(z1, one, 32);
+    memcpy(t1, u, 32);
+    memcpy(t2, v, 32);
+  } else if((b % 2) == 0){
+    e_mul2(vpu, vmu, td, z2,
+           b / 2,
+           u, v, z1, t1, t2);
+    e_double2(u, v, z1, t1, t2);
+  } else {
+    e_mul2(vpu, vmu, td, z2,
+           b - 1,
+           u, v, z1, t1, t2);
+    e_add2(u, v, z1, t1, t2, vpu, vmu, td, z2);
+  };
+};
 /*
 static void square_multi
 (uint64_t * n, uint times)
@@ -573,9 +611,46 @@ static ERL_NIF_TERM short_power
   enif_inspect_binary(env, argv[0], &A);
   enif_get_uint64(env, argv[1], &B);
   short_pow2((uint64_t *)A.data,
-             (uint32_t) B);
+             (uint64_t) B);
   //enif_release_binary(&B);
   return enif_make_binary(env, &A);
+};
+static ERL_NIF_TERM e_mul
+(ErlNifEnv* env, int argc,
+ const ERL_NIF_TERM argv[])
+{
+  ErlNifBinary ENiels;
+  ErlNifUInt64 B;
+  ErlNifBinary ExtendedBin;
+  enif_alloc_binary(160, &ExtendedBin);
+  
+  enif_inspect_binary(env, argv[0], &ENiels);
+  //enif_inspect_binary(env, argv[1], &B);
+  uint64_t * VPU = (uint64_t *)&(ENiels.data[0]);
+  uint64_t * VMU = (uint64_t *)&(ENiels.data[32]);
+  uint64_t * T2D = (uint64_t *)&(ENiels.data[64]);
+  uint64_t * NZ = (uint64_t *)&(ENiels.data[96]);
+
+  uint64_t Extended[20] = { 0 };
+  uint64_t * U = &(Extended[0]);
+  uint64_t * V = &(Extended[4]);
+  uint64_t * Z = &(Extended[8]);
+  uint64_t * T1 = &(Extended[12]);
+  uint64_t * T2 = &(Extended[16]);
+  //starting the extended point at point 1.
+  //memcpy(U, zero, 32);
+  //memcpy(V, one, 32);
+  //memcpy(Z, one, 32);
+  //memcpy(T1, zero, 32);
+  //memcpy(T2, zero, 32);
+  enif_get_uint64(env, argv[1], &B);
+  e_mul2(VPU, VMU, T2D, NZ,
+         (uint64_t) B,
+         U, V, Z, T1, T2);
+  enif_release_binary(&ENiels);
+  //enif_release_binary(&B);
+  memcpy(ExtendedBin.data, Extended, 160);
+  return enif_make_binary(env, &ExtendedBin);
 };
 /*
 static ERL_NIF_TERM inv
@@ -654,6 +729,7 @@ static ErlNifFunc nif_funcs[] =
 
    {"e_double", 1, e_double},
    {"e_add", 2, e_add},
+   {"e_mul", 2, e_mul},
 
    {"ctest", 1, ctest},
    {"setup", 1, setup}

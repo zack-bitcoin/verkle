@@ -1,6 +1,5 @@
 working on a jubjub implementation, since it will give us private reading and
-* implement neg in fq2.c
-* multiplication in fq2.c
+* point multiplication in fq2.c
 * implement fr.c, the finite field on top of jubjub. should be almsot the same as fq2.c
 * redo the verkle tree using jubjub instead of secp256k1.
 -bucket method from secp256k1.

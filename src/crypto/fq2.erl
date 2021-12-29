@@ -14,7 +14,8 @@
          ctest/1,
 
          e_double/1,
-         e_add/2
+         e_add/2,
+         e_mul/2
         ]).
 -on_load(init/0).
 -record(extended_point, {u, v, z, t1, t2}).
@@ -147,6 +148,7 @@ pow(_, _) -> ok.
 short_pow(_, _) -> ok.
 e_double(_) -> ok.
 e_add(_, _) -> ok.
+e_mul(_, _) -> ok.
     
 
 -define(sub3(A, B),
@@ -526,7 +528,55 @@ test(20) ->
     <<A0:256>> = crypto:strong_rand_bytes(32),
     A = A0 rem ?q,
     NA = ?q - A,
-    NA = decode(neg(encode(A))).
+    NA = decode(neg(encode(A)));
+test(21) ->
+    io:fwrite("testing elliptic multiplication\n"),
+    N0 = jubjub:affine_niels2extended_niels(
+           jubjub:affine2affine_niels(
+             jubjub:gen_point())),
+    N = encode_extended_niels(N0),
+    <<B:64>> = crypto:strong_rand_bytes(8),
+    %B = 2,
+    %B = B0 rem ?q,
+    %Be = reverse_bytes(<<B:64>>),
+    %size(e_mul(N, Be)).
+    <<One:256>> = encode(1),
+    Me =  e_mul(N, B),
+    M = jubjub:multiply(B, N0),
+    M2 = decode_extended(Me),
+    %jubjub:eq(M, M2),
+    I2 = 26217937587563095239723870254092982918845276250263818911301829349969290592257,
+    true = jubjub:eq(M, M2),
+    success;
+test(22) ->
+    io:fwrite("elliptic multiplication speed test \n\n"),
+    Many = 100,
+    R = range(0, Many),
+    R2 = lists:map(
+           fun(_) ->
+                   N0 = jubjub:affine_niels2extended_niels(
+                          jubjub:affine2affine_niels(
+                            jubjub:gen_point())),
+                   N = encode_extended_niels(N0),
+                   <<B:64>> = crypto:strong_rand_bytes(8),
+                   {N0, N, B}
+    
+           end, R),
+
+    T1 = erlang:timestamp(),
+    lists:foldl(fun({N0, _, B}, _) ->
+                        jubjub:multiply(B, N0)
+                end, 0, R2),
+    T2 = erlang:timestamp(),
+    lists:foldl(fun({_, N, B}, _) ->
+                        e_mul(N, B)
+                end, 0, R2),
+    T3 = erlang:timestamp(),
+    {{erl, timer:now_diff(T2, T1)/Many},
+     {c, timer:now_diff(T3, T2)/Many}}.
+    
+
+
 %A = encode(2),
 %    B = reverse_bytes(<<3:256>>),
 %    decode(pow(A, B)).
@@ -534,16 +584,4 @@ test(20) ->
 
 
     
-    
-                   
-
-    
-    
-                        
-    
-
-
-    
-                          
-
 
