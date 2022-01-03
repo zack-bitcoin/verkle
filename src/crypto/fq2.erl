@@ -477,12 +477,16 @@ test(16) ->
      {c, timer:now_diff(T3, T2)/Many}};
 test(17) ->
     io:fwrite("test pow\n"),
-    <<A0:256>> = crypto:strong_rand_bytes(32),
+    %<<A0:256>> = crypto:strong_rand_bytes(32),
+    A0 = 2,
     A = A0 rem ?q,
-    <<B0:256>> = crypto:strong_rand_bytes(32),
+    %<<B0:256>> = crypto:strong_rand_bytes(32),
+    B0 = 2,
     B = B0 rem ?q,
-    New = decode(pow(encode(A), 
+    AE = encode(A),
+    New = decode(pow(AE, 
                      reverse_bytes(<<B:256>>))),
+    AE = encode(A),
     Old = basics:rlpow(A, B, ?q),
     New = Old,
     success;

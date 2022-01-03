@@ -31,6 +31,7 @@ init() ->
 %2^256 rem q
 -define(r1, 4365854490173040654744536428792730448269323145811170256246478247246014318553).
 
+%maybe this is r2??            4365854490173040654744536428792730448269323145811170256246478247246014318553
 
 %r*r rem q
 -define(r2, 2244478849891746936202736009816130624903096691796347063256129649283183245105).
@@ -154,6 +155,7 @@ test(6) ->
     Bf = fq:encode(B1),
     <<A2:256>> = Af,
     <<B2:256>> = Bf,
+    S1 = decode(mul(A, B)),
     S1 = decode(mul(A, B)),
     S1 = (A1 * B1) rem ?q,
     %S2 = fq:mul(Af, Bf),
@@ -295,9 +297,11 @@ test(17) ->
     %<<B0:256>> = crypto:strong_rand_bytes(32),
     B0 = 1,
     B = B0 rem ?q,
-    New = decode(pow(encode(A), 
+    AE = encode(A),
+    New = decode(pow(AE,
                      reverse_bytes(<<B:256>>))),
                      %reverse_bytes(<<B:256>>))),
+    AE = encode(A),
     Old = basics:rlpow(A, B, ?q),
     {New == Old,
      New, Old};
@@ -335,13 +339,16 @@ test(19) ->
     C = decode(short_pow(encode(A), B)),
     D = basics:rlpow(A, B, ?q),
     C = D,
-    {A, B, C};
+    %{A, B, C};
+    success;
 test(20) ->
     io:fwrite("test neg\n"),
     <<A0:256>> = crypto:strong_rand_bytes(32),
     A = A0 rem ?q,
     NA = ?q - A,
-    NA = decode(neg(encode(A))).
+    NA = decode(neg(encode(A))),
+    success.
+
     
 
 

@@ -21,7 +21,7 @@ const uint64_t i2[4] =
    869855177390326455U};
 
 
-//<<A:64, B:64, C:64, D:64>> = fq:encode(1).
+//<<A:64, B:64, C:64, D:64>> = fq2:reverse_bytes(fq2:encode(1)).
 //{D, C, B, A}.
 const uint64_t one[4] =
 {8589934590U,
@@ -271,11 +271,13 @@ static void short_pow2
 {
   //uint64_t acc[4];
   memcpy(c, one, 32);
+  uint64_t A[4];
+  memcpy(A, a, 32);
   while(b > 0){
     if((b % 2) == 1){
-      mul2(c, a, c);
+      mul2(c, A, c);
     }
-    square2(a, a);
+    square2(A, A);
     b = b >> 1;
   };
   //memcpy(a, acc, 32);
@@ -295,10 +297,12 @@ static void pow2
 (uint64_t * a, uint64_t * b, uint64_t * c)
 {
   memcpy(c, one, 32);
-  pow3(a, b[0], c);
-  pow3(a, b[1], c);
-  pow3(a, b[2], c);
-  pow3(a, b[3], c);
+  uint64_t A[4];
+  memcpy(A, a, 32);
+  pow3(A, b[0], c);
+  pow3(A, b[1], c);
+  pow3(A, b[2], c);
+  pow3(A, b[3], c);
 }
 
 static inline void e_double2
@@ -607,6 +611,7 @@ static ERL_NIF_TERM power
        (uint64_t *)C);
   enif_release_binary(&A);
   enif_release_binary(&B);
+  memcpy(C, one, 32);
   return Result;
 };
 static ERL_NIF_TERM short_power

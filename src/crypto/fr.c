@@ -13,17 +13,13 @@ const uint64_t q[4] =
  461402362329971456U,
  1044189607433056169U};
 
-//<<A:64, B:64, C:64, D:64>> = rq:encode(1).
+//<<A:64, B:64, C:64, D:64>> = reverse_bytes(fr:encode(1)).
 //{D, C, B, A}.
 const uint64_t one[4] =
-{15638633955384358949U,
- 5829828792659875315U,
- 17587832991681619347U,
- 14291488728537671177U};
-//{8589934590U,
-// 6378425256633387010U,
-// 11064306276430008309U,
-// 1739710354780652911U};
+{2735949640168245209U,
+ 17516141824802482000U,
+ 10602903914100036852U,
+ 695520747347596742U};
 
 const uint64_t zero[4] =
   {0U,0U,0U,0U};
@@ -295,18 +291,13 @@ static void pow3
 static void pow2
 (uint64_t * a, uint64_t * b, uint64_t * c)
 {
-  
-  //uint64_t acc[4];
-  //uint64_t c[4];
   memcpy(c, one, 32);
-  //memcpy(c, a, 32);
-  pow3(a, b[0], c);
-  pow3(a, b[1], c);
-  pow3(a, b[2], c);
-  pow3(a, b[3], c);
-
-  //memcpy(a, acc, 32);
-  //memcpy(a, one, 32);
+  uint64_t A[4];
+  memcpy(A, a, 32);
+  pow3(A, b[0], c);
+  pow3(A, b[1], c);
+  pow3(A, b[2], c);
+  pow3(A, b[3], c);
 }
 
 static ERL_NIF_TERM neg
@@ -407,6 +398,7 @@ static ERL_NIF_TERM power
        (uint64_t *)C);
   enif_release_binary(&A);
   enif_release_binary(&B);
+  memcpy(C, one, 32);
   return Result;
 };
 static ERL_NIF_TERM short_power
