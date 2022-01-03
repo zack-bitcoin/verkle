@@ -9,7 +9,8 @@
          affine2affine_niels/1,
          eq/2,
          add/2,
-         extended2affine/1
+         extended2affine/1,
+         extended2extended_niels/1
         ]).
 
 %this jubjub module is based on this: https://github.com/zkcrypto/jubjub/blob/main/src/lib.rs

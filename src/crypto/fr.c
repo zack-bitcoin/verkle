@@ -8,26 +8,22 @@
 
 //prime used for the scalar field on top of jubjub.
 const uint64_t q[4] =
-  {18446744069414584321U,
-   6034159408538082302U,
-   3691218898639771653U,
-   8353516859464449352U};
+{15030498081868557495U,
+ 11990869827041890434U,
+ 461402362329971456U,
+ 1044189607433056169U};
 
-// inverse(2)
-const uint64_t i2[4] =
-  {4294967295U,
-   12412584665171469313U,
-   14755525175069779962U,
-   869855177390326455U};
-
-
-//<<A:64, B:64, C:64, D:64>> = fq:encode(1).
+//<<A:64, B:64, C:64, D:64>> = rq:encode(1).
 //{D, C, B, A}.
 const uint64_t one[4] =
-{8589934590U,
- 6378425256633387010U,
- 11064306276430008309U,
- 1739710354780652911U};
+{15638633955384358949U,
+ 5829828792659875315U,
+ 17587832991681619347U,
+ 14291488728537671177U};
+//{8589934590U,
+// 6378425256633387010U,
+// 11064306276430008309U,
+// 1739710354780652911U};
 
 const uint64_t zero[4] =
   {0U,0U,0U,0U};
@@ -38,10 +34,8 @@ const uint64_t zero[4] =
 // 18374686475393433600U};
 
 //-(q^-1 mod 2^64) mod 2^64
-//ffff_fffe_ffff_ffff
-//FFFFFFFEFFFFFFFF
-const uint64_t INV = 18446744069414584319U;
-//18446744073441116159 other endian?
+//1ba3_a358_ef78_8ef9
+const uint64_t INV = 1991615062597996281U;
 
 //uint64_t C[4];
 //uint64_t arr[2];
@@ -117,6 +111,13 @@ static inline void addition64
   ADC(a[2], b[2], c[2], *carrystart);
   ADC(a[3], b[3], c[3], *carrystart);
 };
+
+static ERL_NIF_TERM setup
+(ErlNifEnv* env, int argc,
+ const ERL_NIF_TERM argv[])
+{
+  return(argv[0]);
+}
 
 static inline void neg2
 (uint64_t * a, uint64_t * c)
@@ -294,220 +295,19 @@ static void pow3
 static void pow2
 (uint64_t * a, uint64_t * b, uint64_t * c)
 {
+  
+  //uint64_t acc[4];
+  //uint64_t c[4];
   memcpy(c, one, 32);
+  //memcpy(c, a, 32);
   pow3(a, b[0], c);
   pow3(a, b[1], c);
   pow3(a, b[2], c);
   pow3(a, b[3], c);
+
+  //memcpy(a, acc, 32);
+  //memcpy(a, one, 32);
 }
-
-static inline void e_double2
-(uint64_t * u, uint64_t * v, uint64_t * z,
- uint64_t * t1, uint64_t * t2,
- uint64_t * ub, uint64_t * vb, uint64_t * zb,
- uint64_t * t1b, uint64_t * t2b)
-{
-  //todo. working here.
-  uint64_t uu[4];
-  uint64_t vv[4];
-  uint64_t z2[4];
-  square2(u, uu);
-  square2(v, vv);
-  add2(z, z, z2);
-  mul2(z2, z, z2);//zz2
-  add2(u, v, ub);//uv1
-  mul2(ub, ub, ub);//uv2
-
-  add2(vv, uu, t2b);//vv_plus_uu, completed v
-  sub2(vv, uu, zb);//vv_minus_uu, completed z
-  sub2(ub, t2b, t1b);//completed u
-  sub2(z2, zb, uu);//completed t
-
-  mul2(t1b, uu, ub);
-  mul2(t2b, zb, vb);
-  mul2(zb, uu, zb);
-};
-static inline void e_add2
-(uint64_t * u, uint64_t * v, uint64_t * z1,
- uint64_t * t1, uint64_t * t2,
- uint64_t * vpu2, uint64_t * vmu2,
- uint64_t * td2, uint64_t * z2,
- uint64_t * ub, uint64_t * vb, uint64_t * z1b,
- uint64_t * t1b, uint64_t * t2b)
-{
-  uint64_t a[4];
-  uint64_t b[4];
-  uint64_t c[4];
-  uint64_t d[4];
-
-  sub2(v, u, a);
-  mul2(a, vmu2, a);
-  add2(v, u, b);
-  mul2(b, vpu2, b);
-  mul2(t1, t2, c);
-  mul2(c, td2, c);
-  add2(z1, z1, d);
-  mul2(d, z2, d);
-
-  sub2(b, a, t1b);//completed u.
-  add2(b, a, t2b);//completed v.
-  add2(d, c, z1b);//completed z.
-  sub2(d, c, a);//completed t
-
-  mul2(t1b, a, ub);
-  mul2(t2b, z1b, vb);
-  mul2(z1b, a, z1b);
-};
-static inline void e_mul2
-(uint64_t * vpu, uint64_t * vmu,//niels points
- uint64_t * td, uint64_t * z2,
- uint64_t b,//exponent
- uint64_t * u, uint64_t * v, uint64_t * z1,//resulting extended point.
- uint64_t * t1, uint64_t * t2)
-{
-  if(b == 1){
-    //extended_niels2extended
-    add2(vpu, vmu, v);
-    sub2(vpu, vmu, u);
-    mul2(v, (uint64_t *)i2, v);
-    mul2(u, (uint64_t *)i2, u);
-    memcpy(z1, one, 32);
-    memcpy(t1, u, 32);
-    memcpy(t2, v, 32);
-  } else if((b % 2) == 0){
-    e_mul2(vpu, vmu, td, z2,
-           b / 2,
-           u, v, z1, t1, t2);
-    e_double2(u, v, z1, t1, t2,
-              u, v, z1, t1, t2);
-  } else {
-    e_mul2(vpu, vmu, td, z2,
-           b - 1,
-           u, v, z1, t1, t2);
-    e_add2(u, v, z1, t1, t2,
-           vpu, vmu, td, z2,
-           u, v, z1, t1, t2);
-  };
-};
-/*
-static void square_multi
-(uint64_t * n, uint times)
-{
-  for(; times>0; times--){
-    square2(n, n);
-  };
-};
-
-static inline void inv2
-(uint64_t * a, uint64_t * b)
-{
-  uint64_t t0[4];
-  uint64_t t1[4];
-  uint64_t t2[4];
-  uint64_t t3[4];
-  uint64_t t4[4];
-  uint64_t t5[4];
-  uint64_t t6[4];
-  uint64_t t7[4];
-  uint64_t t8[4];
-  uint64_t t9[4];
-  uint64_t t11[4];
-  uint64_t t12[4];
-  uint64_t t13[4];
-  uint64_t t14[4];
-  uint64_t t15[4];
-  uint64_t t16[4];
-  uint64_t t17[4];
-  
-  square2(a, t0);
-  mul2(t0, a, t1);
-  square2(t0, t16);
-  square2(t16, t6);
-  mul2(t6, t0, t5);
-  mul2(t6, t16, t0);
-  mul2(t5, t16, t12);
-  square2(t6, t2);
-  mul2(t5, t6, t7);
-  mul2(t0, t5, t15);
-  square2(t12, t17);
-  mul2(t1, t17, t1);
-  mul2(t7, t2, t3);
-  mul2(t1, t17, t8);
-  mul2(t8, t2, t4);
-  mul2(t8, t7, t9);
-  mul2(t4, t5, t7);
-  mul2(t4, t17, t11);
-  mul2(t9, t17, t5);
-  mul2(t7, t15, t14);
-  mul2(t11, t12, t13);
-  mul2(t11, t17, t12);
-  mul2(t15, t12, t15);
-  mul2(t16, t15, t16);
-  mul2(t3, t16, t3);
-  mul2(t17, t3, t17);
-  mul2(t0, t17, t0);
-  mul2(t6, t0, t6);
-  mul2(t2, t6, t2);
-
-  square_multi(t0, 8);
-  mul2(t0, t17, t0);
-  square_multi(t0, 9);
-  mul2(t0, t16, t0);
-  square_multi(t0, 9);
-  mul2(t0, t15, t0);
-  square_multi(t0, 9);
-  mul2(t0, t15, t0);
-  square_multi(t0, 7);
-  mul2(t0, t14, t0);
-  square_multi(t0, 7);
-  mul2(t0, t13, t0);
-  square_multi(t0, 10);
-  mul2(t0, t12, t0);
-  square_multi(t0, 9);
-  mul2(t0, t11, t0);
-  square_multi(t0, 8);
-  mul2(t0, t8, t0);
-  square_multi(t0, 8);
-  mul2(t0, a, t0);
-  square_multi(t0, 14);
-  mul2(t0, t9, t0);
-  square_multi(t0, 10);
-  mul2(t0, t8, t0);
-  square_multi(t0, 15);
-  mul2(t0, t7, t0);
-  square_multi(t0, 10);
-  mul2(t0, t6, t0);
-  square_multi(t0, 8);
-  mul2(t0, t5, t0);
-  square_multi(t0, 16);
-  mul2(t0, t3, t0);
-  square_multi(t0, 8);
-  mul2(t0, t2, t0);
-  square_multi(t0, 7);
-  mul2(t0, t4, t0);
-  square_multi(t0, 9);
-  mul2(t0, t2, t0);
-  square_multi(t0, 8);
-  mul2(t0, t3, t0);
-  square_multi(t0, 8);
-  mul2(t0, t2, t0);
-  square_multi(t0, 8);
-  mul2(t0, t2, t0);
-  square_multi(t0, 8);
-  mul2(t0, t2, t0);
-  square_multi(t0, 8);
-  mul2(t0, t3, t0);
-  square_multi(t0, 8);
-  mul2(t0, t2, t0);
-  square_multi(t0, 8);
-  mul2(t0, t2, t0);
-  square_multi(t0, 5);
-  mul2(t0, t1, t0);
-  square_multi(t0, 5);
-  mul2(t0, t1, b);
-  
-}
-*/
 
 static ERL_NIF_TERM neg
 (ErlNifEnv* env, int argc,
@@ -626,37 +426,6 @@ static ERL_NIF_TERM short_power
   enif_release_binary(&A);
   return Result;
 };
-static ERL_NIF_TERM e_mul
-(ErlNifEnv* env, int argc,
- const ERL_NIF_TERM argv[])
-{
-  ErlNifBinary ENiels;
-  ErlNifUInt64 B;
-
-  ERL_NIF_TERM Extended2;
-  char * C = enif_make_new_binary
-    (env, 160, &Extended2);
-  
-  enif_inspect_binary(env, argv[0], &ENiels);
-  uint64_t * VPU = (uint64_t *)&(ENiels.data[0]);
-  uint64_t * VMU = (uint64_t *)&(ENiels.data[32]);
-  uint64_t * T2D = (uint64_t *)&(ENiels.data[64]);
-  uint64_t * NZ = (uint64_t *)&(ENiels.data[96]);
-
-  uint64_t * U = (uint64_t *)&(C[0]);
-  uint64_t * V = (uint64_t *)&(C[32]);
-  uint64_t * Z = (uint64_t *)&(C[64]);
-  uint64_t * T1 = (uint64_t *)&(C[96]);
-  uint64_t * T2 = (uint64_t *)&(C[128]);
-
-  enif_get_uint64(env, argv[1], &B);
-  e_mul2(VPU, VMU, T2D, NZ,
-         (uint64_t) B,
-         U, V, Z, T1, T2);
-  enif_release_binary(&ENiels);
-
-  return Extended2;
-};
 /*
 static ERL_NIF_TERM inv
 (ErlNifEnv* env, int argc,
@@ -680,70 +449,6 @@ static ERL_NIF_TERM ctest
   //return enif_make_binary(env, &resultnif);
   return argv[0];
 }
-static ERL_NIF_TERM e_double
-(ErlNifEnv* env, int argc,
- const ERL_NIF_TERM argv[])
-{
-  ErlNifBinary A;
-  enif_inspect_binary(env, argv[0], &A);
-
-  ERL_NIF_TERM Result;
-  char * C = enif_make_new_binary
-    (env, 160, &Result);
-
-  uint64_t * U = (uint64_t *)&A.data[0];
-  uint64_t * V = (uint64_t *)&A.data[32];
-  uint64_t * Z = (uint64_t *)&A.data[64];
-  uint64_t * T1 = (uint64_t *)&A.data[96];
-  uint64_t * T2 = (uint64_t *)&A.data[128];
-
-  uint64_t * Ub = (uint64_t *)&(C[0]);
-  uint64_t * Vb = (uint64_t *)&(C[32]);
-  uint64_t * Zb = (uint64_t *)&(C[64]);
-  uint64_t * T1b = (uint64_t *)&(C[96]);
-  uint64_t * T2b = (uint64_t *)&(C[128]);
-
-  e_double2(U, V, Z, T1, T2,
-            Ub, Vb, Zb, T1b, T2b);
-  //  return enif_make_binary(env, &A);
-  return(Result);
-}
-static ERL_NIF_TERM e_add
-(ErlNifEnv* env, int argc,
- const ERL_NIF_TERM argv[])
-{
-  //todo. shouldn't add in place. don't break erlang's immutability.
-  ErlNifBinary Extended, ENiels;
-  enif_inspect_binary(env, argv[0], &Extended);
-  enif_inspect_binary(env, argv[1], &ENiels);
-
-  ERL_NIF_TERM Result;
-  char * C = enif_make_new_binary
-    (env, 160, &Result);
-
-  uint64_t * U = (uint64_t *)&Extended.data[0];
-  uint64_t * V = (uint64_t *)&Extended.data[32];
-  uint64_t * Z = (uint64_t *)&Extended.data[64];
-  uint64_t * T1 = (uint64_t *)&Extended.data[96];
-  uint64_t * T2 = (uint64_t *)&Extended.data[128];
-
-  uint64_t * VPU = (uint64_t *)&ENiels.data[0];
-  uint64_t * VMU = (uint64_t *)&ENiels.data[32];
-  uint64_t * T2D = (uint64_t *)&ENiels.data[64];
-  uint64_t * NZ = (uint64_t *)&ENiels.data[96];
-
-  uint64_t * Ub = (uint64_t *)&(C[0]);
-  uint64_t * Vb = (uint64_t *)&(C[32]);
-  uint64_t * Zb = (uint64_t *)&(C[64]);
-  uint64_t * T1b = (uint64_t *)&(C[96]);
-  uint64_t * T2b = (uint64_t *)&(C[128]);
-
-  e_add2(U, V, Z, T1, T2, VPU, VMU, T2D, NZ,
-         Ub, Vb, Zb, T1b, T2b);
-
-  //return enif_make_binary(env, &Extended);
-  return(Result);
-}
 
 
 static ErlNifFunc nif_funcs[] =
@@ -757,11 +462,8 @@ static ErlNifFunc nif_funcs[] =
    {"short_pow", 2, short_power},
    //{"inv", 1, inv},
 
-   {"e_double", 1, e_double},
-   {"e_add", 2, e_add},
-   {"e_mul", 2, e_mul},
-
-   {"ctest", 1, ctest}
+   {"ctest", 1, ctest},
+   {"setup", 1, setup}
   };
 
-ERL_NIF_INIT(fq2,nif_funcs,NULL,NULL,NULL,NULL)
+ERL_NIF_INIT(fr,nif_funcs,NULL,NULL,NULL,NULL)

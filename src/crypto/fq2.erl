@@ -12,6 +12,7 @@
          setup/1,
          test/1,
          ctest/1,
+         reverse_bytes/1,
 
          e_double/1,
          e_add/2,
@@ -39,8 +40,6 @@ setup(_) ->
 
 %q = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
 -define(q, 52435875175126190479447740508185965837690552500527637822603658699938581184513).
--define(q_bits, 256).
--define(q_bits2, 512).
 
 -define(iq, 27711634432943687283656245953990505159342029877880134060146103271536583507967).
 
@@ -84,15 +83,15 @@ reverse_bytes(<<A, B/binary>>, R) ->
 reverse_bytes(<<>>, R) -> R.
 
 encode(A) when ((A < ?q) and (A > -1)) ->
-    B = fq:encode(A),
-    reverse_bytes(B).
+    mul(reverse_bytes(<<A:256>>),
+        reverse_bytes(<<?r2:256>>)).
+
 decode(C) ->
-    B = reverse_bytes(C),
-    A = fq:decode(B),
-    A.
-    %<<A:256>> = reverse_bytes(B),
-    %fq:mul(<<A:256>>, <<1:256>>).
-    %ok.
+    X = mul(C, reverse_bytes(<<1:256>>)),
+    <<Y:256>> = reverse_bytes(X),
+    Y.
+    %binary:decode_unsigned(X, little).
+   
 
 encode_extended(
   #extended_point{
@@ -143,7 +142,9 @@ neg(_) -> ok.
 sub(_, _) -> ok.
 mul(_, _) -> ok.
 square(_) -> ok.
-inv(_) -> ok.
+inv(_) -> 
+    io:fwrite("uncomment inverse in c code"),
+    ok.
 pow(_, _) -> ok.
 short_pow(_, _) -> ok.
 e_double(_) -> ok.
@@ -159,6 +160,18 @@ e_mul(_, _) -> ok.
 
 ctest(_) ->
     ok.
+
+points_list(Many) ->
+    G = jubjub:affine2extended(
+          jubjub:gen_point()),
+    G1 = jubjub:multiply(4327409, G),
+    points_list2(Many, G1).
+points_list2(0, _) -> [];
+points_list2(N, G) -> 
+    E = encode_extended(G),
+    [{G, E}|
+     points_list2(
+       N-1, jubjub:multiply(9320472034, G))].
 
 range(N, N) -> [N];
 range(A, B) when (A < B) -> 
@@ -192,30 +205,48 @@ test(2) ->
 %    true = sub(A, B) == reverse_bytes(fq:sub(A, B)),
 %    success;
 test(3) ->
+    io:fwrite("encode decode test\n"),
     <<A0:256>> = crypto:strong_rand_bytes(32),
-    A1 = A0 rem ?q,
+    %A1 = A0 rem ?q,
+    A1 = 2,
     A = encode(A1),
     A1 = decode(A);
 %A = inverse(inverse(A));
 test(4) ->
+    io:fwrite("subtraction speed test\n"),
     <<A0:256>> = crypto:strong_rand_bytes(32),
     <<B0:256>> = crypto:strong_rand_bytes(32),
     A1 = (A0 div 1) rem ?q,
     B1 = (B0 div 1) rem ?q,
     A = encode(A1),
     B = encode(B1),
+
+    %check determinism
+    R = sub(A, B),
+    R = sub(A, B),
+
     T1 = erlang:timestamp(),
     Many = 50000,
-    lists:map(fun(_) ->
-                      sub(A, B)
-              end, range(0, Many)),
+    lists:foldl(fun(_, _) ->
+                        R = sub(A, B)
+              end, 0, range(0, Many)),
     T2 = erlang:timestamp(),
-    {c, timer:now_diff(T2, T1)/Many};
+    lists:foldl(fun(_, _) ->
+                        if
+                            B1>A1 -> A1 + ?q - B1;
+                            true -> A1 - B1
+                        end
+              end, 0, range(0, Many)),
+    T3 = erlang:timestamp(),
+    {{c, timer:now_diff(T2, T1)/Many},
+     {erl, timer:now_diff(T3, T2)/Many}};
 test(5) ->
     %testing addition.
     io:fwrite("addition test\n"),
     <<A0:256>> = crypto:strong_rand_bytes(32),
     <<B0:256>> = crypto:strong_rand_bytes(32),
+    %A0 = 5,
+    %B0 = 7,
     A1 = A0 rem ?q,
     B1 = B0 rem ?q,
     A = encode(A1),
@@ -225,9 +256,14 @@ test(5) ->
     <<A2:256>> = Af,
     <<B2:256>> = Bf,
     %add(<<0:256>>, <<0:256>>),
-    S1 = reverse_bytes(add(A, B)),
+    %S1 = reverse_bytes(add(A, B)),
+    S1 = 0,
     S2 = fq:add2(Af, Bf),
-    {S1 == S2, new, S1, old, S2};
+    C1 = (A1 + B1) rem ?q,
+    C1 = decode(add(A, B)),
+    C1 = decode(add(A, B)),
+    C1 = fq:decode(S2),
+    success;
 test(6) ->
     %testing multiplication.
     io:fwrite("multiply test \n"),
@@ -239,20 +275,9 @@ test(6) ->
     B1 = B0 rem ?q,
     A = encode(A1),
     B = encode(B1),
-    Af = fq:encode(A1),
-    Bf = fq:encode(B1),
-    <<A2:256>> = Af,
-    <<B2:256>> = Bf,
-    S1 = reverse_bytes(mul(A, B)),
-    S2 = fq:mul(Af, Bf),
-    Bool = S1 == S2,
-    if
-        not(Bool) -> 
-            io:fwrite("test failed"),
-            {A, B, S1, S2};
-        true ->
-            {S1 == S2, S1, S2, fq:decode(S1)}
-    end;
+    S3 = (A1 * B1) rem ?q,
+    S3 = decode(mul(A, B)),
+    success;
 test(7) ->
     <<A0:256>> = crypto:strong_rand_bytes(32),
     <<B0:256>> = crypto:strong_rand_bytes(32),
@@ -345,27 +370,6 @@ test(8) ->
       {c, (SC - Empty)/Many}},
      {add, {erl, (AERL - Empty)/Many},
       {c, (AC - Empty)/Many}}};
-test(9) ->
-    %multiplication bug
-    A = <<163,111,88,19,242,144,5,56,171,153,103,125,198,
-   159,249,154,223,13,25,194,47,169,14,84,131,68,
-   162,240,108,177,197,59>>,
-    B = <<168,169,122,20,250,154,42,13,18,192,244,200,78,
-      125,170,150,60,139,147,21,249,194,146,233,147,
-      181,70,152,48,94,173,79>>,
-    A1 = decode(A),
-    B1 = decode(B),
-    Af = fq:encode(A1),
-    Bf = fq:encode(B1),
-    S1 = reverse_bytes(mul(A, B)),
-    S2 = fq:mul(Af, Bf),
-    <<C1:256>> = <<(A1*B1):256>>,
-
-    <<NA:256>> = A,
-    <<NB:256>> = B,
-    C = <<((NA*NB) rem ?q):256>>,
-
-    {S1 == S2, S1, S2, fq:encode((A1*B1) rem ?q)};
 test(10) ->
     io:fwrite("square test\n"),
     <<A0:256>> = crypto:strong_rand_bytes(32),
@@ -374,13 +378,18 @@ test(10) ->
     S1 = decode(square(encode(A))),
     S2 = (A*A rem ?q),
     B = S1 == S2,
-    {S1, S2, B};
+    {B, S1, S2};
 test(11) ->
     io:fwrite("inverse test\n"),
+    %fails.
     <<A0:256>> = crypto:strong_rand_bytes(32),
     A = A0 rem ?q,
-    A = decode(inv(inv(encode(A)))),
-    IA = decode(inv(encode(A))),
+    A1 = encode(A),
+    IA = inv(A1),
+    A1 = inv(IA),
+    A = decode(A1),
+   %A = decode(inv(inv(encode(A)))),
+    %IA = decode(inv(encode(A))),
     {A, IA};
 test(12) ->
     io:fwrite("inverse speed test\n"),
@@ -410,21 +419,15 @@ test(13) ->
            jubjub:gen_point()),
     B = encode_extended(P0),
     P = decode_extended(e_double(B)),
+    P = decode_extended(e_double(B)),
     P2 = jubjub:double(P0),
     true = jubjub:eq(P, P2),
     success;
 test(14) ->
     io:fwrite("jubjub double speed test\n"),
-    Many = 100,
+    Many = 10000,
     R = range(0, Many),
-    R2 = lists:map(
-           fun(_) ->
-                   P0 = jubjub:double(
-                          jubjub:affine2extended(
-                          jubjub:gen_point())),
-                   B = encode_extended(P0),
-                   {P0, B}
-           end, R),
+    R2 = points_list(Many),
     io:fwrite("made points\n"),
     T1 = erlang:timestamp(),
     lists:foldl(fun({P, _}, _) ->
@@ -449,20 +452,14 @@ test(15) ->
     N = encode_extended_niels(N0),
     E3 = jubjub:add(E0, N0),
     E2 = decode_extended(e_add(E, N)),
+    E2 = decode_extended(e_add(E, N)),
     true =jubjub:eq(E2, E3),
     success;
 test(16) ->
     io:fwrite("jubjub add speed\n"),
-    Many = 100,
+    Many = 10000,
     R = range(0, Many),
-    R2 = lists:map(
-           fun(_) ->
-                   P0 = jubjub:double(
-                          jubjub:affine2extended(
-                          jubjub:gen_point())),
-                   B = encode_extended(P0),
-                   {P0, B}
-           end, R),
+    R2 = points_list(Many),
     N0 = jubjub:affine_niels2extended_niels(
            jubjub:affine2affine_niels(
              jubjub:gen_point())),
@@ -522,7 +519,8 @@ test(19) ->
     C = decode(short_pow(encode(A), B)),
     D = basics:rlpow(A, B, ?q),
     C = D,
-    {A, B, C};
+    %{A, B, C},
+    success;
 test(20) ->
     io:fwrite("test neg\n"),
     <<A0:256>> = crypto:strong_rand_bytes(32),
@@ -550,19 +548,15 @@ test(21) ->
     success;
 test(22) ->
     io:fwrite("elliptic multiplication speed test \n\n"),
-    Many = 100,
+    Many = 1000,
     R = range(0, Many),
+    R1 = points_list(Many),
     R2 = lists:map(
-           fun(_) ->
-                   N0 = jubjub:affine_niels2extended_niels(
-                          jubjub:affine2affine_niels(
-                            jubjub:gen_point())),
+           fun({P, _}) ->
+                   N0 = jubjub:extended2extended_niels(P),
                    N = encode_extended_niels(N0),
                    <<B:64>> = crypto:strong_rand_bytes(8),
-                   {N0, N, B}
-    
-           end, R),
-    io:fwrite("generated randomness\n"),
+                   {N0, N, B} end, R1),
     T1 = erlang:timestamp(),
     lists:foldl(fun({N0, _, B}, _) ->
                         jubjub:multiply(B, N0)
@@ -576,10 +570,6 @@ test(22) ->
      {c, timer:now_diff(T3, T2)/Many}}.
     
 
-
-%A = encode(2),
-%    B = reverse_bytes(<<3:256>>),
-%    decode(pow(A, B)).
 
 
 

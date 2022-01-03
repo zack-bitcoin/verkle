@@ -103,7 +103,6 @@ int greater_than(const uint32_t * a,
   }
   return(1);
 };
-
 void assume_positive_sub
 (const uint32_t * a,
  const uint32_t * b,

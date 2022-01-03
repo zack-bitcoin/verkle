@@ -146,6 +146,7 @@ range(A, B) when (A < B) ->
 test(1) ->
     check_constants();
 test(2) ->
+    io:fwrite("subtraction test\n"),
     <<A0:256>> = crypto:strong_rand_bytes(32),
     <<B0:256>> = crypto:strong_rand_bytes(32),
     A1 = A0 rem ?q,
@@ -154,9 +155,7 @@ test(2) ->
     B = encode(B1),
     %setup(0),
     true = sub(A, B) == sub2(A, B),
-    {A, B,
-     sub(A, B),
-     sub2(A, B)};
+    success;
 test(3) ->
     <<A0:256>> = crypto:strong_rand_bytes(32),
     A1 = A0 rem ?q,
