@@ -11,7 +11,8 @@
          encode/1, decode/1,
          test/1,
          ctest/1,
-         setup/1
+         setup/1,
+         batch_inverse/1
 
         ]).
 -on_load(init/0).
@@ -50,6 +51,12 @@ reverse_bytes(<<A, B/binary>>, R) ->
     reverse_bytes(B, <<A, R/binary>>);
 reverse_bytes(<<>>, R) -> R.
 
+encode(0) ->
+    <<0:256>>;
+encode(1) ->
+<<217,7,150,185,179,11,248,37,80,231,182,102,47,
+  214,21,243,244,20,136,235,238,20,37,147,198,85,
+  145,71,111,252,166,9>>;
 encode(A) when ((A < ?q) and (A > -1)) ->
     mul(reverse_bytes(<<A:256>>),
         reverse_bytes(<<?r2:256>>)).
@@ -66,10 +73,27 @@ neg(_) -> ok.
 sub(_, _) -> ok.
 mul(_, _) -> ok.
 square(_) -> ok.
-inv(_) -> ok.
+inv(X) -> ff:inverse(X, ?q).
 pow(_, _) -> ok.
 short_pow(_, _) -> ok.
-    
+
+
+pis([], _) -> [];
+pis([H|T], A) -> 
+    X = mul(H, A),
+    [X|pis(T, X)].
+batch_inverse(Vs) ->
+    [All|V2] = lists:reverse(pis(Vs, encode(1))),%[v16, v15, v14, v13, v12, v1]
+    AllI = encode(ff:inverse(decode(All), ?q)),%i16
+    VI = lists:map(
+           fun(V) -> mul(AllI, V) end,
+           V2), %[i6, i56, i46, i36, i26]
+    V3 = lists:reverse(pis(lists:reverse(Vs), encode(1))),%[v16, v26, v36, v46, v56, v6]
+    V4 = tl(V3)++[encode(1)],%[v26, v36, v46, v56, v6, 1]
+    VI2 = [AllI|lists:reverse(VI)],%[i16, i26, i36, i46, i56, i6]
+    lists:zipwith(fun(A, B) ->
+                          mul(A, B)
+                  end, V4, VI2).
 
 -define(sub3(A, B),
     if

@@ -112,12 +112,12 @@ calc_H(R, RA, T, As, Zs, Base) ->
         lists:map(fun(Z) -> ?sub2(T, Z) end, Zs),
     IDs = ff:batch_inverse(Divisors, Base),
     RIDs = mul_r_powers(R, 1, IDs, Base),
-    calc_H2(RIDs, As, Base, []).
-calc_H2([], [], _, Accumulator) -> Accumulator;
-calc_H2([H|T], [A|AT], Base, Acc) -> 
-    X = poly:mul_scalar(H, A, Base),
+    calc_H2(RIDs, As, []).
+calc_H2([], [], Accumulator) -> Accumulator;
+calc_H2([H|T], [A|AT], Acc) -> 
+    X = poly:mul_scalar(H, A),
     Acc2 = poly:add(X, Acc),
-    calc_H2(T, AT, Base, Acc2).
+    calc_H2(T, AT, Acc2).
 
 calc_R([], [], [], B) -> 
     <<R:256>> = hash:doit(B),

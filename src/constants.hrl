@@ -38,6 +38,7 @@
 
 -define(root, ?root8).
 
+%created in multiproof:make_parameters_jacob/2
 -record(p, {e, b, g, h, q, domain, a, da, ls}).
 
 %secp256k1

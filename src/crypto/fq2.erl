@@ -16,7 +16,8 @@
 
          e_double/1,
          e_add/2,
-         e_mul/2
+         e_mul/2,
+         e_mul_long/2
         ]).
 -on_load(init/0).
 -record(extended_point, {u, v, z, t1, t2}).
@@ -82,6 +83,11 @@ reverse_bytes(<<A, B/binary>>, R) ->
     reverse_bytes(B, <<A, R/binary>>);
 reverse_bytes(<<>>, R) -> R.
 
+encode(0) -> <<0:256>>;
+encode(1) ->
+<<254,255,255,255,1,0,0,0,2,72,3,0,250,183,132,88,
+  245,79,188,236,239,79,140,153,111,5,197,172,89,
+  177,36,24>>;
 encode(A) when ((A < ?q) and (A > -1)) ->
     mul(reverse_bytes(<<A:256>>),
         reverse_bytes(<<?r2:256>>)).
@@ -150,6 +156,7 @@ short_pow(_, _) -> ok.
 e_double(_) -> ok.
 e_add(_, _) -> ok.
 e_mul(_, _) -> ok.
+e_mul_long(_, _) -> ok.
     
 
 -define(sub3(A, B),
@@ -547,7 +554,6 @@ test(21) ->
     M = jubjub:multiply(B, N0),
     M2 = decode_extended(Me),
     %jubjub:eq(M, M2),
-    I2 = 26217937587563095239723870254092982918845276250263818911301829349969290592257,
     true = jubjub:eq(M, M2),
     success;
 test(22) ->
@@ -571,7 +577,22 @@ test(22) ->
                 end, 0, R2),
     T3 = erlang:timestamp(),
     {{erl, timer:now_diff(T2, T1)/Many},
-     {c, timer:now_diff(T3, T2)/Many}}.
+     {c, timer:now_diff(T3, T2)/Many}};
+test(23) ->
+    io:fwrite("testing long elliptic multiplication\n"),
+    N0 = jubjub:affine_niels2extended_niels(
+           jubjub:affine2affine_niels(
+             jubjub:gen_point())),
+    N = encode_extended_niels(N0),
+    <<B:256>> = crypto:strong_rand_bytes(32),
+    %B = 18446744073709551615,
+    <<One:256>> = encode(1),
+    Me =  e_mul_long(N, reverse_bytes(<<B:256>>)),
+    M = jubjub:multiply(B, N0),
+    M2 = decode_extended(Me),
+    true = jubjub:eq(M, M2),
+    success.
+
     
 
 

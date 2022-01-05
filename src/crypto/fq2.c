@@ -54,6 +54,10 @@ const uint64_t INV = 18446744069414584319U;
 
 #define ADC2(a, b, car, c, car2) {c = a + b + car; car2 = ((c < b) || (car && (c == b)));}
 
+//#define kth_bit(n, k) ((n & ( 1 << k)) >> k)
+#define kth_bit(n, k) ((n >> k) & 1)
+
+
 //uint64_t x;
 static void print32
 (uint64_t * x)
@@ -393,6 +397,77 @@ static inline void e_mul2
            u, v, z1, t1, t2);
   };
 };
+static inline void extended_niels2extended
+(uint64_t * vpu, uint64_t * vmu,//niels points
+ uint64_t * td, uint64_t * z2,
+ uint64_t * u, uint64_t * v, uint64_t * z1,//resulting extended point.
+ uint64_t * t1, uint64_t * t2)
+{
+  add2(vpu, vmu, v);
+  sub2(vpu, vmu, u);
+  mul2(v, (uint64_t *)i2, v);
+  mul2(u, (uint64_t *)i2, u);
+  memcpy(z1, one, 32);
+  memcpy(t1, u, 32);
+  memcpy(t2, v, 32);
+};
+
+static inline void e_mul_long2
+(uint64_t * vpu, uint64_t * vmu,//niels points
+ uint64_t * td, uint64_t * z2,
+ uint64_t * b,//exponent
+ uint64_t * u, uint64_t * v, uint64_t * z1,//resulting extended point.
+ uint64_t * t1, uint64_t * t2)
+{
+  extended_niels2extended
+    (vpu, vmu, td, z2, u, v, z1, t1, t2);
+  int all_zero = 1;//true
+  for(int i = 3; i >= 0; i--){
+    for(int j = 63; j >= 0; j--){
+      int bool = kth_bit(b[i], j);
+      if(!(all_zero)){
+        e_double2(u, v, z1, t1, t2,
+                  u, v, z1, t1, t2);
+        if(bool){
+          e_add2(u, v, z1, t1, t2,
+                 vpu, vmu, td, z2,
+                 u, v, z1, t1, t2);
+        }
+      }
+      all_zero = (all_zero && (!(bool)));
+    }
+  }
+}
+    // 1 0 1
+    // double, add, double, double, add
+  
+
+/*
+  if(b == 1){
+    //extended_niels2extended
+    add2(vpu, vmu, v);
+    sub2(vpu, vmu, u);
+    mul2(v, (uint64_t *)i2, v);
+    mul2(u, (uint64_t *)i2, u);
+    memcpy(z1, one, 32);
+    memcpy(t1, u, 32);
+    memcpy(t2, v, 32);
+  } else if((b % 2) == 0){
+    e_mul2(vpu, vmu, td, z2,
+           b / 2,
+           u, v, z1, t1, t2);
+    e_double2(u, v, z1, t1, t2,
+              u, v, z1, t1, t2);
+  } else {
+    e_mul2(vpu, vmu, td, z2,
+           b - 1,
+           u, v, z1, t1, t2);
+    e_add2(u, v, z1, t1, t2,
+           vpu, vmu, td, z2,
+           u, v, z1, t1, t2);
+  };
+};
+*/
 /*
 static void square_multi
 (uint64_t * n, uint times)
@@ -662,6 +737,38 @@ static ERL_NIF_TERM e_mul
 
   return Extended2;
 };
+static ERL_NIF_TERM e_mul_long
+(ErlNifEnv* env, int argc,
+ const ERL_NIF_TERM argv[])
+{
+  ErlNifBinary ENiels, B;
+
+  ERL_NIF_TERM Extended2;
+  char * C = enif_make_new_binary
+    (env, 160, &Extended2);
+  
+  enif_inspect_binary(env, argv[0], &ENiels);
+  uint64_t * VPU = (uint64_t *)&(ENiels.data[0]);
+  uint64_t * VMU = (uint64_t *)&(ENiels.data[32]);
+  uint64_t * T2D = (uint64_t *)&(ENiels.data[64]);
+  uint64_t * NZ = (uint64_t *)&(ENiels.data[96]);
+
+  uint64_t * U = (uint64_t *)&(C[0]);
+  uint64_t * V = (uint64_t *)&(C[32]);
+  uint64_t * Z = (uint64_t *)&(C[64]);
+  uint64_t * T1 = (uint64_t *)&(C[96]);
+  uint64_t * T2 = (uint64_t *)&(C[128]);
+
+  enif_inspect_binary(env, argv[1], &B);
+  
+  e_mul_long2(VPU, VMU, T2D, NZ,
+         (uint64_t *)B.data,
+         U, V, Z, T1, T2);
+  enif_release_binary(&ENiels);
+  enif_release_binary(&B);
+
+  return Extended2;
+};
 /*
 static ERL_NIF_TERM inv
 (ErlNifEnv* env, int argc,
@@ -765,6 +872,7 @@ static ErlNifFunc nif_funcs[] =
    {"e_double", 1, e_double},
    {"e_add", 2, e_add},
    {"e_mul", 2, e_mul},
+   {"e_mul_long", 2, e_mul_long},
 
    {"ctest", 1, ctest}
   };
