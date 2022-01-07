@@ -23,7 +23,8 @@ const uint64_t one[4] =
 
 const uint64_t zero[4] =
   {0U,0U,0U,0U};
-  
+
+
 //{8000017657123382296U,
 // 17676554788265757849U,
 // 164384689140237400U,
@@ -112,6 +113,9 @@ static ERL_NIF_TERM setup
 (ErlNifEnv* env, int argc,
  const ERL_NIF_TERM argv[])
 {
+  //ERL_NIF_TERM Error =
+    //  enif_make_int(env, 0);
+
   return(argv[0]);
 }
 
@@ -305,7 +309,14 @@ static ERL_NIF_TERM neg
  const ERL_NIF_TERM argv[])
 {
   ErlNifBinary A;
-  enif_inspect_binary(env, argv[0], &A);
+  int check =
+    enif_inspect_binary(env, argv[0], &A);
+  if((!(A.size == 32)) || (!check)){
+    const char * msg = "error";
+    ERL_NIF_TERM Error =
+      enif_make_atom(env, msg);
+    return(Error);
+  };
   ERL_NIF_TERM Result;
   char * C = enif_make_new_binary
     (env, 32, &Result);

@@ -73,7 +73,7 @@ neg(_) -> ok.
 sub(_, _) -> ok.
 mul(_, _) -> ok.
 square(_) -> ok.
-inv(X) -> ff:inverse(X, ?q).
+inv(X) -> encode(ff:inverse(decode(X), ?q)).
 pow(_, _) -> ok.
 short_pow(_, _) -> ok.
 

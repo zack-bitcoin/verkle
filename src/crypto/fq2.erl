@@ -9,24 +9,46 @@
          pow/2,
          short_pow/2,
          encode/1, decode/1,
+         encode_extended/1, decode_extended/1,
          setup/1,
          test/1,
          ctest/1,
          reverse_bytes/1,
+         prime/0,
 
          e_double/1,
          e_add/2,
          e_mul/2,
-         e_mul_long/2
+         e_mul_long/2,
+         e_zero/0,
+         eq/2,
+         batch_inverse/1,
+         e_simplify_batch/1,
+
+         gen_point/0,
+
+         extended2extended_niels/1
         ]).
 -on_load(init/0).
 -record(extended_point, {u, v, z, t1, t2}).
 -record(extended_niels_point, 
         {v_plus_u, v_minus_u, t2d, z}).
+
+% -(10240/10241)
+-define(D, <<176,246,116,185,85,36,82,42,179,202,154,13,239,
+             201,108,252,209,40,118,194,148,251,8,122,46,38,
+             14,254,168,246,248,87>>).
+
+% 2 * D
+-define(D2, <<95,237,233,114,172,72,164,84,103,57,55,27,219,
+              239,27,165,158,121,74,123,33,31,216,192,20,207,
+              126,210,254,69,4,60>>).
+
 init() ->
     ok = erlang:load_nif("./ebin/fq2", 0),
     setup(0),
     ok.
+
 
 setup(_) ->
     %defined in C.
@@ -58,6 +80,8 @@ setup(_) ->
 
 %1/r rem n
 -define(ir, 12549076656233958353659347336803947287922716146853412054870763148006372261952).
+
+prime() -> ?q.
 
 check_constants() -> 
     ?iq = prime_reverse(?q),
@@ -131,8 +155,8 @@ encode_extended_niels(
     Ze = encode(Z),
     <<VPUe/binary, VMUe/binary, T2De/binary,
       Ze/binary>>.
-decode_extended_niels(<<VPU:256, VMU:256, T2D:256,
-                        Z:256>>) ->
+decode_extended_niels(
+  <<VPU:256, VMU:256, T2D:256, Z:256>>) ->
     #extended_niels_point
         {v_plus_u = decode(<<VPU:256>>),
          v_minus_u = decode(<<VMU:256>>),
@@ -148,15 +172,70 @@ neg(_) -> ok.
 sub(_, _) -> ok.
 mul(_, _) -> ok.
 square(_) -> ok.
-inv(_) -> 
-    io:fwrite("uncomment inverse in c code"),
-    ok.
+inv(X) -> encode(ff:inverse(decode(X), ?q)).
 pow(_, _) -> ok.
 short_pow(_, _) -> ok.
 e_double(_) -> ok.
 e_add(_, _) -> ok.
 e_mul(_, _) -> ok.
 e_mul_long(_, _) -> ok.
+
+pis([], _) -> [];
+pis([H|T], A) -> 
+    X = mul(H, A),
+    [X|pis(T, X)].
+batch_inverse(Vs) ->
+    [All|V2] = lists:reverse(pis(Vs, encode(1))),%[v16, v15, v14, v13, v12, v1]
+    AllI = encode(ff:inverse(decode(All), ?q)),%i16
+    VI = lists:map(
+           fun(V) -> mul(AllI, V) end,
+           V2), %[i6, i56, i46, i36, i26]
+    V3 = lists:reverse(pis(lists:reverse(Vs), encode(1))),%[v16, v26, v36, v46, v56, v6]
+    V4 = tl(V3)++[encode(1)],%[v26, v36, v46, v56, v6, 1]
+    VI2 = [AllI|lists:reverse(VI)],%[i16, i26, i36, i46, i56, i6]
+    lists:zipwith(fun(A, B) ->
+                          mul(A, B)
+                  end, V4, VI2).
+
+e_simplify_batch(Es) ->
+    Zs = lists:map(fun(<<_:512, Z:256, _:512>>) ->
+                           <<Z:256>> end, Es),
+    %Zs = lists:map(fun(#extended_point{z = Z}) ->
+    %                       Z end, Es),
+    %io:fwrite(decode(hd(Zs))),
+    false = (decode(hd(Zs)) == 0),
+
+    IZs = batch_inverse(Zs),
+    lists:zipwith(fun(E, IZ) ->
+                          simplify(E, IZ)
+                  end, Es, IZs).
+simplify(<<U:256, V:256, _/binary>>, IZ) ->
+    U2 = mul(<<U:256>>, IZ),
+    V2 = mul(<<V:256>>, IZ),
+    <<U2/binary, V2/binary, (encode(1))/binary, 
+      U2/binary, V2/binary>>.
+    
+        
+
+eq(A, B) ->
+    jubjub:eq(
+      decode_extended(A), 
+      decode_extended(B)).
+
+e_zero() ->
+    A = #extended_point
+        {u = 0, v = 1, z = 1, t1 = 0, t2 = 0},
+    encode_extended(A).
+
+extended2extended_niels(
+  <<U:256, V:256, Z:256, T1:256, T2:256>>
+ ) ->
+    UV = mul(<<U:256>>, <<V:256>>),
+    T3 = mul(<<T1:256>>, <<T2:256>>),
+    VPU = add(<<U:256>>, <<V:256>>),
+    VMU = sub(<<V:256>>, <<U:256>>),
+    T2D = mul(T3, ?D2),
+    <<VPU/binary, VMU/binary, T2D/binary, Z:256>>.
     
 
 -define(sub3(A, B),
@@ -167,6 +246,11 @@ e_mul_long(_, _) -> ok.
 
 ctest(_) ->
     ok.
+
+gen_point() ->
+    G = jubjub:affine2extended(
+          jubjub:gen_point()),
+    encode_extended(G).
 
 points_list(Many) ->
     G = jubjub:affine2extended(
@@ -360,7 +444,7 @@ test(8) ->
                   0
           end, 0, R2),
     T7 = erlang:timestamp(),
-    lists:foldl(fun(A, B) -> 0 end, 0, R2),
+    lists:foldl(fun(_, _) -> 0 end, 0, R2),
     T8 = erlang:timestamp(),
     Empty = timer:now_diff(T8, T7),
     MERL = timer:now_diff(T2, T1),
