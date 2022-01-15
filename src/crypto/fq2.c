@@ -587,13 +587,25 @@ static inline void inv2
   
 }
 */
+static ERL_NIF_TERM error_atom
+(ErlNifEnv* env)
+{  
+    const char * msg = "error";
+    ERL_NIF_TERM Error =
+      enif_make_atom(env, msg);
+    return(Error);
+}
 
 static ERL_NIF_TERM neg
 (ErlNifEnv* env, int argc,
  const ERL_NIF_TERM argv[])
 {
   ErlNifBinary A;
-  enif_inspect_binary(env, argv[0], &A);
+  int checka =
+    enif_inspect_binary(env, argv[0], &A);
+  if((!checka) || (!(A.size == 32))){
+    return(error_atom(env));
+  };
   ERL_NIF_TERM Result;
   char * C = enif_make_new_binary
     (env, 32, &Result);
@@ -611,8 +623,16 @@ static ERL_NIF_TERM sub
   ERL_NIF_TERM Result;
   char * C = enif_make_new_binary
     (env, 32, &Result);
-  enif_inspect_binary(env, argv[0], &BinAi);
-  enif_inspect_binary(env, argv[1], &BinBi);
+  int checka =
+    enif_inspect_binary(env, argv[0], &BinAi);
+  int checkb =
+    enif_inspect_binary(env, argv[1], &BinBi);
+  if((!checka) || (!(BinAi.size == 32))){
+    return(error_atom(env));
+  };
+  if((!checkb) || (!(BinBi.size == 32))){
+    return(error_atom(env));
+  };
   sub2((uint64_t *)BinAi.data,
        (uint64_t *)BinBi.data,
        (uint64_t *)C);//~0.007
@@ -625,6 +645,7 @@ static ERL_NIF_TERM add
 (ErlNifEnv* env, int argc,
  const ERL_NIF_TERM argv[])
 {
+  //todo working here. check inputs.
   ErlNifBinary BinAi;
   ErlNifBinary BinBi;
   ERL_NIF_TERM Result;

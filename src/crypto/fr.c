@@ -304,18 +304,27 @@ static void pow2
   pow3(A, b[3], c);
 }
 
-static ERL_NIF_TERM neg
-(ErlNifEnv* env, int argc,
- const ERL_NIF_TERM argv[])
-{
-  ErlNifBinary A;
-  int check =
-    enif_inspect_binary(env, argv[0], &A);
-  if((!(A.size == 32)) || (!check)){
+static ERL_NIF_TERM error_atom
+(ErlNifEnv* env)
+{  
     const char * msg = "error";
     ERL_NIF_TERM Error =
       enif_make_atom(env, msg);
     return(Error);
+}
+
+static ERL_NIF_TERM neg
+(ErlNifEnv* env, int argc,
+ const ERL_NIF_TERM argv[])
+{
+  if(!(argc == 1)){
+    return(error_atom(env));
+  }
+  ErlNifBinary A;
+  int check =
+    enif_inspect_binary(env, argv[0], &A);
+  if((!check) || (!(A.size == 32))){
+    return(error_atom(env));
   };
   ERL_NIF_TERM Result;
   char * C = enif_make_new_binary
@@ -329,13 +338,26 @@ static ERL_NIF_TERM sub
 (ErlNifEnv* env, int argc,
  const ERL_NIF_TERM argv[])
 {
+  if(!(argc == 2)){
+    return(error_atom(env));
+  }
   ErlNifBinary BinAi;
   ErlNifBinary BinBi;
   ERL_NIF_TERM Result;
   char * C = enif_make_new_binary
     (env, 32, &Result);
-  enif_inspect_binary(env, argv[0], &BinAi);
-  enif_inspect_binary(env, argv[1], &BinBi);
+  int checka =
+    enif_inspect_binary(env, argv[0], &BinAi);
+  int checkb =
+    enif_inspect_binary(env, argv[1], &BinBi);
+
+  if((!checka) || (!(BinAi.size == 32))){
+    return(error_atom(env));
+  };
+  if((!checkb) || (!(BinBi.size == 32))){
+    return(error_atom(env));
+  };
+  
   sub2((uint64_t *)BinAi.data,
        (uint64_t *)BinBi.data,
        (uint64_t *)C);//~0.007
@@ -353,8 +375,16 @@ static ERL_NIF_TERM add
   ERL_NIF_TERM Result;
   char * C = enif_make_new_binary
     (env, 32, &Result);
-  enif_inspect_binary(env, argv[0], &BinAi);
-  enif_inspect_binary(env, argv[1], &BinBi);
+  int checka =
+    enif_inspect_binary(env, argv[0], &BinAi);
+  int checkb =
+    enif_inspect_binary(env, argv[1], &BinBi);
+  if((!checka) || (!(BinAi.size == 32))){
+    return(error_atom(env));
+  };
+  if((!checkb) || (!(BinBi.size == 32))){
+    return(error_atom(env));
+  };
   add2((uint64_t *)BinAi.data,
        (uint64_t *)BinBi.data,
        (uint64_t *)C);
@@ -371,8 +401,16 @@ static ERL_NIF_TERM mul
   ERL_NIF_TERM Result;
   char * C = enif_make_new_binary
     (env, 32, &Result);
-  enif_inspect_binary(env, argv[0], &BinAi);
-  enif_inspect_binary(env, argv[1], &BinBi);
+  int checka =
+    enif_inspect_binary(env, argv[0], &BinAi);
+  int checkb =
+    enif_inspect_binary(env, argv[1], &BinBi);
+  if((!checka) || (!(BinAi.size == 32))){
+    return(error_atom(env));
+  };
+  if((!checkb) || (!(BinBi.size == 32))){
+    return(error_atom(env));
+  };
   mul2((uint64_t *)BinAi.data,
        (uint64_t *)BinBi.data,
        (uint64_t *)C);
@@ -388,7 +426,11 @@ static ERL_NIF_TERM square
   ERL_NIF_TERM Result;
   char * C = enif_make_new_binary
     (env, 32, &Result);
-  enif_inspect_binary(env, argv[0], &BinAi);
+  int checka =
+    enif_inspect_binary(env, argv[0], &BinAi);
+  if((!checka) || (!(BinAi.size == 32))){
+    return(error_atom(env));
+  };
   square2((uint64_t *)BinAi.data,
           (uint64_t *)C);
   enif_release_binary(&BinAi);
@@ -402,8 +444,16 @@ static ERL_NIF_TERM power
   ERL_NIF_TERM Result;
   char * C = enif_make_new_binary
     (env, 32, &Result);
+  int checka =
   enif_inspect_binary(env, argv[0], &A);
+  int checkb =
   enif_inspect_binary(env, argv[1], &B);
+  if((!checka) || (!(A.size == 32))){
+    return(error_atom(env));
+  };
+  if((!checkb) || (!(B.size == 32))){
+    return(error_atom(env));
+  };
   pow2((uint64_t *)A.data,
        (uint64_t *)B.data,
        (uint64_t *)C);

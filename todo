@@ -1,4 +1,5 @@
 would be nice to put some guards in the c code, so it returns a 0 or something instead of crashing the entire erlang vm.
+working on fq2.c, on addition.
 
 
 
