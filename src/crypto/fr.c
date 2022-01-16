@@ -445,9 +445,9 @@ static ERL_NIF_TERM power
   char * C = enif_make_new_binary
     (env, 32, &Result);
   int checka =
-  enif_inspect_binary(env, argv[0], &A);
+    enif_inspect_binary(env, argv[0], &A);
   int checkb =
-  enif_inspect_binary(env, argv[1], &B);
+    enif_inspect_binary(env, argv[1], &B);
   if((!checka) || (!(A.size == 32))){
     return(error_atom(env));
   };
@@ -471,8 +471,16 @@ static ERL_NIF_TERM short_power
   ERL_NIF_TERM Result;
   char * C = enif_make_new_binary
     (env, 32, &Result);
-  enif_inspect_binary(env, argv[0], &A);
-  enif_get_uint64(env, argv[1], &B);
+  int checka =
+    enif_inspect_binary(env, argv[0], &A);
+  int checkb =
+    enif_get_uint64(env, argv[1], &B);
+  if((!checka) || (!(A.size == 32))){
+    return(error_atom(env));
+  };
+  if((!checkb)){
+    return(error_atom(env));
+  };
   short_pow2((uint64_t *)A.data,
              (uint64_t) B,
              (uint64_t *)C);
