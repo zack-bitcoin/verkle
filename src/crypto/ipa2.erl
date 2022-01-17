@@ -176,24 +176,27 @@ get_gn(X, G) ->
     {Gl, Gr} = lists:split(S2, G),
     Gr2 = v_mul(X, Gr),
     Gr3 = simplify_v(Gr2),
-    G2 = v_add(Gl, Gr3),
-    get_gn(X, G2).
+    G2 = v_add(fq2:extended_niels2extended(Gl), 
+               Gr3),
+    get_gn(X, fq2:extended2extended_niels(G2)).
 
-foldh_mul(_, _, [C]) -> [C];
+foldh_mul(_, _, [C]) -> [fq2:extended_niels2extended(C)];
 foldh_mul(X, Xi, [L, R|C]) -> 
     [mul(X, L), mul(Xi, R)|
      foldh_mul(X, Xi, C)].
 fold_cs(X, Xi, Cs) ->
-    Cs30 = foldh_mul(X, Xi, Cs),
+    Cs2 = fq2:extended2extended_niels(Cs),
+    Cs30 = foldh_mul(X, Xi, Cs2),
     Cs3 = if
               (length(Cs30) > 15) ->  
                   Cs30;
               true -> Cs30
           end,
+    %io:fwrite({size(hd(Cs3)), size(fq2:e_zero())}),
     lists:foldl(fun(A, B) ->
                         add(A, B)
                 end, fq2:e_zero(), 
-                Cs3).
+                    Cs3).
 
 %-define(comp(X), secp256k1:compress(X)).
 %-define(deco(X), secp256k1:decompress(X)).
@@ -219,7 +222,8 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
         not(EB) -> false;
         true ->
     
-            [X] = points_to_entropy([C1]),
+            [X0] = points_to_entropy([C1]),
+            X = fr:encode(X0 rem fr:prime()),
             Xi = fr:inv(X),
             GN = get_gn(Xi, G),
             HN = get_gn(X, H),
