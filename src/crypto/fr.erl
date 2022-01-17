@@ -12,7 +12,8 @@
          test/1,
          ctest/1,
          setup/1,
-         batch_inverse/1
+         batch_inverse/1,
+         prime/0
 
         ]).
 -on_load(init/0).
@@ -43,6 +44,8 @@ init() ->
 
 %1/r rem n
 -define(ir, 1567272257966931702389313186440236991373725286385964474393257158920703783441).
+
+prime() -> ?q.
 
 %todo. binary:encode_unsigned(X, little) is probably faster.
 reverse_bytes(X) ->

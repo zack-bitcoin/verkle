@@ -44,7 +44,7 @@ simple_exponent(
     %e_add(extended, eniels)
     %e_mul_long(eniels, exponent)%exponent is a 256 bit little endian number in binary.
     Acc2 = fq2:extended2extended_niels(Acc),
-    A2 = fq2:e_add(fq2:e_mul_long(G, fq2:bytes_reverse(R)), Acc2),
+    A2 = fq2:e_add(fq2:e_mul_long(G, fq2:reverse_bytes(R)), Acc2),
     simple_exponent(RT, GT, A2).
 
 doit(
@@ -74,6 +74,7 @@ bucketify([], BucketsETS, [],
           end, range(1, ManyBuckets)),
     T2 = lists:reverse(T),
     %io:fwrite("bucketify part 2 \n"),
+    %io:fwrite({size(hd(T2)), size(hd(tl(T2)))}),
     bucketify2(tl(T2), hd(T2), hd(T2));
 bucketify([0|T], BucketsETS, [_|Gs], 
           ManyBuckets) ->
@@ -92,7 +93,7 @@ bucketify([BucketNumber|T], BucketsETS,
             [{_, X}] -> X
         end,
     %Bucket2 = jacob_add(G, Bucket, E),
-    Bucket2 = fq2:e_add(G, Bucket),
+    Bucket2 = fq2:e_add(Bucket, G),
 %todo, instead of adding here, we should build up a list. so we can do efficient addition later with simplified format numbers. this can potentially make it twice as fast. This was tried, and it made it slower. but it still seems possible.
             
     ets:insert(BucketsETS, {BucketNumber, Bucket2}),
@@ -104,9 +105,10 @@ bucketify2([S|R], L, T) ->
     %compute starting at the end. S7 + (S7 + S6) + (S7 + S6 + S5) ...
     %todo. maybe simplify, multiply, simplify and add? something like that should be faster if there are lots of buckets.
     %L2 = jacob_add(S, L, E),
-    L2 = fq2:e_add(S, L),
+    L2 = fq2:e_add(L, fq2:extended2extended_niels(S)),
     %T2 = jacob_add(L2, T, E),
-    T2 = fq2:e_add(L2, T),
+    T2 = fq2:e_add(L2, fq2:extended2extended_niels(T)),
+    %io:fwrite({size(L2), size(T), L2, T, T2}),
     bucketify2(R, L2, T2).
 
 
@@ -141,10 +143,11 @@ multi_exponent2(Rs, Gs) ->
                    ets:delete(BucketsETS),
                    Result
            end, Ts),
+    %io:fwrite({Ss}),
     me3(Ss, fq2:e_zero(), F).
 me3([H], A, _) -> 
-    fq2:e_add(H, A);
+    fq2:e_add(H, fq2:extended2extended_niels(A));
 me3([H|T], A, F) -> 
-    X = fq2:e_add(H, A),
-    X2 = fq2:e_mul(X, F),
+    X = fq2:e_add(A, fq2:extended2extended_niels(H)),
+    X2 = fq2:e_mul(fq2:extended2extended_niels(X), F),
     me3(T, X2, F).

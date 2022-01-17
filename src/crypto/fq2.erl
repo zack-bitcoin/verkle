@@ -27,7 +27,8 @@
 
          gen_point/0,
 
-         extended2extended_niels/1
+         extended2extended_niels/1,
+         extended_niels2extended/1
         ]).
 -on_load(init/0).
 -record(extended_point, {u, v, z, t1, t2}).
@@ -63,6 +64,12 @@ setup(_) ->
 
 %q = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
 -define(q, 52435875175126190479447740508185965837690552500527637822603658699938581184513).
+
+%-define(i2, 26217937587563095239723870254092982918845276250263818911301829349969290592257).
+-define(i2, 
+<<255,255,255,255,0,0,0,0,1,164,1,0,253,91,66,172,
+  250,39,94,246,247,39,198,204,183,130,98,214,172,
+  88,18,12>>).
 
 -define(iq, 27711634432943687283656245953990505159342029877880134060146103271536583507967).
 
@@ -227,6 +234,10 @@ e_zero() ->
         {u = 0, v = 1, z = 1, t1 = 0, t2 = 0},
     encode_extended(A).
 
+extended2extended_niels([]) -> [];
+extended2extended_niels([H|T]) -> 
+    [extended2extended_niels(H)|
+     extended2extended_niels(T)];
 extended2extended_niels(
   <<U:256, V:256, Z:256, T1:256, T2:256>>
  ) ->
@@ -236,6 +247,23 @@ extended2extended_niels(
     VMU = sub(<<V:256>>, <<U:256>>),
     T2D = mul(T3, ?D2),
     <<VPU/binary, VMU/binary, T2D/binary, Z:256>>.
+
+extended_niels2extended([]) -> [];
+extended_niels2extended([H|T]) ->
+    [extended_niels2extended(H)|
+     extended_niels2extended(T)];
+extended_niels2extended(
+  <<VPU:256, VMU:256, T2D:256, Z:256>>
+) ->
+    V2 = add(<<VPU:256>>, <<VMU:256>>),
+    U2 = sub(<<VPU:256>>, <<VMU:256>>),
+    V = mul(V2, ?i2),
+    U = mul(U2, ?i2),
+    affine2extended(<<U/binary, V/binary>>).
+affine2extended(
+  <<U:256, V:256>>) ->
+    Z = encode(1),
+    <<U:256, V:256, Z/binary, U:256, V:256>>.
     
 
 -define(sub3(A, B),

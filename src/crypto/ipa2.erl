@@ -44,10 +44,14 @@ fv_mul(S, Bs) ->
 
 commit(V, G) ->
     %pedersen commitment
-    %G is a list of jacob encoded points.
+    %G is a list of extended niels encoded points.
     %returns a single jacob encoded point.
     %V1*G1 + V2*G2 + V3*G3 + ...
     %secp256k1:multi_exponent(V, G, E).
+    %V is integers that fit in 256 bits.
+
+    %todo. call this with the correct inputs.
+
     multi_exponent:doit(V, G).
 
 add(A, B = <<_:(256*5)>>) ->
@@ -100,23 +104,28 @@ points_to_entropy(L) ->
               end, L2).
    
 %todo. update below here to not use secp256k1. 
-    
+
 make_ipa(A, B, G, H, Q) ->
     io:fwrite("make ipa 0\n"),
     AG = commit(A, G),
     BH = commit(B, H),
     io:fwrite("make ipa 1\n"),
+    %io:fwrite({size(hd(A)), A, G, AG, BH}),
     AGBH = add(AG, BH),
     io:fwrite("make ipa 2\n"),
     AB = dot(A, B),
     io:fwrite("make ipa 3\n"),
-    C1 = add(AGBH, mul(AB, Q)),
+    ABQ = mul(AB, Q),
+    C1 = add(AGBH, ABQ),
+    %io:fwrite({size(AGBH), size(ABQ), AGBH, ABQ, C1}),
     io:fwrite("make ipa 4\n"),
-    io:fwrite({fq2:decode_extended(AG), fq2:decode_extended(BH), fq2:decode_extended(AGBH)}),
-    io:fwrite({fq2:decode_extended(AGBH), fq2:decode_extended(mul(AB, Q)), fq2:decode_extended(C1)}),
-    [X] = points_to_entropy([C1]),
+    %io:fwrite({fq2:decode_extended(AG), fq2:decode_extended(BH), fq2:decode_extended(AGBH)}),
+    %io:fwrite({fq2:decode_extended(AGBH), fq2:decode_extended(mul(AB, Q)), fq2:decode_extended(C1)}),
+    [X0] = points_to_entropy([C1]),
+    X = fr:encode((X0 rem fr:prime())),
     io:fwrite("make ipa 5\n"),
     Xi = fr:inv(X),
+    %io:fwrite({X, C1, Xi}),
     io:fwrite("make ipa 6\n"),
     {Cs0, AN, BN} = 
         make_ipa2(C1, A, G, B, H, 
@@ -145,13 +154,18 @@ make_ipa2(C1, A, G, B, H, Q, Cs, X, Xi)  ->
                  mul(Zr, Q))),
     A2 = fv_add(Al, fv_mul(X, Ar)),
     B2 = fv_add(Bl, fv_mul(Xi, Br)),
-    C12 = add(mul(X,  Cl),
-             mul(Xi, Cr)),
+    C12 = add(mul(X,  fq2:extended2extended_niels(Cl)),
+             mul(Xi, fq2:extended2extended_niels(Cr))),
     C2 = add(C1, C12),
     %G2 = v_add(Gl, v_mul(Xi, Gr, E), E),
     %H2 = v_add(Hl, v_mul(X, Hr, E), E),
-    G2 = v_add(Gl, simplify_v(v_mul(Xi, Gr))),
-    H2 = v_add(Hl, simplify_v(v_mul(X, Hr))),
+    G20 = v_add(fq2:extended_niels2extended(Gl), 
+               simplify_v(v_mul(Xi, Gr))),
+    H20 = v_add(fq2:extended_niels2extended(Hl), 
+               simplify_v(v_mul(X, Hr))),
+    G2 = fq2:extended2extended_niels(G20),
+    H2 = fq2:extended2extended_niels(H20),
+               
     make_ipa2(C2, A2, G2, B2, 
               H2, Q, [Cl, Cr|Cs], X, Xi).
 
@@ -243,6 +257,7 @@ encode_list(L) ->
 test(1) ->
     A0 = range(100, 108),
     A = encode_list(A0),
+    %A = A0,
     S = length(A),
     E = secp256k1:make(),
     {G, H, Q} = basis(S, E),
@@ -252,7 +267,8 @@ test(1) ->
     Proof = make_ipa(
               A, Bv,%103+104 = 207
               G, H, Q),
-    {_, 207, _, _, _} = Proof,
+    N207 = fr:encode(207),
+    {_, N207, _, _, _} = Proof,
     io:fwrite("test 1 1 \n"),
     Proof2 = make_ipa(
               A, Bv2,%103+104 = 207
