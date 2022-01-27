@@ -1,13 +1,14 @@
 -module(ipa2).
 -export([make_ipa/5, verify_ipa/5,
          commit/2, eq/2, 
+         gen_point/1,
          basis/2,
          test/1]).
 %inner product arguments using pedersen commitments.
 
 %learn more about inner product arguments here https://dankradfeist.de/ethereum/2021/07/27/inner-product-arguments.html
 
-%uses the secp256k1 library.
+%uses secp256k1 the library.
 
 %-include("../constants.hrl").
 %-define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
@@ -17,19 +18,15 @@
 %        if (C>= ?order ) -> C - ?order;
 %           true -> C end).
 
+-define(sanity_checks, false).
+
 dot(A, B) -> dot(A, B, fr:encode(0)).
 dot([], [], Acc) -> Acc;
 dot([A|AT], [B|BT], Acc) ->
     %dot product of two scalar vectors.
-    %io:fwrite("dot 0 \n"),
-    %io:fwrite({A, B}),
     Acc2 = fr:mul(A, B),
-    %io:fwrite("dot 1 \n"),
     Acc3 = fr:add(Acc, Acc2),
-    %io:fwrite("dot 2 \n"),
     dot(AT, BT, Acc3).
-%    Acc3 = Acc + Acc2,
-%    dot(AT, BT, ?add_mod(Acc3)).
 fv_add(As, Bs) ->
     %adding 2 scalar vectors by adding each component.
     lists:zipwith(
@@ -56,25 +53,27 @@ commit(V, G) ->
 
 add(A, B = <<_:(256*5)>>) ->
     add(A, fq2:extended2extended_niels(B));
-add(A, B) ->
-    true = is_binary(A),
-    true = (32*5) == size(A),
-    true = is_binary(B),
-    true = (32*4) == size(B),
+add(A = <<_:(256*5)>>, B = <<_:(256*4)>>) ->
     fq2:e_add(A, B).
-    %secp256k1:jacob_add(A, B, E).
-%sub(A, B, E) ->
-%    secp256k1:jacob_sub(A, B, E).
-%double(A, E) ->
-%    secp256k1:jacob_double(A, E).
+
 mul(X, G) ->
+    mul2(X, G).
+mul2(X, G) ->
     %multiply point G by scalar X.
-    %secp256k1:jacob_mul(G, X, E).
+    %X is a montgomery encoded binary.
     true = is_binary(X),
     true = 32 == size(X),
     true = is_binary(G),
     true = (32*4) == size(G),
-    fq2:e_mul_long(G, X).
+    fq2:e_mul2(G, X).
+mul1(X, G) ->
+    %multiply point G by scalar X.
+    %X is a little endian integer.
+    true = is_binary(X),
+    true = 32 == size(X),
+    true = is_binary(G),
+    true = (32*4) == size(G),
+    fq2:e_mul1(G, X).
 eq(G, H) ->
     %secp256k1:jacob_equal(G, H, E).
     fq2:eq(G, H).
@@ -95,50 +94,94 @@ v_mul(A, Bs) ->
 simplify_v(X) ->
     %simplifies jacobian points to make the denomenator of the projective points Z = 1.
     %secp256k1:simplify_Zs_batch(X).
+    %fq2:e_simplify_batch(X).
     fq2:e_simplify_batch(X).
 
 points_to_entropy(L) ->
     L2 = simplify_v(L),
+    %io:fwrite({size(hd(L2)), L2}),
     lists:map(fun(<<X:512, _/binary>>) ->
-                      X rem fq2:prime()
+                      fr:encode(X rem fr:prime())
               end, L2).
    
 %todo. update below here to not use secp256k1. 
 
 make_ipa(A, B, G, H, Q) ->
-    io:fwrite("make ipa 0\n"),
+    %proving a statement of the form
+    %C = AG+BH+AB*Q
     AG = commit(A, G),
-    BH = commit(B, H),
-    io:fwrite("make ipa 1\n"),
-    %io:fwrite({size(hd(A)), A, G, AG, BH}),
-    AGBH = add(AG, BH),
-    io:fwrite("make ipa 2\n"),
     AB = dot(A, B),
-    io:fwrite("make ipa 3\n"),
-    ABQ = mul(AB, Q),
-    C1 = add(AGBH, ABQ),
-    %io:fwrite({size(AGBH), size(ABQ), AGBH, ABQ, C1}),
-    io:fwrite("make ipa 4\n"),
-    %io:fwrite({fq2:decode_extended(AG), fq2:decode_extended(BH), fq2:decode_extended(AGBH)}),
-    %io:fwrite({fq2:decode_extended(AGBH), fq2:decode_extended(mul(AB, Q)), fq2:decode_extended(C1)}),
-    [X0] = points_to_entropy([C1]),
-    X = fr:encode((X0 rem fr:prime())),
-    io:fwrite("make ipa 5\n"),
+    C1 = add(add(AG, commit(B, H)), 
+             mul(AB, Q)),
+    %[X] = points_to_entropy([C1]),
+    X = fr:encode(1),
     Xi = fr:inv(X),
-    %io:fwrite({X, C1, Xi}),
-    io:fwrite("make ipa 6\n"),
     {Cs0, AN, BN} = 
         make_ipa2(C1, A, G, B, H, 
                   Q, [C1], X, Xi), 
-    io:fwrite("make ipa 7\n"),
     [AGf|Cs] = simplify_v([AG|Cs0]),
-    io:fwrite("make ipa 8\n"),
     {AGf, AB, Cs, AN, BN}.
     
-make_ipa2(_C1, [A], _, [B], _, _, Cs, _, _) ->
+make_ipa2(C1, [A], [G], [B], [H], Q, Cs, _, _) ->
     %maybe at this point we should compress some of this data so it is smaller to send.
+    if
+        ?sanity_checks ->
+            C2 = add(add(mul(A, G),
+                         mul(B, H)),
+                     mul(fr:mul(A, B), Q)),
+            %io:fwrite("last C1\n"),
+            %io:fwrite(base64:encode(fq2:extended2affine(C1))),
+            %io:fwrite("\n"),
+            %io:fwrite("last C2\n"),
+            %io:fwrite(base64:encode(fq2:extended2affine(C2))),
+            %io:fwrite("\n"),
+            io:fwrite("B is: "),
+            io:fwrite(integer_to_list(fr:decode(B))),
+            io:fwrite("\n"),
+            Bool = fq2:eq(C1, C2),
+            if
+                not(Bool) ->
+                    io:fwrite("sanity check\n"),
+                    io:fwrite(base64:encode(fq2:extended2affine(C1))),
+                    io:fwrite("\n"),
+                    io:fwrite(base64:encode(fq2:extended2affine(C2))),
+                    io:fwrite("\n"),
+                    1=2;
+                true -> 
+                    ok
+            end;
+        true -> ok
+    end,
     {Cs, A, B};
 make_ipa2(C1, A, G, B, H, Q, Cs, X, Xi)  ->
+    if
+        ?sanity_checks ->
+            C1b =  add(add(commit(A, G), 
+                          commit(B, H)),
+                      mul(dot(A, B), Q)),
+            Bool = fq2:eq(C1, C1b),
+            if
+                not(Bool) ->
+                    io:fwrite("sanity check\n"),
+                    io:fwrite(base64:encode(fq2:extended2affine(C1))),
+                    io:fwrite("\n"),
+                    io:fwrite(base64:encode(fq2:extended2affine(C1b))),
+                    io:fwrite("\n"),
+                    1=2;
+                true -> 
+                    io:fwrite("B is: "),
+                    lists:map(
+                      fun(X) -> 
+                              io:fwrite(integer_to_list(fr:decode(X))),
+                              io:fwrite(" ")
+                      end,
+                      B),
+                    io:fwrite("\n"),
+                    ok
+            end;
+        true -> ok
+    end,
+
     S2 = length(A) div 2,
     {Al, Ar} = lists:split(S2, A),
     {Bl, Br} = lists:split(S2, B),
@@ -157,12 +200,10 @@ make_ipa2(C1, A, G, B, H, Q, Cs, X, Xi)  ->
     C12 = add(mul(X,  fq2:extended2extended_niels(Cl)),
              mul(Xi, fq2:extended2extended_niels(Cr))),
     C2 = add(C1, C12),
-    %G2 = v_add(Gl, v_mul(Xi, Gr, E), E),
-    %H2 = v_add(Hl, v_mul(X, Hr, E), E),
-    G20 = v_add(fq2:extended_niels2extended(Gl), 
-               simplify_v(v_mul(Xi, Gr))),
-    H20 = v_add(fq2:extended_niels2extended(Hl), 
-               simplify_v(v_mul(X, Hr))),
+    G20 = v_add(v_mul(Xi, Gr), Gl),
+    H20 = v_add(v_mul(X, Hr), Hl),
+    %G20 = v_add(simplify_v(v_mul(Xi, Gr)), Gl),
+    %H20 = v_add(simplify_v(v_mul(X, Hr)), Hl),
     G2 = fq2:extended2extended_niels(G20),
     H2 = fq2:extended2extended_niels(H20),
                
@@ -180,23 +221,18 @@ get_gn(X, G) ->
                Gr3),
     get_gn(X, fq2:extended2extended_niels(G2)).
 
-foldh_mul(_, _, [C]) -> [fq2:extended_niels2extended(C)];
+foldh_mul(_, _, [C]) -> 
+    [fq2:extended_niels2extended(C)];
 foldh_mul(X, Xi, [L, R|C]) -> 
     [mul(X, L), mul(Xi, R)|
      foldh_mul(X, Xi, C)].
 fold_cs(X, Xi, Cs) ->
     Cs2 = fq2:extended2extended_niels(Cs),
-    Cs30 = foldh_mul(X, Xi, Cs2),
-    Cs3 = if
-              (length(Cs30) > 15) ->  
-                  Cs30;
-              true -> Cs30
-          end,
-    %io:fwrite({size(hd(Cs3)), size(fq2:e_zero())}),
+    Cs3 = foldh_mul(X, Xi, Cs2),
     lists:foldl(fun(A, B) ->
                         add(A, B)
                 end, fq2:e_zero(), 
-                    Cs3).
+                Cs3).
 
 %-define(comp(X), secp256k1:compress(X)).
 %-define(deco(X), secp256k1:decompress(X)).
@@ -219,21 +255,29 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
              mul(AB, Q)),
     EB = eq(C1, C1b),
     if
-        not(EB) -> false;
+        not(EB) -> 
+            io:fwrite("verify ipa false 1\n"),
+            false;
         true ->
     
-            [X0] = points_to_entropy([C1]),
-            X = fr:encode(X0 rem fr:prime()),
+            %[X] = points_to_entropy([C1]),
+            X = fr:encode(1),
             Xi = fr:inv(X),
             GN = get_gn(Xi, G),
             HN = get_gn(X, H),
             CNa = add(add(mul(AN, GN),
                           mul(BN, HN)),
-                      mul(fq2:mul(AN, BN), Q)),
+                      mul(fr:mul(AN, BN), Q)),
             %T1 = erlang:timestamp(),
             CNb = fold_cs(X, Xi, Cs),
             %T2 = erlang:timestamp(),
-            eq(CNa, CNb)
+            B2 = eq(CNa, CNb),
+            if
+                B2 -> true;
+                true ->
+                    io:fwrite("verify ipa false 2\n"),
+                    io:fwrite({size(CNa), size(CNb), base64:encode(fq2:extended2affine(CNa)), base64:encode(fq2:extended2affine(CNb))})
+            end
     end.
 
 gen_point(_E) ->
@@ -259,29 +303,34 @@ encode_list(L) ->
     lists:map(fun(X) -> fr:encode(X) end, L).
 
 test(1) ->
+
     A0 = range(100, 108),
     A = encode_list(A0),
     %A = A0,
     S = length(A),
     E = secp256k1:make(),
     {G, H, Q} = basis(S, E),
-    Bv = encode_list([0,0,0,1,1,0,0,0]),%103+104 = 207
-    Bv2 = encode_list([1,0,0,0,0,1,0,0]),%100+105 = 205
+
+    %todo, it is only working iwth lists that are palindrones.
+
+    Bv = encode_list([10,0,3,1,1,2,0,10]),%103+104 = 207
+    %Bv2 = encode_list([1,0,0,0,0,1,0,0]),%100+105 = 205
+    Bv2 = encode_list([0,0,0,0,0,0,0,1]),%100+105 = 205
     io:fwrite("test 1 0 \n"),
     Proof = make_ipa(
               A, Bv,%103+104 = 207
               G, H, Q),
-    N207 = fr:encode(207),
-    {_, N207, _, _, _} = Proof,
     io:fwrite("test 1 1 \n"),
-    Proof2 = make_ipa(
-              A, Bv2,%103+104 = 207
-              G, H, Q),
-    io:fwrite("test 1 2 \n"),
     true = verify_ipa(Proof, Bv, G, H, Q),
+    %N207 = fr:encode(207),
+    %{_, N207, _, _, _} = Proof,
     io:fwrite("test 1 3 \n"),
-    true = verify_ipa(Proof2, Bv2, G, H, Q),
+    Proof2 = make_ipa(
+              A, Bv2,
+              G, H, Q),
+    %100 = fr:decode(element(2, Proof2)),
     io:fwrite("test 1 4 \n"),
+    true = verify_ipa(Proof2, Bv2, G, H, Q),
     success;
 test(2) ->
     %comparing the speed between versions
@@ -358,7 +407,23 @@ test(4) ->
     T4 = erlang:timestamp(),
     {timer:now_diff(T2, T1)/Many,%0.115
      timer:now_diff(T3, T2)/Many,%0.066
-     timer:now_diff(T4, T3)/Many}.%0.69
+     timer:now_diff(T4, T3)/Many};%0.69
+test(5) ->
+    io:fwrite("testing the palindrone bug\n"),
+    A0 = range(100, 108),
+    A = encode_list(A0),
+    S = length(A),
+    E = secp256k1:make(),
+    {G, H, Q} = basis(S, E),
+    Bv2 = encode_list([1,0,0,0,0,0,0,0]),
+    Proof2 = make_ipa(
+              A, Bv2,
+              G, H, Q),
+    %{AGf, AB, Cs, AN, BN}.
+    true = verify_ipa(Proof2, Bv2, G, H, Q),
+    success.
+    
+
     
                      
     

@@ -10,7 +10,9 @@
          eq/2,
          add/2,
          extended2affine/1,
-         extended2extended_niels/1
+         extended2extended_niels/1,
+         extended_niels2extended/1,
+         is_on_curve/1
         ]).
 
 %this jubjub module is based on this: https://github.com/zkcrypto/jubjub/blob/main/src/lib.rs
@@ -284,7 +286,7 @@ affine2affine_niels(#affine_point{u = U, v = V}) ->
 extended2extended_niels(
   #extended_point{u = U, v = V, z = Z, t1 = T1, 
                   t2 = T2}) ->
-    UV = ?mul(U, V),
+    %UV = ?mul(U, V),
     T3 = ?mul(T1, T2),
     #extended_niels_point{
                v_plus_u = fadd(V, U),
@@ -300,8 +302,9 @@ extended_niels2extended(
      t2d = T}) -> 
     V2 = fadd(VPU, VSU),
     U2 = ?sub(VPU, VSU),
-    V = ?mul(V2, ?i2),%divide by 2.
-    U = ?mul(U2, ?i2),
+    IZ = finverse(Z),
+    V = ?mul(IZ, ?mul(V2, ?i2)),%divide by 2.
+    U = ?mul(IZ, ?mul(U2, ?i2)),
     A = #affine_point{u = U, v = V},
     affine2extended(A).
     

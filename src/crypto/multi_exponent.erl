@@ -1,5 +1,5 @@
 -module(multi_exponent).
--export([doit/2]).
+-export([doit/2, test/1]).
 
 det_pow(0, _) -> 0;
 det_pow(_, 0) -> 1;
@@ -44,7 +44,8 @@ simple_exponent(
     %e_add(extended, eniels)
     %e_mul_long(eniels, exponent)%exponent is a 256 bit little endian number in binary.
     Acc2 = fq2:extended2extended_niels(Acc),
-    A2 = fq2:e_add(fq2:e_mul_long(G, fq2:reverse_bytes(R)), Acc2),
+    A2 = fq2:e_add(fq2:e_mul2(G, R), Acc2),
+    %A2 = fq2:e_add(fq2:e_mul_long(G, (R)), Acc2),
     simple_exponent(RT, GT, A2).
 
 doit(
@@ -55,13 +56,14 @@ doit(
         remove_zero_terms(Rs0, Gs0, [], []),
     if
         length(Rs1) < 2 ->
+        %true ->
             simple_exponent(
               Rs1, Gs, fq2:e_zero());
+              %Rs0, Gs0, fq2:e_zero());
         true ->
             multi_exponent2(Rs1, Gs)
     end.
-bucketify([], BucketsETS, [], 
-          ManyBuckets) -> 
+bucketify([], BucketsETS, [], ManyBuckets) -> 
     %io:fwrite(Buckets),
     %T = tuple_to_list(Buckets),
     T = lists:map(
@@ -73,9 +75,11 @@ bucketify([], BucketsETS, [],
                   end
           end, range(1, ManyBuckets)),
     T2 = lists:reverse(T),
+    %T2 = T,
     %io:fwrite("bucketify part 2 \n"),
     %io:fwrite({size(hd(T2)), size(hd(tl(T2)))}),
-    bucketify2(tl(T2), hd(T2), hd(T2));
+    bucketify3(T2);
+%bucketify2(tl(T2), hd(T2), hd(T2));
 bucketify([0|T], BucketsETS, [_|Gs], 
           ManyBuckets) ->
     bucketify(T, BucketsETS, Gs, ManyBuckets);
@@ -86,47 +90,58 @@ bucketify([BucketNumber|T], BucketsETS,
     %(2^C)-1 buckets in total. 
     %Put a list of the Gs into each bucket.
 
-    BucketETS0 = ets:lookup(BucketsETS, BucketNumber),
-    Bucket = 
+    BucketETS0 = ets:lookup(
+                   BucketsETS, BucketNumber),
+    Bucket2 = 
         case BucketETS0 of
-            [] -> fq2:e_zero();
-            [{_, X}] -> X
+            [] -> fq2:extended_niels2extended(G);
+            [{_, X}] -> fq2:e_add(X, G)
         end,
-    %Bucket2 = jacob_add(G, Bucket, E),
-    Bucket2 = fq2:e_add(Bucket, G),
+
 %todo, instead of adding here, we should build up a list. so we can do efficient addition later with simplified format numbers. this can potentially make it twice as fast. This was tried, and it made it slower. but it still seems possible.
             
     ets:insert(BucketsETS, {BucketNumber, Bucket2}),
     bucketify(T, BucketsETS, Gs, ManyBuckets).
+bucketify3(T) ->
+    %T is a list of extended points.
+    bucketify2(tl(T), hd(T), hd(T)).
 bucketify2([], _L, T) -> T;
 bucketify2([S|R], L, T) -> 
-    %for each bucket, sum up the points inside. [S1, S2, S3, ...
+    %for each bucket, sum up the points inside. [S7, S6, S5, ...
     %T_i = S1 + 2*S2 + 3*S3 ... (this is another multi-exponent. a simpler one this time.)
     %compute starting at the end. S7 + (S7 + S6) + (S7 + S6 + S5) ...
     %todo. maybe simplify, multiply, simplify and add? something like that should be faster if there are lots of buckets.
     %L2 = jacob_add(S, L, E),
-    L2 = fq2:e_add(L, fq2:extended2extended_niels(S)),
-    %T2 = jacob_add(L2, T, E),
-    T2 = fq2:e_add(L2, fq2:extended2extended_niels(T)),
-    %io:fwrite({size(L2), size(T), L2, T, T2}),
+    %B = fq2:is_zero(S),
+    %B2 = fq2:is_zero(L),
+    L2 = fq2:e_add(
+           L, fq2:extended2extended_niels(
+                S)),
+    T2 = fq2:e_add(
+           L2, fq2:extended2extended_niels(
+                 T)),
     bucketify2(R, L2, T2).
 
 
 
 multi_exponent2([], []) ->
     fq2:e_zero();
-multi_exponent2(Rs, Gs) ->
+multi_exponent2(Rs0, Gs) ->
+    
+    Rs = lists:map(fun(X) -> fr:decode(X) end, 
+                   Rs0),
     %io:fwrite({Rs}),
     C0 = floor(math:log(length(Rs))/math:log(2))-2,
     C1 = min(C0, 16),
     C = max(1, C1),%how many bits per chunk
+    %C = max(12, C1),%how many bits per chunk
     F = det_pow(2, C),%this is how many buckets we have, and is the constant factor between elements in a bucket.
     %write each integer in R in binary. partition the binaries into chunks of C bits.
     B = 256,
     R_chunks = 
         lists:map(
           fun(R) -> L = chunkify(
-                          fr:decode(R), F, 1+(B div C)),
+                          R, F, 1+(B div C)),
                     lists:reverse(L)
           end, Rs),
     Ts = matrix_diagonal_flip(R_chunks),
@@ -143,11 +158,166 @@ multi_exponent2(Rs, Gs) ->
                    ets:delete(BucketsETS),
                    Result
            end, Ts),
-    %io:fwrite({Ss}),
-    me3(Ss, fq2:e_zero(), F).
+    me3(Ss, fq2:e_zero(), 
+        %fr:reverse_bytes(<<F:256>>)).
+        fr:encode(F)).
 me3([H], A, _) -> 
-    fq2:e_add(H, fq2:extended2extended_niels(A));
+    fq2:e_add(
+      H, fq2:extended2extended_niels(A));
 me3([H|T], A, F) -> 
-    X = fq2:e_add(A, fq2:extended2extended_niels(H)),
-    X2 = fq2:e_mul(fq2:extended2extended_niels(X), F),
+    X = fq2:e_add(
+          A, 
+          fq2:extended2extended_niels(H)),
+    X2 = fq2:e_mul2(
+           fq2:extended2extended_niels(X), F),
     me3(T, X2, F).
+
+
+test(0) ->
+    G = ipa2:gen_point(0),
+    EG = fq2:extended_niels2extended(G),
+     A = fq2:e_add(EG, G),
+     A2 = fq2:e_mul2(G, fr:encode(2)),
+    B = fq2:e_add(A, G),
+     B2 = fq2:e_mul2(G, fr:encode(3)),
+    {
+      fq2:eq(EG, 
+           multi_exponent2([fr:encode(1)], [G])),
+      fq2:eq(EG, 
+           multi_exponent2(
+             [fr:encode(1), fr:encode(0)], 
+             [G, G])),
+     fq2:eq(multi_exponent2(
+              [fr:encode(1), fr:encode(1)], 
+              [G, G]),
+            fq2:e_mul2(G, fr:encode(2))),
+     fq2:eq(multi_exponent2([fr:encode(2)], 
+                 [G]),
+            fq2:e_mul2(G, fr:encode(2))),
+      fq2:eq(multi_exponent2(
+               [fr:encode(1), fr:encode(1)], 
+               [G, G]), 
+            fq2:e_mul2(G, fr:encode(2))),
+      fq2:eq(multi_exponent2(
+               [fr:encode(2)], 
+               [G]), 
+             fq2:e_mul2(G, fr:encode(2))),
+      fq2:eq(multi_exponent2(
+               [fr:encode(4)], 
+               [G]), 
+             fq2:e_mul2(G, fr:encode(4))),
+      fq2:eq(doit(
+               [fr:encode(1), fr:encode(4)], 
+               [G, G]), 
+             fq2:e_mul2(G, fr:encode(5)))
+     %doit([fr:encode(2)], [G]),
+     %fq2:e_mul1(G, fr:reverse_bytes(<<2:256>>)),
+     %A2, B2
+    % fq2:eq(A, A2),
+    % fq2:eq(B, B2),
+    % fq2:eq(fq2:e_double(B), 
+    %        fq2:e_mul2(G, fr:encode(6)))
+     %doit([fr:encode(1), fr:encode(1)], [G, G])
+    };
+test(1) ->
+    %testing bucketify3. (S7*7 + S6*6 + S5*5 + ...)
+    ENiels = ipa2:gen_point(0),
+    Extended = fq2:extended_niels2extended(ENiels),
+    Zero = fq2:e_zero(),
+    NielsZero = fq2:extended2extended_niels(Zero),
+    L = [Extended, Zero],%[S2, S1]
+    fq2:eq(bucketify3([Extended, Zero]),
+           fq2:e_mul2(ENiels, fr:encode(2))
+          );
+test(2) ->
+    %testing addition orders
+    ENiels1 = ipa2:gen_point(0),
+    ENiels2 = ipa2:gen_point(0),
+    ZeroNiels = fq2:extended2extended_niels(fq2:e_zero()),
+    Extended1 = 
+        fq2:extended_niels2extended(ENiels1),
+    Extended2 = 
+        fq2:extended_niels2extended(ENiels2),
+    ZeroPlus = 
+      fq2:e_add(fq2:e_zero(), 
+                ZeroNiels),
+    ZeroMul = 
+        fq2:e_mul2(ZeroNiels,
+                   fr:encode(27)),
+    
+    {
+      % a + b = b + a
+      fq2:eq(fq2:e_add(Extended1, ENiels2),
+            fq2:e_add(Extended2, ENiels1)),
+     % 0 + 0 = 0
+     fq2:eq(fq2:e_zero(), 
+            fq2:e_add(fq2:e_zero(), 
+                      ZeroNiels)),
+     % 0 * 27 = 0
+     fq2:eq(fq2:e_zero(), 
+            fq2:e_mul2(ZeroNiels,
+                       fr:encode(27))),
+      %can niels encode the default version of zero.
+      fq2:eq(fq2:e_zero(),
+             fq2:extended_niels2extended(fq2:extended2extended_niels(fq2:e_zero()))),
+      %cannot niel encode other versions of zero.
+      fq2:is_zero(ZeroPlus),
+      fq2:is_zero(
+             fq2:extended_niels2extended(fq2:extended2extended_niels(ZeroPlus)))
+    };
+test(3) ->
+    G = ipa2:gen_point(0),
+    EG = fq2:extended_niels2extended(G),
+    F = fr:encode(4),
+    R = multi_exponent2([F], 
+                        [G]),
+    {
+      fq2:e_double(fq2:e_double(EG)),
+      fq2:e_mul2(G, F),
+      fq2:e_mul2(fq2:extended2extended_niels(EG), 
+                 F),
+      R,
+      fq2:eq(R,
+             fq2:e_mul2(G, F))
+    };
+test(4) ->
+    N = ipa2:gen_point(0),
+    E0 = fq2:extended_niels2extended(N),
+    Nb = fq2:extended2extended_niels(E0),
+    E0b = fq2:extended_niels2extended(Nb),
+
+    E = fq2:e_mul2(N, fr:encode(2)),
+    N2 = fq2:extended2extended_niels(E),
+    Eb = fq2:extended_niels2extended(N2),
+    N2b = fq2:extended2extended_niels(Eb),
+
+    E2 = fq2:e_mul2(N2, fr:encode(2)),
+    E4 = fq2:e_mul2(N, fr:encode(4)),
+    DD = fq2:e_double(fq2:e_double(E0)),
+
+
+
+    {
+      fq2:eq(E0, E0b),%false.
+      fq2:eq(E, Eb),%false.
+      fq2:eq(E, fq2:e_double(E0)),%true
+
+      fq2:eq(E2, E4),%false
+      fq2:eq(E2, DD),%false
+      fq2:eq(DD, E4)%true
+    };
+test(5) ->
+    G = ipa2:gen_point(0),
+    fq2:eq(multi_exponent2(
+             [fr:encode(4)], 
+             [G]), 
+           fq2:e_mul2(G, fr:encode(4)));
+test(6) ->
+    G = ipa2:gen_point(0),
+    H = ipa2:gen_point(0),
+    B = [fr:encode(4), fr:encode(5)],
+    fq2:eq(multi_exponent2(B, [G, H]),
+           simple_exponent(B, [G, H], 
+                          fq2:e_zero())).
+    
+

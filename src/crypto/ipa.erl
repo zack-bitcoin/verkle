@@ -111,7 +111,7 @@ make_ipa2(C1, A, G, B, H, Q, E, Cs, X, Xi) ->
     C2 = add(C1, C12, E),
     %G2 = v_add(Gl, v_mul(Xi, Gr, E), E),
     %H2 = v_add(Hl, v_mul(X, Hr, E), E),
-    G2 = v_add(Gl, simplify_v(v_mul(Xi, Gr, E)), E),
+    G2 = v_add(Gl, simplify_v(v_mul(Xi, Gr, E)),E),
     H2 = v_add(Hl, simplify_v(v_mul(X, Hr, E)), E),
     make_ipa2(C2, A2, G2, B2, 
               H2, Q, E, [Cl, Cr|Cs], X, Xi).

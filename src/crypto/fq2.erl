@@ -18,8 +18,9 @@
 
          e_double/1,
          e_add/2,
-         e_mul/2,
-         e_mul_long/2,
+         %e_mul/2,
+         e_mul1/2,
+         e_mul2/2,
          e_zero/0,
          eq/2,
          batch_inverse/1,
@@ -28,7 +29,9 @@
          gen_point/0,
 
          extended2extended_niels/1,
-         extended_niels2extended/1
+         extended_niels2extended/1,
+         is_zero/1,
+         extended2affine/1
         ]).
 -on_load(init/0).
 -record(extended_point, {u, v, z, t1, t2}).
@@ -183,9 +186,20 @@ inv(X) -> encode(ff:inverse(decode(X), ?q)).
 pow(_, _) -> ok.
 short_pow(_, _) -> ok.
 e_double(_) -> ok.
-e_add(_, _) -> ok.
-e_mul(_, _) -> ok.
-e_mul_long(_, _) -> ok.
+e_add(_extended, _niels) -> ok.
+e_mul(_, _) -> ok.%unused, accepts a 8 byte exponent as an integer.
+e_mul1(_, _) -> 
+    %input 2 is a 32 byte integer as a little endian binary.
+    ok.
+e_mul2(Fq, Fr) ->
+    %the exponent is montgomery encoded.
+    case fr:decode(Fr) of
+        0 -> e_zero();
+        R2 ->
+            R3 = fr:reverse_bytes(<<R2:256>>),
+            e_mul1(Fq, R3)
+    end.
+    
 
 pis([], _) -> [];
 pis([H|T], A) -> 
@@ -207,9 +221,6 @@ batch_inverse(Vs) ->
 e_simplify_batch(Es) ->
     Zs = lists:map(fun(<<_:512, Z:256, _:512>>) ->
                            <<Z:256>> end, Es),
-    %Zs = lists:map(fun(#extended_point{z = Z}) ->
-    %                       Z end, Es),
-    %io:fwrite(decode(hd(Zs))),
     false = (decode(hd(Zs)) == 0),
 
     IZs = batch_inverse(Zs),
@@ -221,6 +232,11 @@ simplify(<<U:256, V:256, _/binary>>, IZ) ->
     V2 = mul(<<V:256>>, IZ),
     <<U2/binary, V2/binary, (encode(1))/binary, 
       U2/binary, V2/binary>>.
+extended2affine(E) ->
+    [E2] = e_simplify_batch([E]),
+    <<A:256, B:256, _/binary>> = E2,
+    <<A:256, B:256>>.
+    
     
         
 
@@ -234,32 +250,48 @@ e_zero() ->
         {u = 0, v = 1, z = 1, t1 = 0, t2 = 0},
     encode_extended(A).
 
+is_zero(
+  <<U:256, V:256, Z:256, _:256, _:256>>
+ ) ->
+    (U == 0) and (V == Z);
+is_zero(
+  <<VPU:256, VMU:256, T2D:256, Z:256>>
+) ->
+    (VPU == VMU) and (VPU == Z).
+
+
 extended2extended_niels([]) -> [];
 extended2extended_niels([H|T]) -> 
     [extended2extended_niels(H)|
      extended2extended_niels(T)];
 extended2extended_niels(
-  <<U:256, V:256, Z:256, T1:256, T2:256>>
+  A = <<U:256, V:256, Z:256, T1:256, T2:256>>
  ) ->
-    UV = mul(<<U:256>>, <<V:256>>),
-    T3 = mul(<<T1:256>>, <<T2:256>>),
-    VPU = add(<<U:256>>, <<V:256>>),
-    VMU = sub(<<V:256>>, <<U:256>>),
-    T2D = mul(T3, ?D2),
-    <<VPU/binary, VMU/binary, T2D/binary, Z:256>>.
+%    B = is_zero(A),
+%    if
+%        B -> 
+%            <<(encode(1))/binary,
+%              (encode(1))/binary,
+%              (encode(0))/binary,
+%              (encode(1))/binary>>;
+%        true ->
+            UV = mul(<<U:256>>, <<V:256>>),
+            T3 = mul(<<T1:256>>, <<T2:256>>),
+            VPU = add(<<U:256>>, <<V:256>>),
+            VMU = sub(<<V:256>>, <<U:256>>),
+            T2D = mul(T3, ?D2),
+            <<VPU/binary, VMU/binary, 
+              T2D/binary, Z:256>>.
+%    end.
 
 extended_niels2extended([]) -> [];
 extended_niels2extended([H|T]) ->
     [extended_niels2extended(H)|
      extended_niels2extended(T)];
 extended_niels2extended(
-  <<VPU:256, VMU:256, T2D:256, Z:256>>
+  N = <<VPU:256, VMU:256, T2D:256, Z:256>>
 ) ->
-    V2 = add(<<VPU:256>>, <<VMU:256>>),
-    U2 = sub(<<VPU:256>>, <<VMU:256>>),
-    V = mul(V2, ?i2),
-    U = mul(U2, ?i2),
-    affine2extended(<<U/binary, V/binary>>).
+    e_add(e_zero(), N).
 affine2extended(
   <<U:256, V:256>>) ->
     Z = encode(1),
@@ -305,24 +337,9 @@ test(2) ->
     B1 = B0 rem ?q,
     A = encode(A1),
     B = encode(B1),
-    Af = fq:encode(A1),
-    Bf = fq:encode(B1),
-    <<A2:256>> = Af,
-    <<B2:256>> = Bf,
-%    true = reverse_bytes(sub(A, B)) ==
-%        fq:sub(Af, Bf),
-    S1 = reverse_bytes(sub(A, B)),
-    S2 = fq:sub(Af, Bf),
-    {
-      %Af > Bf,
-      S1 == S2,
-      S1
-      %S2,
-      %fq:sub2(Af, Bf),
-      %<<(?sub3(A2, B2)):256>>
-    };
-%    true = sub(A, B) == reverse_bytes(fq:sub(A, B)),
-%    success;
+    S = decode(sub(A, B)),
+    S = ((A1 - B1) + ?q) rem ?q,
+    success;
 test(3) ->
     io:fwrite("encode decode test\n"),
     <<A0:256>> = crypto:strong_rand_bytes(32),
@@ -331,34 +348,6 @@ test(3) ->
     A = encode(A1),
     A1 = decode(A);
 %A = inverse(inverse(A));
-test(4) ->
-    io:fwrite("subtraction speed test\n"),
-    <<A0:256>> = crypto:strong_rand_bytes(32),
-    <<B0:256>> = crypto:strong_rand_bytes(32),
-    A1 = (A0 div 1) rem ?q,
-    B1 = (B0 div 1) rem ?q,
-    A = encode(A1),
-    B = encode(B1),
-
-    %check determinism
-    R = sub(A, B),
-    R = sub(A, B),
-
-    T1 = erlang:timestamp(),
-    Many = 50000,
-    lists:foldl(fun(_, _) ->
-                        R = sub(A, B)
-              end, 0, range(0, Many)),
-    T2 = erlang:timestamp(),
-    lists:foldl(fun(_, _) ->
-                        if
-                            B1>A1 -> A1 + ?q - B1;
-                            true -> A1 - B1
-                        end
-              end, 0, range(0, Many)),
-    T3 = erlang:timestamp(),
-    {{c, timer:now_diff(T2, T1)/Many},
-     {erl, timer:now_diff(T3, T2)/Many}};
 test(5) ->
     %testing addition.
     io:fwrite("addition test\n"),
@@ -370,19 +359,11 @@ test(5) ->
     B1 = B0 rem ?q,
     A = encode(A1),
     B = encode(B1),
-    Af = fq:encode(A1),
-    Bf = fq:encode(B1),
-    <<A2:256>> = Af,
-    <<B2:256>> = Bf,
-    %add(<<0:256>>, <<0:256>>),
-    %S1 = reverse_bytes(add(A, B)),
-    S1 = 0,
-    S2 = fq:add2(Af, Bf),
-    C1 = (A1 + B1) rem ?q,
-    C1 = decode(add(A, B)),
-    C1 = decode(add(A, B)),
-    C1 = fq:decode(S2),
+    
+    S = decode(add(A, B)),
+    S = (A1 + B1) rem ?q,
     success;
+
 test(6) ->
     %testing multiplication.
     io:fwrite("multiply test \n"),
@@ -397,31 +378,8 @@ test(6) ->
     S3 = (A1 * B1) rem ?q,
     S3 = decode(mul(A, B)),
     success;
-test(7) ->
-    <<A0:256>> = crypto:strong_rand_bytes(32),
-    <<B0:256>> = crypto:strong_rand_bytes(32),
-    A1 = (A0 div 1) rem ?q,
-    B1 = (B0 div 1) rem ?q,
-    A = encode(A1),
-    B = encode(B1),
-    Many = 50000,
-    R = range(B0, B0 + Many),
-    R2 = lists:map(
-           fun(X) -> encode(X rem ?q) end, R),
-    T1 = erlang:timestamp(),
-    lists:map(fun(I) ->
-                      mul(A, I)
-              end, R2),
-    T2 = erlang:timestamp(),
-    lists:map(fun(I) ->
-                      C0 = (A0 * I) rem ?q
-              end, R),
-    T3 = erlang:timestamp(),
-    io:fwrite("multiply speed test \n"),
-    {{c, timer:now_diff(T2, T1)/Many},
-     {erl, timer:now_diff(T3, T2)/Many}};
 test(8) ->
-    %more accurate multiplication speed test.
+    io:fwrite("more accurate multiplication speed test.\n"),
     Many = 100000,
     R = lists:map(fun(_) ->
                           <<A0:256>> = crypto:strong_rand_bytes(32),
@@ -540,7 +498,21 @@ test(13) ->
     P = decode_extended(e_double(B)),
     P = decode_extended(e_double(B)),
     P2 = jubjub:double(P0),
+    P2b = decode_extended(
+            extended_niels2extended(
+              extended2extended_niels(
+                encode_extended(P2)))),
+    P2c = jubjub:extended_niels2extended(
+            jubjub:extended2extended_niels(P2)),
+    P0 = jubjub:extended_niels2extended(
+            jubjub:extended2extended_niels(P0)),
+    true = jubjub:is_on_curve(
+             jubjub:extended2affine(P0)),
+    true = jubjub:is_on_curve(
+             jubjub:extended2affine(P2)),
     true = jubjub:eq(P, P2),
+    true = jubjub:eq(P2, P2c),
+    true = jubjub:eq(P2, P2b),
     success;
 test(14) ->
     io:fwrite("jubjub double speed test\n"),
@@ -572,7 +544,17 @@ test(15) ->
     E3 = jubjub:add(E0, N0),
     E2 = decode_extended(e_add(E, N)),
     E2 = decode_extended(e_add(E, N)),
-    true =jubjub:eq(E2, E3),
+
+    N2 = extended2extended_niels(e_add(E, N)),
+    E4 = decode_extended(e_add(E, N2)),
+
+    true = jubjub:eq(E2, E3),
+    true = jubjub:is_on_curve(
+             jubjub:extended2affine(E2)),
+    true = jubjub:is_on_curve(
+             jubjub:extended2affine(E3)),
+    true = jubjub:is_on_curve(
+             jubjub:extended2affine(E4)),
     success;
 test(16) ->
     io:fwrite("jubjub add speed\n"),
@@ -699,11 +681,63 @@ test(23) ->
     <<B:256>> = crypto:strong_rand_bytes(32),
     %B = 18446744073709551615,
     <<One:256>> = encode(1),
-    Me =  e_mul_long(N, reverse_bytes(<<B:256>>)),
+    Me =  e_mul1(N, reverse_bytes(<<B:256>>)),
     M = jubjub:multiply(B, N0),
     M2 = decode_extended(Me),
     true = jubjub:eq(M, M2),
+    success;
+test(24) ->
+    G = gen_point(),
+    GN = extended2extended_niels(G),
+    G2 = extended_niels2extended(GN),
+    true = eq(G, G2),
+    success;
+test(25) ->
+    %check that both simplifies don't change the order.
+    Gs = [gen_point(),
+          gen_point(),
+          gen_point()],
+    G2s = lists:map(fun(X) -> e_double(X) end,
+                    Gs),
+    G2simp = e_simplify_batch(G2s),
+    [true, true, true] = 
+        lists:zipwith(fun(A, B) -> eq(A, B) end,
+                  G2s, G2simp),
+
+    E = secp256k1:make(),
+    G = fun() ->
+                secp256k1:to_jacob(
+                  secp256k1:gen_point(E))
+        end,
+    Ps = [G(), G(), G()],
+    Ps = secp256k1:simplify_Zs_batch(Ps),
+    success;
+test(26) ->
+    io:fwrite("testing elliptic zero point\n"),
+    Z0 = e_zero(),
+    Z1 = e_double(Z0),
+    Z2 = e_add(Z0, extended2extended_niels(Z1)),
+    Z3 = extended_niels2extended(
+           extended2extended_niels(Z2)),
+    true = is_zero(Z0),
+    true = is_zero(Z1),
+    true = is_zero(Z2),
+    true = is_zero(Z3),
+
+    true = is_zero(e_mul2(fr:encode(0), extended2extended_niels(gen_point()))),
+    
+    
+
+
     success.
+    
+    
+
+    
+
+    
+    
+
 
     
 

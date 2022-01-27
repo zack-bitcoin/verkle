@@ -13,7 +13,8 @@
          ctest/1,
          setup/1,
          batch_inverse/1,
-         prime/0
+         prime/0,
+         reverse_bytes/1
 
         ]).
 -on_load(init/0).
@@ -54,6 +55,9 @@ reverse_bytes(<<A, B/binary>>, R) ->
     reverse_bytes(B, <<A, R/binary>>);
 reverse_bytes(<<>>, R) -> R.
 
+encode([]) -> [];
+encode([H|T]) -> 
+    [encode(H)|encode(T)];
 encode(0) ->
     <<0:256>>;
 encode(1) ->
@@ -118,16 +122,9 @@ test(2) ->
     B1 = B0 rem ?q,
     A = encode(A1),
     B = encode(B1),
-    Af = fq:encode(A1),
-    Bf = fq:encode(B1),
-    <<A2:256>> = Af,
-    <<B2:256>> = Bf,
-%    true = reverse_bytes(sub(A, B)) ==
-%        fq:sub(Af, Bf),
-    S1 = decode(sub(A, B)),
-    S2 = (?q - B1 + A1) rem ?q,
-    %S2 = fq:sub(Af, Bf),
-    true = (S1 == S2),
+    S = decode(sub(A, B)),
+    S = decode(sub(A, B)),
+    S = (?q - B1 + A1) rem ?q,
     success;
 test(3) ->
     <<A0:256>> = crypto:strong_rand_bytes(32),
@@ -159,33 +156,22 @@ test(5) ->
     B1 = B0 rem ?q,
     A = encode(A1),
     B = encode(B1),
-    Af = fq:encode(A1),
-    Bf = fq:encode(B1),
-    <<A2:256>> = Af,
-    <<B2:256>> = Bf,
-    %add(<<0:256>>, <<0:256>>),
-    S1 = decode(add(A, B)),
-    S1 = (A1 + B1) rem ?q,
+    S = decode(add(A, B)),
+    S = decode(add(A, B)),
+    S = (A1 + B1) rem ?q,
     success;
 test(6) ->
     %testing multiplication.
     io:fwrite("multiply test \n"),
     <<A0:256>> = crypto:strong_rand_bytes(32),
     <<B0:256>> = crypto:strong_rand_bytes(32),
-    %A0 = 2,
-    %B0 = 3,
     A1 = A0 rem ?q,
     B1 = B0 rem ?q,
     A = encode(A1),
     B = encode(B1),
-    Af = fq:encode(A1),
-    Bf = fq:encode(B1),
-    <<A2:256>> = Af,
-    <<B2:256>> = Bf,
-    S1 = decode(mul(A, B)),
-    S1 = decode(mul(A, B)),
-    S1 = (A1 * B1) rem ?q,
-    %S2 = fq:mul(Af, Bf),
+    S = decode(mul(A, B)),
+    S = decode(mul(A, B)),
+    S = (A1 * B1) rem ?q,
     success;
 test(7) ->
     <<A0:256>> = crypto:strong_rand_bytes(32),

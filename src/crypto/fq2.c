@@ -82,6 +82,7 @@ static inline int greater_than
   return(1);
 };
 
+
 //__uint128_t prod;
 static inline void mac
 (const uint64_t a, const uint64_t b,
@@ -129,7 +130,8 @@ static inline void neg2
 };
 
 static inline void sub2
-(uint64_t * a, uint64_t * b, uint64_t * c)
+(const uint64_t * a, const uint64_t * b,
+ uint64_t * c)
 {
   //c = (a-b) mod ?q
 
@@ -143,7 +145,8 @@ static inline void sub2
 }
 
 static inline void add2
-(uint64_t * a, uint64_t * b, uint64_t * c)
+(const uint64_t * a, const uint64_t * b,
+ uint64_t * c)
 {
   //c = (a+b) mod ?q
 
@@ -156,7 +159,8 @@ static inline void add2
 
 //uint64_t mulcarry;
 static inline void multiply64
-(uint64_t * a, uint64_t * b, uint64_t * c)
+(const uint64_t * a, const uint64_t * b,
+ uint64_t * c)
 {
   //a is 256 bits, b is 256 bits, c is 512 bits.
   //c = a * b.
@@ -264,7 +268,8 @@ static inline void square2
 }
 
 static inline void mul2
-(uint64_t * a, uint64_t * b, uint64_t * c)
+(const uint64_t * a, const uint64_t * b,
+ uint64_t * c)
 {
   uint64_t mul2_r[8];
   multiply64(a, b, mul2_r);
@@ -336,8 +341,9 @@ static inline void e_double2
   mul2(zb, uu, zb);
 };
 static inline void e_add2
-(uint64_t * u, uint64_t * v, uint64_t * z1,
- uint64_t * t1, uint64_t * t2,
+(const uint64_t * u, const uint64_t * v,
+ const uint64_t * z1,const uint64_t * t1,
+ const uint64_t * t2,
  uint64_t * vpu2, uint64_t * vmu2,
  uint64_t * td2, uint64_t * z2,
  uint64_t * ub, uint64_t * vb, uint64_t * z1b,
@@ -366,6 +372,26 @@ static inline void e_add2
   mul2(t2b, z1b, vb);
   mul2(z1b, a, z1b);
 };
+static inline void extended_niels2extended
+(uint64_t * vpu, uint64_t * vmu,//niels points
+ uint64_t * td, uint64_t * z2,
+ uint64_t * u, uint64_t * v, uint64_t * z1,//resulting extended point.
+ uint64_t * t1, uint64_t * t2)
+{
+  //{u = 0, v = 1, z = 1, t1 = 0, t2 = 0},
+  e_add2(zero, one, one, zero, zero,//zero point
+         vpu, vmu, td, z2,
+         u, v, z1, t1, t2);
+  /*
+  add2(vpu, vmu, v);
+  sub2(vpu, vmu, u);
+  mul2(v, (uint64_t *)i2, v);//would need to multiply by inverse of z here...
+  mul2(u, (uint64_t *)i2, u);//and here.
+  memcpy(z1, one, 32);
+  memcpy(t1, u, 32);
+  memcpy(t2, v, 32);
+  */
+};
 static inline void e_mul2
 (uint64_t * vpu, uint64_t * vmu,//niels points
  uint64_t * td, uint64_t * z2,
@@ -374,7 +400,9 @@ static inline void e_mul2
  uint64_t * t1, uint64_t * t2)
 {
   if(b == 1){
-    //extended_niels2extended
+    extended_niels2extended
+      (vpu, vmu, td, z2, u, v, z1, t1, t2);
+    /*
     add2(vpu, vmu, v);
     sub2(vpu, vmu, u);
     mul2(v, (uint64_t *)i2, v);
@@ -382,6 +410,7 @@ static inline void e_mul2
     memcpy(z1, one, 32);
     memcpy(t1, u, 32);
     memcpy(t2, v, 32);
+    */
   } else if((b % 2) == 0){
     e_mul2(vpu, vmu, td, z2,
            b / 2,
@@ -396,20 +425,6 @@ static inline void e_mul2
            vpu, vmu, td, z2,
            u, v, z1, t1, t2);
   };
-};
-static inline void extended_niels2extended
-(uint64_t * vpu, uint64_t * vmu,//niels points
- uint64_t * td, uint64_t * z2,
- uint64_t * u, uint64_t * v, uint64_t * z1,//resulting extended point.
- uint64_t * t1, uint64_t * t2)
-{
-  add2(vpu, vmu, v);
-  sub2(vpu, vmu, u);
-  mul2(v, (uint64_t *)i2, v);
-  mul2(u, (uint64_t *)i2, u);
-  memcpy(z1, one, 32);
-  memcpy(t1, u, 32);
-  memcpy(t2, v, 32);
 };
 
 static inline void e_mul_long2
@@ -899,7 +914,6 @@ static ERL_NIF_TERM e_add
 (ErlNifEnv* env, int argc,
  const ERL_NIF_TERM argv[])
 {
-  //todo. shouldn't add in place. don't break erlang's immutability.
   ErlNifBinary Extended, ENiels;
   int checka =
     enif_inspect_binary(env, argv[0], &Extended);
@@ -933,8 +947,24 @@ static ERL_NIF_TERM e_add
   uint64_t * T1b = (uint64_t *)&(C[96]);
   uint64_t * T2b = (uint64_t *)&(C[128]);
 
-  e_add2(U, V, Z, T1, T2, VPU, VMU, T2D, NZ,
-         Ub, Vb, Zb, T1b, T2b);
+  /*
+  if((VPU == VMU) && (VPU == Z)){
+    //the niels point is zero, so
+    //just return the extended point
+    memcpy(C, Extended.data, 160);
+  }else if((U == 0) && (V == Z)){
+    //the extended point is zero, so
+    //just return the niels point converted
+    //into a extended point.
+    extended_niels2extended
+      (VPU, VMU, T2D, NZ,
+       Ub, Vb, Zb, T1b, T2b);
+  } else {
+  */ 
+    e_add2(U, V, Z, T1, T2,
+           VPU, VMU, T2D, NZ,
+           Ub, Vb, Zb, T1b, T2b);
+    //}
 
   //return enif_make_binary(env, &Extended);
   return(Result);
@@ -955,7 +985,7 @@ static ErlNifFunc nif_funcs[] =
    {"e_double", 1, e_double},
    {"e_add", 2, e_add},
    {"e_mul", 2, e_mul},
-   {"e_mul_long", 2, e_mul_long},
+   {"e_mul1", 2, e_mul_long},
 
    {"ctest", 1, ctest}
   };

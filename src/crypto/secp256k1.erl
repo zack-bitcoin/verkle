@@ -990,7 +990,8 @@ test(15) ->
     sub4_test(X, X, Many),%0.11
     %empty_test(X, X, Many),%0.02
     T2 = erlang:timestamp(),
-    timer:now_diff(T2, T1)/Many.
+    timer:now_diff(T2, T1)/Many;
+
 
 %in always positive format, we lose 0.08 per normal multiplicaiton.
 %in either sign format, we lose 0.09 per sub, and 0.04 per add.
@@ -1010,7 +1011,15 @@ test(15) ->
 % all together, positive is 0.25 faster.
 %0.00000055 seconds
     
-
-    
+test(16) ->
+    %checking that multi_exponent isn't messing up the order of inputs.
+    E = make(),
+    Gs = [to_jacob(gen_point(E)), 
+          to_jacob(gen_point(E))],
+    B = [4, 5],
+    jacob_equal(
+      multi_exponent2(B, Gs, E),
+      simple_exponent(B, Gs, E, jacob_zero()),
+     E).
     
 
