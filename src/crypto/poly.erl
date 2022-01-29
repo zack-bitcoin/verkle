@@ -210,7 +210,6 @@ div_e(Ps, Domain, DA, M, DivEAll, DivEAll2) ->
         end,
     {Poly1, Zeroth0} =
         div_e3(Ps, 1, IDs, IDs2, M, [], 0),
-    io:fwrite({length(Poly1)}),
     Zeroth = ?mul(Zeroth0, DA_M),
     {PolyA, PolyB} = lists:split(M-1, Poly1),
     Result = PolyA ++ [Zeroth] ++ PolyB,
@@ -249,7 +248,9 @@ calc_DA(Domain, E) ->
                         end, Domain2),
                   mul_c_all(Y, Base)
           end, Domain),
-    add_all(X).
+    lists:foldl(fun(A, B) -> add_c(A, B, Base) end,
+              hd(X), tl(X)).
+%    add_all(X).
     
                           
               

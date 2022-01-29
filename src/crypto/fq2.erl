@@ -36,7 +36,9 @@
          extended_niels2extended/1,
          is_zero/1,
          extended2affine/1,
-         to_affine_batch/1
+         affine2extended/1,
+         to_affine_batch/1,
+         hash_point/1
         ]).
 -on_load(init/0).
 -record(extended_point, {u, v, z, t1, t2}).
@@ -177,6 +179,12 @@ decode_extended_niels(
          v_minus_u = decode(<<VMU:256>>),
          t2d = decode(<<T2D:256>>),
          z = decode(<<Z:256>>)}.
+
+hash_point(<<U:512>>) ->
+    U rem prime();
+hash_point(X = <<U:(256*5)>>) ->
+    hash_point(extended2affine(X)).
+
 
 sqrt_C(S) ->
     <<X0:256>> = crypto:strong_rand_bytes(32),

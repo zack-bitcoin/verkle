@@ -1,15 +1,8 @@
-would be nice to put some guards in the c code, so it returns a 0 or something instead of crashing the entire erlang vm.
-working on fq2.c, on addition.
-
 
 
 working on a jubjub implementation, since it will give us private reading and
-* redo the verkle tree using jubjub instead of secp256k1.
--ipa.erl
--poly.erl
--multiproof:prove
--multiproof:verify
--redo precomputes for the new format of points.
+* rewrite test_trie:test(18, CFG) for stem2/store2/get2/verify2/ and jubjub versions of everything.
+* new benchmark
 * make a SNARK of a verkle proof.
 
 

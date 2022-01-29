@@ -89,8 +89,6 @@ prove(As, %committed data
     DA = parameters2:da(),
     PA = parameters2:a(),
     Domain = parameters2:domain(),
-    
-    
 
     %todo. instead of accepting the entire list of As, we should receive a tree structure that allows us to stream the As. that way the memory requirement doesn't get so big.
 
@@ -113,6 +111,7 @@ prove(As, %committed data
     io:fwrite("multiprove calc G\n"),
     %the slow step.
     G2 = calc_G_e(R, As, Ys, Zs, Domain, DA),
+    %G2 is a vector of fr encoded values.
     %io:fwrite("multiprove 4\n"),
     io:fwrite("multiprove commit to G\n"),
     %io:fwrite({length(G2), length(Gs)}),
@@ -142,13 +141,7 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     DA = parameters2:da(),
     PA = parameters2:a(),
     Domain = parameters2:domain(),
-    %io:fwrite({CommitG0, Commits0, Cs0}),
-%    {[CommitG|Commits], Cs} = 
-%        lists:split(length(Commits0)+1, 
-%                    secp256k1:simplify_Zs_batch(
-%                      [CommitG0|Commits0] ++ Cs0)),
-   
-%    Open_G_E = setelement(3, Open_G_E0, Cs),
+
     io:fwrite("multiproof verify calc r\n"),
     T1 = erlang:timestamp(),
     [ACG|AffineCommits] = 
@@ -156,20 +149,29 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
           [CommitG|Commits]),
     T2 = erlang:timestamp(),
     R = calc_R(AffineCommits, Zs, Ys, <<>>),
+
     io:fwrite("multiproof verify calc t\n"),
     T3 = erlang:timestamp(),
     T = calc_T(ACG, R),
+
     io:fwrite("multiproof verify eval outside v\n"),
     EV = poly2:eval_outside_v(
            T, Domain, PA, DA),
     T4 = erlang:timestamp(),
+
     io:fwrite("multiproof verify ipa\n"),
     true = ipa2:verify_ipa(
              Open_G_E, EV, Gs, Hs, Q),
     T5 = erlang:timestamp(),
+
     io:fwrite("multiproof verify g2\n"),
     {RIDs, G2} = calc_G2_2(R, T, Ys, Zs),
+
+    true = (fr:encode(0) == 
+                fr:add(G2, element(2, Open_G_E))),
+
     T6 = erlang:timestamp(),
+
     %sum_i  Ci*(R^i/(T-Zi))
     io:fwrite("multiproof verify commit neg e\n"),
     %the slow step.
@@ -188,14 +190,15 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     T9 = erlang:timestamp(),
     NegE = timer:now_diff(T7, T6),
     io:fwrite("multiproof verify done\n"),
+    true.
     %io:fwrite(integer_to_list(timer:now_diff(T4, T3))),
     %io:fwrite("\n"),
     %io:fwrite("proofs per second: "),
     %io:fwrite(integer_to_list(round(length(Zs) * 1000000 / NegE))),
     %io:fwrite("\n"),
     %0 == add(G2, element(2, Open_G_E), Base).
-    fr:encode(0) == 
-        fr:add(G2, element(2, Open_G_E)).
+%    fr:encode(0) == 
+%        fr:add(G2, element(2, Open_G_E)).
    
          
 range(X, X) -> [];

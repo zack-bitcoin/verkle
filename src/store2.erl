@@ -1,11 +1,21 @@
--module(store).
+-module(store2).
 -export([store/3, %non-batched store is not needed.
          batch/3,
-         multi_exponent_parameters/1,
+         multi_exponent_parameters/2,
          test/1,
          precomputed_multi_exponent/2
         ]).
--include("constants.hrl").
+%-include("constants.hrl").
+-define(nindex, 8).
+-record(stem, { root
+                , types
+                , pointers
+                , hashes
+	      }).
+-record(leaf, { key
+	      , value
+	      , meta = 0 %meta is data we want to remember that doesn't get hashed into the merkle tree.
+	      }).
 
 store(Leaf, RP, CFG) ->
     batch([Leaf], RP, CFG).
@@ -15,7 +25,7 @@ batch(Leaves0, RP, CFG) ->%returns {location, stem/leaf, #stem{}/#leaf{}}
     io:fwrite("store sorting 0\n"),
     Leaves = sort_by_path2(Leaves0, CFG),
     io:fwrite("store parameters 1\n"),
-    MEP = parameters:multi_exp(),
+    MEP = parameters2:multi_exp(),
     io:fwrite("store storing 1\n"),
     batch(Leaves, RP, stem, 0, CFG, MEP).
 
@@ -46,7 +56,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     Leaves2 = clump_by_path(%  0.6%
                 Depth, Leaves, CFG),
     %depth first recursion over the sub-lists on teh sub-trees to calculate the pointers and hashes for this node.
-    RootStem = stem2:get(RP, CFG),
+    RootStem = stem:get(RP, CFG),
     #stem{
            hashes = Hashes,
            pointers = Pointers,
@@ -69,7 +79,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
                           P2, Type, Tree, H, CFG),
                    <<HN:256>> = H,
                    <<HN2:256>> = H2,
-                   Sub = ?sub2(HN2, HN),
+                   Sub = fr:sub(HN2, HN),
                    {Sub, H2, P2, Type}
            end,
             Leaves2, HPT1),
@@ -91,8 +101,9 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     %43% of total. (impossible, because inside it was 70%
     EllDiff = precomputed_multi_exponent(Rs, MEP),
 %    true = secp256k1:jacob_equal(EllDiff, EllDiff2, ?p#p.e),
-    NewRoot = secp256k1:jacob_add(
-                EllDiff, Root, ?p#p.e),% 0.3%
+    NewRoot = fq2:e_add(EllDiff, Root),
+%    NewRoot = secp256k1:jacob_add(
+%                EllDiff, Root, ?p#p.e),% 0.3%
     %clumping is 0.6%
     %hashing is 0.3%
     %reading + writing is 15%
@@ -106,7 +117,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
           types = list_to_tuple(Types2),
           root = NewRoot
          },
-    Loc = stem2:put(NewStem, CFG),
+    Loc = stem:put(NewStem, CFG),
     {Loc, stem, NewStem}.
 
 range(X, X) -> [X];
@@ -122,9 +133,10 @@ clump_by_path(D, Leaves, CFG) ->
                                    L, CFG)),
                       {B, L} end,
               Leaves),
+    {Gs, _, _} = parameters2:read(),
     Result0 = 
         clump_by_path2(
-          0, length(?p#p.g), Paths, []),
+          0, length(Gs), Paths, []),
     remove_pointers(Result0).
 remove_pointers({_, B}) -> B;
 remove_pointers([]) -> [];
@@ -162,7 +174,7 @@ hash_thing(_, stem, stem_not_recorded,
 hash_thing(_, leaf, L = #leaf{}, _, CFG) -> 
     leaf:hash(L, CFG);
 hash_thing(_, stem, S = #stem{}, _, _) -> 
-    stem2:hash(S).
+    stem:hash(S).
 sort_by_path2(L, CFG) ->
     %this time we want to sort according to the order of a depth first search.
     lists:sort(
@@ -175,22 +187,25 @@ multi_exponent_parameters2(_, X, 0) -> [X];
 multi_exponent_parameters2(Base, X, Times) ->
     [X|multi_exponent_parameters2(
          Base, 
-         secp256k1:jacob_add(Base, X, ?p#p.e),
+         fq2:e_add(X, Base),
          Times - 1)].
-multi_exponent_parameters(C) ->
+det_pow(0, _) -> 0;
+det_pow(_, 0) -> 1;
+det_pow(A, 1) -> A;
+det_pow(A, N) when ((N rem 2) == 0) -> 
+    det_pow(A*A, N div 2);
+det_pow(A, N) -> 
+    A*det_pow(A, N-1).
+multi_exponent_parameters(C, Gs) ->
     io:fwrite("calculating 256 multi exponent parameters\n"),
-    Gs = ?p#p.g,
-    F = secp256k1:det_pow(2, C),
+    F = det_pow(2, C),
     L = lists:zipwith(
           fun(G, R) ->
                   String = "ME # " ++ integer_to_list(R) ++ "\n",
                   %io:fwrite(String),
                   X = multi_exponent_parameters2(
-                        G, secp256k1:jacob_zero(), 
-                        F),
-                  X3 = 
-                      secp256k1:simplify_Zs_batch(
-                        X),
+                        G, fq2:e_zero(), F),
+                  X3 = fq2:e_simplify_batch(X),
                   list_to_tuple(X3)
           end, Gs, range(1, length(Gs))),
     io:fwrite("multi exponent parameters done\n"),
@@ -235,10 +250,11 @@ get_domain([D|DT], [R|RT], Ds, Rs) ->
 precomputed_multi_exponent(Rs0, MEP) ->
     %we want to do part of the bucket algorithm, but since the generator points are all known ahead of time, we want to use precalculated values where possible.
     %n = 2, C = 10 -> 128*2/8 -> 32.
+    Domain0 = parameters2:domain(),
     {Domain, Rs} = get_domain(% 0.4%
-                     ?p#p.domain, Rs0, [], []),
+                     Domain0, Rs0, [], []),
     C = 8,
-    F = secp256k1:det_pow(2, C),
+    F = det_pow(2, C),
     B = 256,
     %bitcoin has 19 leading zeros in hexidecimal format. around 80 bits per block.
     Lim = ceil(B / C),
@@ -260,13 +276,14 @@ precomputed_multi_exponent(Rs0, MEP) ->
     Ss = lists:map(%  30% of storage
            fun(T) ->
                    pme2(T, Domain, MEP, 
-                        secp256k1:jacob_zero())
+                        fq2:e_zero())
            end, Ts),
 
     %40% of storage
-    Result = secp256k1:me3(lists:reverse(Ss), 
-                  secp256k1:jacob_zero(), 
-                           F, ?p#p.e),%  5%
+    Result = multi_exponent:me3(
+               lists:reverse(Ss), 
+               fq2:e_zero(), 
+               fr:encode(F)),%  5%
     Result.
                       
     %Now the problem has been broken into 256/C instances of multi-exponentiation.
@@ -291,10 +308,9 @@ pme2([Power|T], [Gid|Domain], MEP, Acc) ->
     X = element(
           Power+1,
           element(
-            Gid, MEP)),
+            fr:decode(Gid), MEP)),
 %    X = parameters:multi_exp(Gid, Power+1),
-    Acc2 = secp256k1:jacob_add(
-             X, Acc, ?p#p.e),
+    Acc2 = fq2:e_add(X, fq2:extended2extended_niels(Acc)),
     pme2(T, Domain, MEP, Acc2).
     
 
@@ -304,24 +320,26 @@ many(A, N) when N > 0 ->
 
 test(1) ->
     verkle_app:start(normal, []),
-    R1 = [1|many(0, 255)],
-    R2 = [0,1|many(0, 254)],
-    R3 = [2|many(0, 255)],
-    R4 = [0,2|many(0, 254)],
+    R1 = ([1|many(0, 255)]),
+    R2 = ([0,1|many(0, 254)]),
+    R3 = ([2|many(0, 255)]),
+    R4 = ([0,2|many(0, 254)]),
     R = R4,
-    Old0 = secp256k1:multi_exponent(
-            R, ?p#p.g, ?p#p.e),
-    Old = secp256k1:to_affine(Old0),
-    MEP = parameters:multi_exp(),
-    New = precomputed_multi_exponent(R, MEP), 
+    {Gs, _, _} = parameters2:read(),
+    Old = multi_exponent:doit(fr:encode(R), Gs),
+    %Old = fq2:extended2affine(Old0),
+    MEP = parameters2:multi_exp(),
+    New = precomputed_multi_exponent(
+            R, MEP), 
     %Saved0 = element(2, element(1, MEP)),
-    Saved0 = element(2, element(2, MEP)),
-    Saved = secp256k1:to_affine(secp256k1:jacob_add(Saved0, Saved0, ?p#p.e)),
+%    Saved0 = element(2, element(2, MEP)),
+%    Saved = secp256k1:to_affine(secp256k1:jacob_add(Saved0, Saved0, ?p#p.e)),
     %Saved1 = element(2, element(2, MEP)),
     %io:fwrite({Old, New, Saved0}),
-    secp256k1:jacob_equal(Old0, New, ?p#p.e);
+    fq2:eq(Old, New);
 test(2) ->
     %multi exponent precompute speed comparison.
+    1=2,
     verkle_app:start(normal, []),
     Many = 20,
     Rs = lists:map(fun(_) ->
@@ -338,10 +356,10 @@ test(2) ->
     fprof:trace(stop),
 %fprof:analyse().
     T2 = erlang:timestamp(),
-    lists:map(fun(_) ->
-                      secp256k1:multi_exponent(
-                        Rs, ?p#p.g, ?p#p.e)%125000
-              end, range(1, Many)),
+%    lists:map(fun(_) ->
+%                      secp256k1:multi_exponent(
+%                        Rs, Gs, E)%125000
+%              end, range(1, Many)),
     T3 = erlang:timestamp(),
     {timer:now_diff(T2, T1)/Many,
      timer:now_diff(T3, T2)/Many},

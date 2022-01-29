@@ -52,7 +52,7 @@ init(ok) ->
     C = 8,
     ME = read_or_gen(
           "precomputes/ME.db",
-          fun() -> store:multi_exponent_parameters(C) end),
+          fun() -> store2:multi_exponent_parameters(C, G) end),
     DB = #db{g = G, h = H, q = Q, a = A, da = DA, 
              domain = Domain, dive = DivE, 
              me = ME},

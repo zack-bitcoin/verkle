@@ -1,5 +1,5 @@
 -module(multi_exponent).
--export([doit/2, test/1]).
+-export([doit/2, me3/3, test/1]).
 
 det_pow(0, _) -> 0;
 det_pow(_, 0) -> 1;
