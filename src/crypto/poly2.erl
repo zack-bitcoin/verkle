@@ -3,11 +3,10 @@
 -export(
    [calc_DA/1, calc_A/1, 
     c2e/3, %lagrange_polynomials/2, 
-    sub/3, div_e/6, mul_scalar/3, mul_scalar/2, 
+    sub/3, div_e/6, mul_scalar/2, 
     add/2, 
-    eval_e/4, eval_outside/6, eval_outside_v/5,
-    all_div_e_parameters/1,
-    all_div_e_parameters2/0
+    eval_e/3, eval_outside/6, eval_outside_v/5,
+    all_div_e_parameters/2
    ]).
 
 %library for dealing with polynomials over integers mod a prime.
@@ -21,7 +20,14 @@
 %-define(mul(A, B), ((A * B) rem ?order)).
 %-include("../constants.hrl").
 
--record(p, {e, b, g, h, q, domain, a, da, ls}).
+-record(p, {b, 
+            g, 
+            h, 
+            q, 
+            domain, 
+            a, 
+            da, 
+            ls}).
 
 symetric_view([], _) -> [];
 symetric_view([H|T], Y) ->
@@ -50,22 +56,29 @@ neg([H|T], Base) ->
     %[ff:sub(0, H, Base)|
     [fr:neg(H)|
      neg(T, Base)].
-mul_scalar(S, A) ->
-    mul_scalar(S, A, 0).
-mul_scalar(_, [], _) -> [];
-mul_scalar(S, [A|T], _) 
-  when is_integer(S) -> 
+mul_scalar(_, []) -> [];
+mul_scalar(S, [A|T]) ->
+    %scalar * polynomial
     [fr:mul(S, A)|
-     mul_scalar(S, T, 0)].
+     mul_scalar(S, T)].
 add_all([P]) -> P;
 add_all([A, B|T]) -> 
     %add_all([?add(A, B)|T]).
     %C = A+B,
     add_all([fr:add(A, B)|T]).
 
+poly_add_all([P]) -> P;
+poly_add_all([A,B|T]) -> 
+    poly_add_all([add(A, B)|T]).
+
 %only used for generating parameters.
 mul_c_all([X]) -> X;
 mul_c_all([A, B|T]) ->
+    if
+        (hd(A) == error) ->
+            io:fwrite({A, B, T});
+        true -> ok
+    end,
     mul_c_all([mul_c(A, B)|T]).
 
 %coefficient form
@@ -75,8 +88,9 @@ mul_c(_, []) -> [];
 mul_c([A], B) ->
     mul_scalar(A, B);
 mul_c([A|AT], B) ->
-    add_c(mul_scalar(A, B),
-        mul_c(AT, [0|B])).
+    X = mul_scalar(A, B),
+    Y = mul_c(AT, [fr:encode(0)|B]),
+    add_c(X, Y).
    
 %coefficient format doesn't need to be same length 
 %only for generating parameters.
@@ -95,11 +109,11 @@ range(N, N) -> [N];
 range(A, B) when A < B -> 
     [A|range(A+1, B)].
 
-all_div_e_parameters2() ->
-    P = ok,%?p,
-    D = P#p.domain,
-    DA = P#p.da,
-    E = P#p.e,
+all_div_e_parameters2(Domain, DA) ->
+    io:fwrite("calculating the poly:div_e parameters\n"),
+    %P = ok,%?p,
+    D = Domain,
+    %DA = P#p.da,
     First = hd(D),
     Last = hd(lists:reverse(D)),
     %R = range(First - Last, Last - First),
@@ -127,15 +141,18 @@ all_div_e_parameters2() ->
     
               
 
-all_div_e_parameters(P) ->
+all_div_e_parameters(Domain, DA) ->
+    io:fwrite("calculating "),
+    io:fwrite(integer_to_list(length(Domain))),
+    io:fwrite(" div e parameters.\n"),
     L = lists:map(
           fun(M) ->
-                  %io:fwrite("generating parameter "),
-                  %io:fwrite(integer_to_list(M)),
-                  %io:fwrite("\n"),
+                  io:fwrite("div e parameter "),
+                  io:fwrite(integer_to_list(fr:decode(M))),
+                  io:fwrite("\n"),
                   div_e_parameters(
-                    P#p.domain, P#p.da, M)
-          end, P#p.domain),
+                    Domain, DA, M)
+          end, Domain),
     list_to_tuple(L).
 
 %div_e_parameters(_, _, M) ->
@@ -146,8 +163,8 @@ div_e_parameters(Domain, DA, M) ->
           fun(D) -> 
                   %X = ?sub2(D, M),
                   X = fr:sub(D, M),
-                  case X of
-                      0 -> 1;
+                  case fr:decode(X) of
+                      0 -> fr:encode(1);
                       _ -> X
                   end
           end, Domain),
@@ -155,7 +172,7 @@ div_e_parameters(Domain, DA, M) ->
         lists:zipwith3(
           fun(D, ID, A) ->
                   if
-                      (D == M) -> 1;
+                      (D == M) -> fr:encode(1);
                       true ->
                           fr:mul(A, fr:sub(M, D))
                               %?mul(A, ?sub2(M, D))
@@ -166,7 +183,7 @@ div_e_parameters(Domain, DA, M) ->
           length(Dividends),
           fr:batch_inverse(
             Dividends ++ Dividends2)),
-    {lists:nth(M, DA),%this only works because the domain is the integers. there should be a way to generalize it. 
+    {lists:nth(fr:decode(M), DA),%this only works because the domain is the integers. there should be a way to generalize it. 
      IDs, IDs2}.
 
 lookup_param([], _, _) -> [];
@@ -232,6 +249,7 @@ div_e3([P|PT], D, [ID1|IDs1], [ID2|IDs2],
 calc_A(Domain) -> 
     %in roots of unity case, it is (x^d - 1)
     %only used for generating parameters.
+    io:fwrite("calculating the A polynomial\n"),
     L = lists:map(
           fun(D) -> base_polynomial_c(D) 
           end, Domain),
@@ -240,9 +258,12 @@ calc_DA(Domain) ->
     %this is the derivative of polynomial A. for some deterministic version of the derivative.
     %in the roots of unity case, A(root_i) is (vector size)*(root^(-i))
     %only used for generating parameters
+    io:fwrite("calculating the DA polynomial. 256 elements.\n"),
     X = lists:map(
           fun(D) ->
                   %multiply together all the base polynomials, besides D.
+                  io:fwrite(integer_to_list(fr:decode(D))),
+                  io:fwrite("\n"),
                   Domain2 = remove_element(D, Domain),
                   Y = lists:map(
                         fun(D2) ->
@@ -251,7 +272,7 @@ calc_DA(Domain) ->
                         end, Domain2),
                   mul_c_all(Y)
           end, Domain),
-    add_all(X).
+    poly_add_all(X).
     
                           
               
@@ -259,7 +280,7 @@ calc_DA(Domain) ->
 %coefficient format
 base_polynomial_c(Intercept) ->
     % x - intercept
-    [fr:sub(fr:encode(0), Intercept), fr:encode(1)].
+    [fr:neg(Intercept), fr:encode(1)].
     %[?order - Intercept, 1].
 
 %coefficient format
@@ -274,9 +295,10 @@ eval_poly2(X, XA, [H|T], Base, Acc) ->
 
 
 %evaluation format
-eval_e(X, [P|_], [X|_], Base) -> P;
-eval_e(X, [_|P], [_|D], Base) -> 
-    eval_e(X, P, D, Base).
+%todo. maybe lists:nth would be faster.
+eval_e(X, [P|_], [X|_]) -> P;
+eval_e(X, [_|P], [_|D]) -> 
+    eval_e(X, P, D).
 
 %evaluation format, looking up something outside the known domain.
 %DA is also in evaluation format

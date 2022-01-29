@@ -178,10 +178,14 @@ multi_exponent_parameters2(Base, X, Times) ->
          secp256k1:jacob_add(Base, X, ?p#p.e),
          Times - 1)].
 multi_exponent_parameters(C) ->
+    io:fwrite("calculating 256 multi exponent parameters\n"),
     Gs = ?p#p.g,
     F = secp256k1:det_pow(2, C),
-    L = lists:map(
-          fun(G) ->
+    L = lists:zipwith(
+          fun(G, R) ->
+                  io:fwrite("ME # "),
+                  io:fwrite(integer_to_list(R)),
+                  io:fwrite("\n"),
                   X = multi_exponent_parameters2(
                         G, secp256k1:jacob_zero(), 
                         F),
@@ -189,7 +193,8 @@ multi_exponent_parameters(C) ->
                       secp256k1:simplify_Zs_batch(
                         X),
                   list_to_tuple(X3)
-          end, Gs),
+          end, Gs, range(1, length(Gs))),
+    io:fwrite("multi exponent parameters done\n"),
     list_to_tuple(L).
 batch_chunkify2(_Rs, _, 0) -> [];
 batch_chunkify2(Rs, C, Lim) -> 
@@ -199,6 +204,7 @@ batch_chunkify3([], C, N, A) ->
     {lists:reverse(N), lists:reverse(A)};
 batch_chunkify3(
   [<<N:8, A/binary>>|Rs], C, Ns, As) ->
+    %I think this N is 8 bits long, becuase the value of C in parameters.erl is 8.
     batch_chunkify3(Rs, C, [N|Ns], [A|As]).
 batch_chunkify(_Rs, _, 0) -> [];
 batch_chunkify(Rs, F, Lim) -> 

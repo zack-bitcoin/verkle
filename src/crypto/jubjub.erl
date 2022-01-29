@@ -2,6 +2,7 @@
 -export([test/1,
          sqrt/2,
          gen_point/0,
+         gen_point/1,
          multiply/2,
          double/1,
          affine2extended/1,
@@ -129,6 +130,7 @@ factors_of_two(X) when ((X rem 2) == 0) ->
 factors_of_two(_) -> 0.
     
 sqrt(A, P) ->    
+    %sqrt(a) mod P
     %fpow(A, (?q + 1) div 4).%this strategy doesn't work, because ?q+1 is not divisible by 4.
     %using tonelli-shanks. page 12 algorithm 5. https://eprint.iacr.org/2012/685.pdf
     %?q - 1 has 2^32 as a factor.
@@ -194,8 +196,6 @@ sqrt2(A, V, X, B, W, Z, P) ->
     end.
             
 sqrt_k(B, K, P) ->
-    %io:fwrite("sqrt k\n"),
-    %C = fpow(B, fpow(2, K)),
     C = basics:rlpow(B, basics:rlpow(2, K, P), P),
     case C of
         1 -> K;
@@ -373,13 +373,27 @@ is_on_curve(#affine_point{u = U, v = V}) ->
 %vv(1 - duu) = one + uu
 %vv = (one + uu)/(1 - duu)
 
+-define(tries, 20).
+
+test_gen_point(_, _, 0) -> ok;
+test_gen_point(G, X, Times) 
+  when (Times > 0) ->
+    io:fwrite(integer_to_list(Times)),
+    io:fwrite("\n"),
+    G = gen_point(X),
+    test_gen_point(G, X, Times-1).
+
 gen_point() ->
     <<X0:256>> = crypto:strong_rand_bytes(32),
     X = X0 rem ?q,
-    G = gen_point(X),
+    G = gen_point(X, 2, 2),
     true = is_on_curve(G),
     G.
-gen_point(U) ->
+gen_point(X) ->
+    gen_point(X, ?tries, ?tries).
+gen_point(U, 0, StartTries) ->
+    gen_point(U+1, StartTries, StartTries);
+gen_point(U, Tries, StartTries) ->
     UU = ?mul(U, U),
     DUU = ?mul(?D, UU),
     B = finverse(?sub(1, DUU)),
@@ -387,14 +401,18 @@ gen_point(U) ->
     VV = ?mul(T, B),
     V = sqrt(VV, ?q),
     case V of
-        no_sqrt -> gen_point(U+1);
+        no_sqrt -> 
+            %io:fwrite("no sqrt\n"),
+            gen_point(U+1, StartTries, StartTries);
         _ ->
             A = #affine_point{u = U, v = V},
             G = affine2extended(A),
             Prime = is_prime_order(G),
             if
                 Prime -> A;
-                true -> gen_point(U+1)
+                true -> 
+                    gen_point(U, Tries-1, 
+                              StartTries)
             end
     end.
     
@@ -586,5 +604,12 @@ test(4) ->
     {is_torsion_free(G),
      not(identity(G)),
      is_prime_order(G),
-    A}.
+     A};
+test(5) ->
+    io:fwrite("deterministic gen point test\n"),
+    Times = 100,
+    X = 500000,
+    G = gen_point(X),
+    test_gen_point(G, X, Times).
+
 

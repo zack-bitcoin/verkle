@@ -14,7 +14,8 @@
          setup/1,
          batch_inverse/1,
          prime/0,
-         reverse_bytes/1
+         reverse_bytes/1,
+         add_all/1
 
         ]).
 -on_load(init/0).
@@ -84,6 +85,11 @@ inv(X) -> encode(ff:inverse(decode(X), ?q)).
 pow(_, _) -> ok.
 short_pow(_, _) -> ok.
 
+
+add_all([]) -> fr:encode(0);
+add_all([X]) -> X;
+add_all([A,B|T]) ->
+    add_all([add(A, B)|T]).
 
 pis([], _) -> [];
 pis([H|T], A) -> 

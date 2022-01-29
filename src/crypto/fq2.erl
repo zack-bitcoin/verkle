@@ -15,6 +15,7 @@
          ctest/1,
          reverse_bytes/1,
          prime/0,
+         sqrt/1,
 
          e_double/1,
          e_add/2,
@@ -25,13 +26,16 @@
          eq/2,
          batch_inverse/1,
          e_simplify_batch/1,
+         pow_/2,
 
          gen_point/0,
+         gen_point/1,
 
          extended2extended_niels/1,
          extended_niels2extended/1,
          is_zero/1,
-         extended2affine/1
+         extended2affine/1,
+         to_affine_batch/1
         ]).
 -on_load(init/0).
 -record(extended_point, {u, v, z, t1, t2}).
@@ -172,8 +176,119 @@ decode_extended_niels(
          v_minus_u = decode(<<VMU:256>>),
          t2d = decode(<<T2D:256>>),
          z = decode(<<Z:256>>)}.
-   
 
+sqrt_C(S) ->
+    <<X0:256>> = crypto:strong_rand_bytes(32),
+    C = X0 rem prime(),
+    EC = encode(C),
+    if
+        (C < 2) -> sqrt_C(S);
+        true ->
+        
+            %C0 = basics:rlpow(C, basics:rlpow(2, S-1, P), P),
+            %Power = decode(pow_(encode(2),
+            %                   S-1)),
+            Power = 2147483648,
+            C0 = decode(pow_(EC, Power)),
+            if
+                C0 < 2 -> sqrt_C(S);
+                true -> C0
+            end
+    end.
+factors_of_two(0) -> 1=2;
+factors_of_two(X) when ((X rem 2) == 0) ->
+    1 + factors_of_two(X div 2);
+factors_of_two(_) -> 0.
+sqrt(A) ->    
+    1=2,
+    %currently does not work. use the jubjub version.
+    %fpow(A, (?q + 1) div 4).%this strategy doesn't work, because ?q+1 is not divisible by 4.
+    %using tonelli-shanks. page 12 algorithm 5. https://eprint.iacr.org/2012/685.pdf
+    %?q - 1 has 2^32 as a factor.
+    %?q - 1 = t*2^S.
+    %S = 32,
+    %T = 12208678567578594777604504606729831043093128246378069236549469339647,
+    S = factors_of_two(prime() - 1),%s is an integer, everything else is fr encoded.
+    %T = (P - 1) div basics:rlpow(2, S, P),
+    N1 = neg(encode(1)),
+    T = mul(N1, inv(pow_(encode(2), S))),
+    true = (decode(T) rem 2) == 1,
+    %P = (T * basics:rlpow(2, S, P)) + 1,
+    N1 = mul(T, pow_(encode(2), S)),
+
+    %everything before this line could be a pre-compute.
+
+    C = sqrt_C(S),
+    %Z = basics:rlpow(C, T, P),
+    Z = pow_(encode(C), decode(T)),
+    %io:fwrite({C, decode(T), decode(Z)}),
+    %W = basics:rlpow(A, (T-1) div 2, P),
+    W = pow_(A, (decode(T)-1) div 2),
+    WW = mul(W, W),
+    WWA = mul(WW, A),
+    %WW = (W*W) rem P,
+    %WWA = (WW*A) rem P,
+    %A0 = basics:rlpow(WWA, basics:rlpow(2, S-1, P), P),
+    %Power = decode(pow_(encode(2),
+    %                   S-1)),
+    Power = 2147483648,
+    A0 = pow_(WWA, Power),
+    Bool = (A0 == N1),
+    if
+        Bool ->
+            no_sqrt;
+        true ->
+            V = S,
+            %X = (A * W) rem P,
+            X = mul(A, W),
+            %B = (X * W) rem P,
+            B = mul(X, W),
+            sqrt2(A, V, X, B, W, Z)
+    end.
+sqrt_k(B, K) ->
+    %C = basics:rlpow(B, basics:rlpow(2, K, P), P),
+    C = pow_(B, decode(pow_(encode(2), K))),
+    case decode(C) of
+        1 -> K;
+        _ -> sqrt_k(B, K+1)
+    end.
+sqrt2(A, V, X, B, W, Z) ->
+    K = sqrt_k(B, 0),
+    VK1 = V - K - 1,
+    if
+        (VK1 < 0) -> sqrt(A);
+        true ->
+    %W2 = basics:rlpow(Z, basics:rlpow(2, VK1, P), P),
+    W2 = pow_(Z, decode(pow_(encode(2), VK1))),
+    %Z2 = (W2 * W2) rem P,
+    Z2 = mul(W2, W2),
+    %B2 = (B * Z2) rem P,
+    B2 = mul(B, Z2),
+    %X2 = (X * W2) rem P,
+    X2 = mul(X, W2),
+    V2 = K,
+            io:fwrite("VK1: "),
+            io:fwrite(integer_to_list(VK1)),
+            io:fwrite("\n"),
+            io:fwrite("W2: "),
+            io:fwrite(integer_to_list(decode(W2))),
+            io:fwrite("\n"),
+            io:fwrite("Z2: "),
+            io:fwrite(integer_to_list(decode(Z2))),
+            io:fwrite("\n"),
+            io:fwrite("B: "),
+            io:fwrite(integer_to_list(decode(B))),
+            io:fwrite("\n"),
+            io:fwrite("B2: "),
+            io:fwrite(integer_to_list(decode(B2))),
+            io:fwrite("\n"),
+    case decode(B2) of
+        1 -> X2;
+        _ -> sqrt2(A, V2, X2, B2, W2, Z2)
+    end
+    end.
+pow_(X, Y) when is_integer(Y) ->
+    pow(X, reverse_bytes(<<Y:256>>)).
     
    
 %these functions are defined in c. 
@@ -236,6 +351,12 @@ extended2affine(E) ->
     [E2] = e_simplify_batch([E]),
     <<A:256, B:256, _/binary>> = E2,
     <<A:256, B:256>>.
+
+to_affine_batch(L) ->
+    L2 = e_simplify_batch(L),
+    lists:map(fun(<<U:256, V:256, _/binary>>) ->
+                      <<U:256, V:256>>
+              end, L2).
     
     
         
@@ -311,6 +432,11 @@ gen_point() ->
     G = jubjub:affine2extended(
           jubjub:gen_point()),
     encode_extended(G).
+gen_point(X) ->
+    fq2:encode_extended(
+      jubjub:affine2extended(
+        jubjub:gen_point(X))).
+    
 
 points_list(Many) ->
     G = jubjub:affine2extended(
@@ -578,11 +704,11 @@ test(16) ->
      {c, timer:now_diff(T3, T2)/Many}};
 test(17) ->
     io:fwrite("test pow\n"),
-    %<<A0:256>> = crypto:strong_rand_bytes(32),
-    A0 = 2,
+    <<A0:256>> = crypto:strong_rand_bytes(32),
+    %A0 = 2,
     A = A0 rem ?q,
-    %<<B0:256>> = crypto:strong_rand_bytes(32),
-    B0 = 2,
+    <<B0:256>> = crypto:strong_rand_bytes(32),
+    %B0 = 2,
     B = B0 rem ?q,
     AE = encode(A),
     New = decode(pow(AE, 

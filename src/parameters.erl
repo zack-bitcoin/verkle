@@ -2,8 +2,15 @@
 -behaviour(gen_server).
 -export([start_link/0,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2]).
 -export([read/0, div_e/1, div_e/0,
-         multi_exp/0, multi_exp/1, multi_exp/2]).
+         multi_exp/0, multi_exp/1, multi_exp/2,
+         domain/1]).
 -include("parameters256.hrl").
+%-record(p, {
+%          g, h, q, %generator points for ipa.
+%          domain, %domain to store polynomials
+%          a, %poly:calc_A(domain)
+%          da%poly:calc_DA(domain)
+%         }).
 
 init(ok) -> 
     P = ?p,
@@ -47,3 +54,38 @@ multi_exp(G) ->
     gen_server:call(?MODULE, {multi_exp, G}).
 multi_exp(G, R) ->
     gen_server:call(?MODULE, {multi_exp, G, R}).
+
+range(X, X) -> [X];
+range(X, Y) when X < Y -> 
+    [X|range(X+1, Y)].
+
+get_fr(X) ->
+    <<Y:256>> = hash:doit(<<X:256>>),
+    Y rem fr:prime().
+   
+domain(Many) -> 
+    lists:map(fun(X) -> fr:encode(X) end,
+              range(1, Many)).
+    
+
+make_ghq() ->
+    %p{g, h, q, domain, a, da}
+    Many = 256,
+    %Many = 4,
+    R = range(1, Many),
+    G = lists:map(fun(X) ->
+                          io:fwrite(integer_to_list(X)),
+                          io:fwrite("\n"),
+                          Y = get_fr(X),
+                          fq2:gen_point(Y)
+                  end, R),
+    H = lists:map(fun(X) ->
+                          io:fwrite(integer_to_list(X)),
+                          io:fwrite("\n"),
+                          Y = get_fr(X + Many),
+                          fq2:gen_point(Y)
+                  end, R),
+    QN = get_fr(513),
+    Q = fq2:gen_point(QN),
+    {G, H, Q}.
+
