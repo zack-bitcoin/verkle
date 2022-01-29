@@ -53,8 +53,9 @@ init(ok) ->
     ME = read_or_gen(
           "precomputes/ME.db",
           fun() -> store:multi_exponent_parameters(C) end),
-    DB = #db{g = G, h = H, q = Q, a = A, 
-             da = DA, dive = DivE, me = ME},
+    DB = #db{g = G, h = H, q = Q, a = A, da = DA, 
+             domain = Domain, dive = DivE, 
+             me = ME},
     {ok, DB}.
 start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, ok, []).
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
@@ -121,7 +122,8 @@ det_point(X) ->
     %deterministicly generated point.
     <<Y:256>> = hash:doit(<<X:256>>),
     Z = Y rem fr:prime(),
-    fq2:gen_point(Z).
+    fq2:extended2extended_niels(
+      fq2:gen_point(Z)).
    
 calc_domain(Many) -> 
     lists:map(fun(X) -> fr:encode(X) end,

@@ -47,11 +47,17 @@ handle_call({clean_ets, Pointer}, _, CFG) ->
     %A4 = ids:stem(CFG),
     LID = ids:leaf(CFG),
     SID = ids:stem(CFG),
-    TempLID = list_to_atom(atom_to_list(LID) ++ "_temp"),
-    TempSID = list_to_atom(atom_to_list(SID) ++ "_temp"),
+    TempLID = list_to_atom(
+                atom_to_list(LID) ++ "_temp"),
+    TempSID = list_to_atom(
+                atom_to_list(SID) ++ "_temp"),
     case ets:info(TempLID) of
 	undefined ->
-	    ets:new(TempLID, [set, named_table, {write_concurrency, false}, compressed]);
+	    ets:new(
+              TempLID, 
+              [set, named_table, 
+               {write_concurrency, false}, 
+               compressed]);
 	_ -> ets:delete_all_objects(TempLID)
     end,
     case ets:info(TempSID) of
@@ -86,24 +92,32 @@ handle_call({garbage, NewRoot, OldRoot}, _From, CFG) ->%prune new
 %    valid_key(Key),
 %    NewRoot = delete:delete(Key, Root, CFG),
 %    {reply, NewRoot, CFG};
-handle_call({restore, Key, Value, Meta, Hash, Proof, Root}, _From, CFG) -> 
+handle_call({restore, Key, Value, 
+             Meta, Hash, Proof, Root}, 
+            _From, CFG) -> 
     valid_key(Key),
     Leaf = leaf:new(Key, Value, Meta, CFG),
-    {Hash, NewRoot, _} = store:restore(Leaf, Hash, Proof, Root, CFG),
+    {Hash, NewRoot, _} = 
+        store:restore(Leaf, Hash, Proof, 
+                      Root, CFG),
     {reply, NewRoot, CFG};
-handle_call({put, Key, Value, Meta, Root}, _From, CFG) -> 
+handle_call({put, Key, Value, Meta, Root}, 
+            _From, CFG) -> 
     valid_key(Key),
     Leaf = leaf:new(Key, Value, Meta, CFG),
     %{_, NewRoot, _} = store:store(Leaf, Root, CFG),
     {_, NewRoot} = store:store(Leaf, Root, CFG),
     {reply, NewRoot, CFG};
-handle_call({put_batch, Leaves, Root}, _From, CFG) ->
-    {Hash, NewRoot} = store:batch(Leaves, Root, CFG),
+handle_call({put_batch, Leaves, Root}, 
+            _From, CFG) ->
+    {Hash, NewRoot} = 
+        store:batch(Leaves, Root, CFG),
     {reply, NewRoot, CFG};
-handle_call({get, Key, RootPointer}, _From, CFG) -> 
+handle_call({get, Key, RootPointer}, _From, CFG) ->
     valid_key(Key),
     P = leaf:path_maker(Key, CFG),
-    {RootHash, L, Proof} = get:get(P, RootPointer, CFG),
+    {RootHash, L, Proof} = 
+        get:get(P, RootPointer, CFG),
     L2 = if
 	     L == empty -> empty;
 	     L == unknown -> unknown;
@@ -122,7 +136,8 @@ handle_call(empty, _, CFG) ->
     {reply, cfg:empty(CFG), CFG};
 handle_call({new_trie, RootStem}, _From, CFG) ->
     %Stem = stem:empty_trie(Root, CFG),
-    Stem = stem:update_pointers(RootStem, stem:empty_tuple()),
+    Stem = stem:update_pointers(
+             RootStem, stem:empty_tuple()),
     X = stem:put(Stem, CFG),
     {reply, X, CFG};
 handle_call({root_hash, RootPointer}, _From, CFG) ->
@@ -140,28 +155,40 @@ save_table(ID, Loc) ->
     end.
 
 cfg(ID) when is_atom(ID) ->
-    gen_server:call({global, ids:main_id(ID)}, cfg).
+    gen_server:call(
+      {global, ids:main_id(ID)}, cfg).
 new_trie(ID, RootStem) when is_atom(ID) ->
-    gen_server:call({global, ids:main_id(ID)}, {new_trie, RootStem}).
+    gen_server:call({global, ids:main_id(ID)}, 
+                    {new_trie, RootStem}).
 clean_ets(ID, Pointer) ->
     %deletes everything from the merkel tree database, except for what can be proved from this single state root.
     %used for loading a checkpoint.
-    gen_server:call({global, ids:main_id(ID)}, {clean_ets, Pointer}).
+    gen_server:call({global, ids:main_id(ID)}, 
+                    {clean_ets, Pointer}).
     
 reload_ets(ID) ->
     %reloads the ram databases from the hard drive copy.
-    gen_server:cast({global, ids:main_id(ID)}, reload_ets).
+    gen_server:cast({global, ids:main_id(ID)}, 
+                    reload_ets).
 quick_save(ID) ->
-    gen_server:call({global, ids:main_id(ID)}, quick_save).
+    gen_server:call({global, ids:main_id(ID)}, 
+                    quick_save).
 empty(ID) when is_atom(ID) ->
-    gen_server:call({global, ids:main_id(ID)}, empty).
-root_hash(ID, RootPointer) when (is_atom(ID) and is_integer(RootPointer))->
-    gen_server:call({global, ids:main_id(ID)}, {root_hash, RootPointer}).
+    gen_server:call({global, ids:main_id(ID)}, 
+                    empty).
+root_hash(ID, RootPointer) 
+  when (is_atom(ID) and is_integer(RootPointer)) ->
+    gen_server:call({global, ids:main_id(ID)}, 
+                    {root_hash, RootPointer}).
 restore(Leaf, Hash, Path, Root, ID) ->
-    restore(leaf:key(Leaf), leaf:value(Leaf), leaf:meta(Leaf),
+    restore(leaf:key(Leaf), 
+            leaf:value(Leaf), leaf:meta(Leaf),
 	    Hash, Path, Root, ID).
 restore(Key, Value, Meta, Hash, Path, Root, ID) ->
-    gen_server:call({global, ids:main_id(ID)}, {restore, Key, Value, Meta, Hash, Path, Root}).
+    gen_server:call(
+      {global, ids:main_id(ID)}, 
+      {restore, Key, Value, Meta, 
+       Hash, Path, Root}).
 put_batch([], Root, _) -> Root;
 put_batch(Leaves, Root, ID) -> 
     gen_server:call({global, ids:main_id(ID)}, 
@@ -194,7 +221,7 @@ get_all_internal2([], [], _) -> [];
 get_all_internal2([A|AT], [T|TT], CFG) -> 
     B = case T of
 	    0 -> [];%empty
-	    1 -> get_all_internal(A, CFG);%another stem
+	    1 -> get_all_internal(A, CFG);%a stem
 	    2 -> [leaf:get(A, CFG)]%a leaf
 	end,
     B++get_all_internal2(AT, TT, CFG).
@@ -209,7 +236,9 @@ clean_ets_internal(Pointer, CFG, SID, LID) ->
     stem:hash(S, CFG).
    
 clean_ets_internal2([], [], _, _, _, _) -> [];
-clean_ets_internal2([Pointer|PT], [Type|TT], [Hash|HT], CFG, SID, LID) -> 
+clean_ets_internal2(
+  [Pointer|PT], [Type|TT], [Hash|HT], 
+  CFG, SID, LID ) -> 
     case Type of
 	0 -> %empty
 	    Hash = <<0:256>>;

@@ -27,6 +27,7 @@
          batch_inverse/1,
          e_simplify_batch/1,
          pow_/2,
+         e_neg/1,
 
          gen_point/0,
          gen_point/1,
@@ -314,6 +315,12 @@ e_mul2(Fq, Fr) ->
             R3 = fr:reverse_bytes(<<R2:256>>),
             e_mul1(Fq, R3)
     end.
+e_neg(<<U:256, VZ:512, T1:256, T2:256>>) ->
+    %neg U and T1
+    NU = neg(<<U:256>>),
+    NT1 = neg(<<T1:256>>),
+    <<NU/binary, VZ:512, NT1/binary, T2:256>>.
+
     
 
 pis([], _) -> [];

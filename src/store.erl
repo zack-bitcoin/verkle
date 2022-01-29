@@ -183,9 +183,8 @@ multi_exponent_parameters(C) ->
     F = secp256k1:det_pow(2, C),
     L = lists:zipwith(
           fun(G, R) ->
-                  io:fwrite("ME # "),
-                  io:fwrite(integer_to_list(R)),
-                  io:fwrite("\n"),
+                  String = "ME # " ++ integer_to_list(R) ++ "\n",
+                  %io:fwrite(String),
                   X = multi_exponent_parameters2(
                         G, secp256k1:jacob_zero(), 
                         F),

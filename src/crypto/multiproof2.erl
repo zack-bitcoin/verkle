@@ -6,7 +6,7 @@ calc_G_e(R, As, Ys, Zs, Domain, DA) ->
     %polynomial h from dankrad's paper.
     DivEAll = parameters2:div_e(),
     DivEAll2 = 0,
-    calc_G_e2(1, R, As, Ys, Zs,
+    calc_G_e2(fr:encode(1), R, As, Ys, Zs,
               Domain, DA, DivEAll, DivEAll2, []).
 calc_G_e2(_, _, [], [], [], _, _, _, _ ,
           Accumulator) -> Accumulator;
@@ -40,11 +40,11 @@ calc_G2_2(R, T, Ys, Zs) ->
     {RIDs, Result}.
 
 %sum_i: polyA_i * (r^i)/(t - z_i)
-calc_H(R, RA, T, As, Zs) ->
+calc_H(R, T, As, Zs) ->
     Divisors = 
         lists:map(fun(Z) -> fr:sub(T, Z) end, Zs),
     IDs = fr:batch_inverse(Divisors),
-    RIDs = mul_r_powers(R, 1, IDs),
+    RIDs = mul_r_powers(R, fr:encode(1), IDs),
     calc_H2(RIDs, As, []).
 calc_H2([], [], Accumulator) -> Accumulator;
 calc_H2([H|T], [A|AT], Acc) -> 
@@ -54,19 +54,19 @@ calc_H2([H|T], [A|AT], Acc) ->
 
 calc_R([], [], [], B) -> 
     <<R:256>> = hash:doit(B),
-    R;
-calc_R([{C1, C2}|CT], [Z|ZT], [Y|YT], B) -> 
-    %io:fwrite({C1, C2, Z, Y, B}),
+    fr:encode(R rem fr:prime());
+calc_R([<<C1:256, C2:256>>|CT], 
+       [<<Z:256>>|ZT], [<<Y:256>>|YT], B) -> 
     B2 = <<B/binary, 
            Z:256, 
            Y:256, 
            C1:256, 
            C2:256>>,
     calc_R(CT, ZT, YT, B2).
-calc_T({C1, C2}, R) ->
+calc_T(<<C1:256, C2:256>>, <<R:256>>) ->
     B = <<C1:256, C2:256, R:256>>,
     <<R2:256>> = hash:doit(B),
-    R2.
+    fr:encode(R2 rem fr:prime()).
 
 %-define(deco(X), secp256k1:decompress(X)).
 %-define(comp(X), secp256k1:compress(X)).
@@ -97,6 +97,10 @@ prove(As, %committed data
     io:fwrite("multiprove Ys from As \n"),
     Ys = lists:zipwith(
            fun(F, Z) ->
+                   %io:fwrite({size(Z), 
+                   %           length(F), 
+                   %           size(hd(Domain)), 
+                   %           Z, F, hd(Domain)}),
                    poly2:eval_e(Z, F, Domain)
            end, As, Zs),%this should be streamed with calculating the As.
     io:fwrite("multiprove calc random R\n"),
@@ -111,6 +115,7 @@ prove(As, %committed data
     G2 = calc_G_e(R, As, Ys, Zs, Domain, DA),
     %io:fwrite("multiprove 4\n"),
     io:fwrite("multiprove commit to G\n"),
+    %io:fwrite({length(G2), length(Gs)}),
     CommitG_e = ipa2:commit(G2, Gs),
     io:fwrite("multiprove calc random T\n"),
     T = calc_T(fq2:extended2affine(CommitG_e), R),
@@ -118,7 +123,7 @@ prove(As, %committed data
     %spend very little time here.
     io:fwrite("multiprove calc polynomial h\n"),
     %a little slow.
-    He = calc_H(R, 1, T, As, Zs),
+    He = calc_H(R, T, As, Zs),
     %io:fwrite("multiprove 7\n"),
     io:fwrite("multiprove calc commit to G-E\n"),
     G_sub_E_e = poly2:sub(G2, He),
@@ -168,14 +173,14 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     %sum_i  Ci*(R^i/(T-Zi))
     io:fwrite("multiproof verify commit neg e\n"),
     %the slow step.
-    CommitE = multi_exponent:doit(RIDs, Commits), %this is the slowest step.
-    CommitNegE = fq2:ne(CommitE),
+    CommitE = multi_exponent:doit(RIDs, fq2:extended2extended_niels(Commits)), %this is the slowest step.
+    CommitNegE = fq2:e_neg(CommitE),
     %true = secp256k1:jacob_equal(CommitNegE, CommitNegE2, E),
     T7 = erlang:timestamp(),
     
     %CommitG_sub_E = ipa:add(CommitG, CommitNegE, E),
     io:fwrite("multiproof verify commit G-E\n"),
-    CommitG_sub_E = fq2:e_add(CommitG, CommitNegE),
+    CommitG_sub_E = fq2:e_add(CommitG, fq2:extended2extended_niels(CommitNegE)),
     T8 = erlang:timestamp(),
     io:fwrite("multiproof verify ipa eq\n"),
     true = ipa2:eq(CommitG_sub_E, 
@@ -189,7 +194,8 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     %io:fwrite(integer_to_list(round(length(Zs) * 1000000 / NegE))),
     %io:fwrite("\n"),
     %0 == add(G2, element(2, Open_G_E), Base).
-    0 == fr:add(G2, element(2, Open_G_E)).
+    fr:encode(0) == 
+        fr:add(G2, element(2, Open_G_E)).
    
          
 range(X, X) -> [];
@@ -241,7 +247,10 @@ test(7) ->
     %Root4b = fr:mul(Root4, Root4),
     %Root4c = fr:mul(Root4b, Root4),
     %Domain = [1, Root4, Root4b, Root4c],
-    Domain = [1,2,3,4],
+%    Domain = [fr:encode(1),
+%              fr:encode(2),
+%              fr:encode(3),
+%              fr:encode(4)],
     
     %Domain = [5,6,7,8],
     %P = make_parameters_jacob(Domain, E),
@@ -250,10 +259,9 @@ test(7) ->
     %     sub(0, 2, Base),
     %     sub(0, 1, Base)],
     %A = [?neg(4), ?neg(3), ?neg(2), ?neg(1)],
-    A = [fr:neg(fr:encode(4)),
-         fr:neg(fr:encode(3)),
-         fr:neg(fr:encode(2)),
-         fr:neg(fr:encode(1))],
+    Domain = parameters2:domain(),
+    A = lists:map(fun(X) -> fr:neg(X) end,
+                  lists:reverse(Domain)),
     As = lists:map(fun(_) -> A end,
                    range(0, Many)),
     %As = lists:map(fun(R) -> [sub(0, R, Base),

@@ -126,10 +126,12 @@ bucketify2([S|R], L, T) ->
 
 multi_exponent2([], []) ->
     fq2:e_zero();
-multi_exponent2(Rs0, Gs) ->
-    
+multi_exponent2(Rs0, Gs) 
+  when is_binary(hd(Rs0)) ->
     Rs = lists:map(fun(X) -> fr:decode(X) end, 
                    Rs0),
+    multi_exponent2(Rs, Gs);
+multi_exponent2(Rs, Gs) ->
     %io:fwrite({Rs}),
     C0 = floor(math:log(length(Rs))/math:log(2))-2,
     C1 = min(C0, 16),

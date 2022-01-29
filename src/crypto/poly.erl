@@ -210,6 +210,7 @@ div_e(Ps, Domain, DA, M, DivEAll, DivEAll2) ->
         end,
     {Poly1, Zeroth0} =
         div_e3(Ps, 1, IDs, IDs2, M, [], 0),
+    io:fwrite({length(Poly1)}),
     Zeroth = ?mul(Zeroth0, DA_M),
     {PolyA, PolyB} = lists:split(M-1, Poly1),
     Result = PolyA ++ [Zeroth] ++ PolyB,

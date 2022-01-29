@@ -106,7 +106,7 @@ After loading 20k elements into a merkle tree, memory usage is 13 megabytes.
 
 after loading 20k into a verkle tree, memory is 1.8 megabytes.
 
-Crypto used
+Crypto used in Secp256k1 version
 ==============
 
 [secp256k1 is the same elliptic curve as is used in bitcoin](src/crypto/secp256k1.erl)
@@ -118,5 +118,4 @@ Includes a function for batch simplifying jacobian points, to set their Z values
 
 [polynomial library for polynomials stored in evaluation format, as recommended by Dankrad Feist](src/crypto/poly.erl)
 
-[a multiproof system for pedersen commitments](src/crypto/multiproof.erl)
-
+[for combining pedersen commitments into a single constant sized proof](src/crypto/multiproof.erl)
