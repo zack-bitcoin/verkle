@@ -105,7 +105,7 @@ proof(Root0, {Tree, CommitG, Open}, CFG) ->
                     fun(<<X:256>>) -> X end,
                     Ys),
             io:fwrite("verify multiproof \n"),
-            B2 = multiproof:verify(
+            B2 = multiproof2:verify(
                    {CommitG, Open}, 
                    Commits, Zs, Ys2),
             io:fwrite("verify done \n"),

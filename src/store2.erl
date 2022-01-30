@@ -56,7 +56,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     Leaves2 = clump_by_path(%  0.6%
                 Depth, Leaves, CFG),
     %depth first recursion over the sub-lists on teh sub-trees to calculate the pointers and hashes for this node.
-    RootStem = stem:get(RP, CFG),
+    RootStem = stem2:get(RP, CFG),
     #stem{
            hashes = Hashes,
            pointers = Pointers,
@@ -79,7 +79,8 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
                           P2, Type, Tree, H, CFG),
                    <<HN:256>> = H,
                    <<HN2:256>> = H2,
-                   Sub = fr:sub(HN2, HN),
+                   Sub = fr:sub(fr:encode(HN2 rem fr:prime()), 
+                                fr:encode(HN rem fr:prime())),
                    {Sub, H2, P2, Type}
            end,
             Leaves2, HPT1),
@@ -101,7 +102,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     %43% of total. (impossible, because inside it was 70%
     EllDiff = precomputed_multi_exponent(Rs, MEP),
 %    true = secp256k1:jacob_equal(EllDiff, EllDiff2, ?p#p.e),
-    NewRoot = fq2:e_add(EllDiff, Root),
+    NewRoot = fq2:e_add(EllDiff, fq2:extended2extended_niels(Root)),
 %    NewRoot = secp256k1:jacob_add(
 %                EllDiff, Root, ?p#p.e),% 0.3%
     %clumping is 0.6%
@@ -117,7 +118,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
           types = list_to_tuple(Types2),
           root = NewRoot
          },
-    Loc = stem:put(NewStem, CFG),
+    Loc = stem2:put(NewStem, CFG),
     {Loc, stem, NewStem}.
 
 range(X, X) -> [X];
@@ -174,7 +175,7 @@ hash_thing(_, stem, stem_not_recorded,
 hash_thing(_, leaf, L = #leaf{}, _, CFG) -> 
     leaf:hash(L, CFG);
 hash_thing(_, stem, S = #stem{}, _, _) -> 
-    stem:hash(S).
+    stem2:hash(S).
 sort_by_path2(L, CFG) ->
     %this time we want to sort according to the order of a depth first search.
     lists:sort(
@@ -268,8 +269,8 @@ precomputed_multi_exponent(Rs0, MEP) ->
     %Rs2 = to_binaries(Rs),%almost 0.
     %Ts = lists:reverse(
     %        batch_chunkify2(Rs2, C, Lim)),%8.9
-
-    Ts = batch_chunkify(Rs, F, Lim),%  1.8%
+    Ts = batch_chunkify(
+           fr:decode(Rs), F, Lim),%  1.8%
 
     %4.5
 

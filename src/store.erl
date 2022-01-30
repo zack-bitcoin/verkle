@@ -46,7 +46,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     Leaves2 = clump_by_path(%  0.6%
                 Depth, Leaves, CFG),
     %depth first recursion over the sub-lists on teh sub-trees to calculate the pointers and hashes for this node.
-    RootStem = stem2:get(RP, CFG),
+    RootStem = stem:get(RP, CFG),
     #stem{
            hashes = Hashes,
            pointers = Pointers,
@@ -106,7 +106,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
           types = list_to_tuple(Types2),
           root = NewRoot
          },
-    Loc = stem2:put(NewStem, CFG),
+    Loc = stem:put(NewStem, CFG),
     {Loc, stem, NewStem}.
 
 range(X, X) -> [X];
@@ -162,7 +162,7 @@ hash_thing(_, stem, stem_not_recorded,
 hash_thing(_, leaf, L = #leaf{}, _, CFG) -> 
     leaf:hash(L, CFG);
 hash_thing(_, stem, S = #stem{}, _, _) -> 
-    stem2:hash(S).
+    stem:hash(S).
 sort_by_path2(L, CFG) ->
     %this time we want to sort according to the order of a depth first search.
     lists:sort(

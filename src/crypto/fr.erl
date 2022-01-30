@@ -69,8 +69,14 @@ encode(A) when ((A < ?q) and (A > -1)) ->
     mul(reverse_bytes(<<A:256>>),
         reverse_bytes(<<?r2:256>>));
 encode(A) when (A < 0)->
-    neg(encode(-A)).
+    neg(encode(-A));
+encode(A) when (A > (?q-1)) ->
+    encode(A rem ?q).
 
+
+decode([]) -> [];
+decode([A|B]) -> 
+    [decode(A)|decode(B)];
 decode(C) ->
     X = mul(C, reverse_bytes(<<1:256>>)),
     <<Y:256>> = reverse_bytes(X),

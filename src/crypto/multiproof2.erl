@@ -63,6 +63,7 @@ calc_R([<<C1:256, C2:256>>|CT],
            C1:256, 
            C2:256>>,
     calc_R(CT, ZT, YT, B2).
+
 calc_T(<<C1:256, C2:256>>, <<R:256>>) ->
     B = <<C1:256, C2:256, R:256>>,
     <<R2:256>> = hash:doit(B),
@@ -148,7 +149,10 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
         fq2:to_affine_batch(
           [CommitG|Commits]),
     T2 = erlang:timestamp(),
-    R = calc_R(AffineCommits, Zs, Ys, <<>>),
+%    io:fwrite({hd(AffineCommits), hd(Zs),
+%               hd(Ys)}),
+    R = calc_R(AffineCommits, Zs, 
+               fr:encode(Ys), <<>>),
 
     io:fwrite("multiproof verify calc t\n"),
     T3 = erlang:timestamp(),
@@ -165,10 +169,11 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     T5 = erlang:timestamp(),
 
     io:fwrite("multiproof verify g2\n"),
-    {RIDs, G2} = calc_G2_2(R, T, Ys, Zs),
+    {RIDs, G2} = calc_G2_2(R, T, 
+                           fr:encode(Ys), Zs),
+    %io:fwrite({G2, R, T, hd(Ys), hd(Zs)}),
+    
 
-    true = (fr:encode(0) == 
-                fr:add(G2, element(2, Open_G_E))),
 
     T6 = erlang:timestamp(),
 
@@ -190,6 +195,9 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     T9 = erlang:timestamp(),
     NegE = timer:now_diff(T7, T6),
     io:fwrite("multiproof verify done\n"),
+    %io:fwrite({G2, element(2, Open_G_E)}),
+    true = (fr:encode(0) == 
+                fr:add(G2, element(2, Open_G_E))),
     true.
     %io:fwrite(integer_to_list(timer:now_diff(T4, T3))),
     %io:fwrite("\n"),

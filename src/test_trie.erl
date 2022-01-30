@@ -11,7 +11,8 @@ test() ->
     %V = [1,2,3,5,7,8,9,10,11,12,13,14,16,17,18],
     %V = [5, 6, 12, 13],
     %V = [101, 17],
-    V = [18],
+    V = [%18, 
+         20],
     test_helper(V, CFG).
 test_helper([], _) -> success;
 test_helper([N|T], CFG) -> 
@@ -527,7 +528,7 @@ test(18, CFG) ->
     T4 = erlang:timestamp(),
     true = (length(Leaves2) == length(Many)),
     if
-        true ->
+        false ->
             io:fwrite("measured in millionths of a second. 6 decimals. \n"),
             io:fwrite(
               {{load_tree, timer:now_diff(T2, T1)},
@@ -563,7 +564,49 @@ test(19, CFG) ->
                   #leaf{key = Times + 1 - N, value = <<N:16>>}
           %end, Many),
           end, range(1, Times+1)),
-    ok.
+    ok;
+test(20, CFG) ->
+    Loc = 1,
+    Times = 5,
+    Leaves = 
+        lists:map(
+          fun(N) -> 
+                  Key0 = Times + 1 - N,
+                  %<<Key:256>> = <<(-Key0):256>>,
+                  Key = 1000000000 - Key0,
+                  #leaf{key = Key, value = <<N:16>>}
+          %end, Many),
+          end, range(1, Times+1)),
+    Many = lists:map(fun(#leaf{key = K}) -> K end,
+                     Leaves),
+    io:fwrite("load up the batch database\n"),
+    T1 = erlang:timestamp(),
+    {NewLoc, stem, _} = 
+        store2:batch(Leaves, Loc, CFG),
+    T2 = erlang:timestamp(),
+    io:fwrite("make proof\n"),
+    Proof = 
+        get2:batch(Many, NewLoc, CFG),
+    T3 = erlang:timestamp(),
+    io:fwrite("verify proof\n"),
+    Root = stem2:root(stem2:get(NewLoc, CFG)),
+    {true, Leaves2} = 
+        verify2:proof(Root, Proof, CFG),
+    T4 = erlang:timestamp(),
+    true = (length(Leaves2) == length(Many)),
+    if
+        true ->
+    io:fwrite("measured in millionths of a second. 6 decimals. \n"),
+    io:fwrite(
+      {{load_tree, timer:now_diff(T2, T1)},
+       {make_proof, 
+        timer:now_diff(T3, T2)},
+       {verify, timer:now_diff(T4, T3)}});
+        true -> ok
+    end,
+    success.
+
+
     
     
     

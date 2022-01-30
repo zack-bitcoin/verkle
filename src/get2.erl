@@ -65,7 +65,8 @@ batch(Keys, Root, CFG) ->
     io:fwrite("get make multiproof\n"),
     %the slow step.
     {CommitG, Opening} = 
-        multiproof2:prove(As, Zs, Commits),%this is the slow step.
+        multiproof2:prove(
+          fr:encode(As), fr:encode(Zs), Commits),%this is the slow step.
     io:fwrite("get done\n"),
 
     %sanity checks
