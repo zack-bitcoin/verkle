@@ -1,7 +1,7 @@
 Verkle Tree
 ===========
 
-Pure erlang implementation of pedersen-commitment based verkle trees.
+Pedersen-commitment based verkle trees using the jubjub elliptic curve.
 
 This software seems to basically work, but it still has some inefficiencies.
 See the todo list for what needs to be done still.
