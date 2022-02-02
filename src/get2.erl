@@ -22,20 +22,28 @@ keys2paths(Keys, CFG) ->
 
 batch(Keys, Root, CFG) ->
     RootStem0 = stem2:get(Root, CFG),
+    %io:fwrite(RootStem0#stem.hashes),
     RootStem = RootStem0#stem{
-                 hashes = binary2int2(
-                            tuple_to_list(
-                              RootStem0#stem.hashes))},
+                 %hashes = 
+                 %      RootStem0#stem.hashes},
+                 hashes = 
+                     %binary2int2(
+                     fr:decode(
+                       tuple_to_list(
+                         RootStem0#stem.hashes))},
     io:fwrite("get keys2paths\n"),
+    benchmark:now(),
     Paths0 = keys2paths(Keys, CFG),
     Paths = lists:sort(fun(A, B) -> A < B end, 
                        Paths0),
     %Paths example: [[1,4,3,2],[1,1,1,2],[1,1,1,1],[2,1,1,1]]
     io:fwrite("get paths2tree\n"),
+    benchmark:now(),
     Tree = paths2tree(Paths),
     %Tree example [[1|[[4,3,2], [1,1|[[1], [2]]]]], [2,1,1,1]],
     %list of lists means or. list of integers means and.
     io:fwrite("get lookup stems and leaves\n"),
+    benchmark:now(),
     %slow. todo
     %[[1,0,0,0],[2,0,0,0]...
     Tree2 = points_values(Tree, RootStem, CFG),
@@ -44,30 +52,46 @@ batch(Keys, Root, CFG) ->
     %[stem, {I, stem}, [{I, leaf}], [{I, stem}, {I, leaf}], [{I, stem}, [{I, leaf}], [{I, leaf}]]]
     %list of things is AND, list of lists is OR.
     io:fwrite("get remove duplicate elliptic points\n"),
+    benchmark:now(),
     Tree3 = withdraw_points(Tree2),%removing duplicate elliptic points by shifting all the points one step towards the root.
     %looks the same, just changes which elliptic point is written where.
     io:fwrite("get remove hashes\n"),
+    benchmark:now(),
     Tree4 = remove_hashes(Tree3),%the hashes in each stem aren't needed to verify the verkle proof, so they are removed.
     %[El, {I, El}, [{I, leaf}], [{I, El}, {I, El}], [{I, El}, [{I, El}], [{I, El}]]]
 
     io:fwrite("get flatten\n"),
+    benchmark:now(),
 
     Lookups = flatten(Tree2, []),
     io:fwrite("get split3\n"),
+    benchmark:now(),
     {Zs0, Commits, As0} = split3parts(Lookups, [], [], []),
     io:fwrite("get lookup parameters\n"),
+    benchmark:now(),
     Domain = parameters2:domain(),
     io:fwrite("get index to domain conversion\n"),
+    benchmark:now(),
     Zs = index2domain2(
            Zs0, list_to_tuple(Domain)),
     As = As0,
+    %io:fwrite({As}),
 
     io:fwrite("get make multiproof\n"),
+    benchmark:now(),
     %the slow step.
+    {Gs, Hs, Q} = parameters2:read(),
+    DA = parameters2:da(),
+    PA = parameters2:a(),
+    Domain = parameters2:domain(),
     {CommitG, Opening} = 
         multiproof2:prove(
-          fr:encode(As), fr:encode(Zs), Commits),%this is the slow step.
+          fr:encode(As), 
+          %As,
+          fr:encode(Zs), Commits,
+         Gs, Hs, Q, DA, PA, Domain),%this is the slow step.
     io:fwrite("get done\n"),
+    benchmark:now(),
 
     %sanity checks
     %Tree5 = verify:unfold(Root4, Tl4, [], CFG),
@@ -88,11 +112,14 @@ batch(Keys, Root, CFG) ->
 binary2int([]) -> [];
 binary2int([H|T]) ->
     L = tuple_to_list(H),
-    L2 = binary2int2(L),
+    L2 = fr:decode(L),
     [L2|binary2int(T)].
-binary2int2([]) -> [];
-binary2int2([<<H:256>>|T]) -> 
-    [H|binary2int2(T)].
+%binary2int2([]) -> [];
+%binary2int2([<<H:256>>|T]) -> 
+%    [H|binary2int2(T)].
+%binary2int2([<<H:256>>|T]) -> 
+%    [fr:decode(<<H:256>>)|
+%     binary2int2(T)].
               
     %remove duplicate elliptic points in the tree structure by moving where they are written more towards the root of the tree.
 withdraw_points(X = [[{_, R}|_]|_]) ->
@@ -154,6 +181,7 @@ flatten({Index, S = #stem{}}, T) ->
     %[{Index, S#stem.root, S#stem.hashes}|T];
     H = S#stem.hashes,
     %H = binary2int2(tuple_to_list(S#stem.hashes)),
+    
     [{Index, S#stem.root, H}|T];
 flatten(X = {_Index, _Point, _Hashes}, T) -> [X|T];
 flatten([H|T], R) -> 
@@ -199,8 +227,7 @@ starts_same_split2(_, Rest, Sames) ->
     {lists:reverse(Sames), Rest}.
 
 
-points_values([<<Loc:?nindex>>|R], Root, CFG) 
-  when is_integer(Loc)->
+points_values([<<Loc:?nindex>>|R], Root, CFG) ->
     Type = stem2:type(Loc+1, Root),
     P = stem2:pointer(Loc+1, Root),
     %EllipticPoint = stem:root(Root),
@@ -212,9 +239,12 @@ points_values([<<Loc:?nindex>>|R], Root, CFG)
         1 -> %stem
             S0 = stem2:get(P, CFG),
             S = S0#stem{
-                  hashes = binary2int2(
+                  %hashes= fr:decode(S0#stem.hashes)
+                  %hashes = binary2int2(
+                  hashes = fr:decode(
                              tuple_to_list(
-                               S0#stem.hashes))},
+                               S0#stem.hashes))
+                 },
             [V|points_values(R, S, CFG)];
         2 -> %leaf
             L = leaf:get(P, CFG),

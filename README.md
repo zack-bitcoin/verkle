@@ -6,13 +6,13 @@ Pure erlang implementation of pedersen-commitment based verkle trees.
 This software seems to basically work, but it still has some inefficiencies.
 See the todo list for what needs to be done still.
 
-a verkle tree database based on pedersen commitments over the secp256k1 elliptic curve.
-Written in pure erlang.
+a verkle tree database based on pedersen commitments over the jubjub elliptic curve.
 
 learn about verkle trees here:
 https://vitalik.ca/general/2021/06/18/verkle.html
 
 Techniques used in this software:
+https://dankradfeist.de/ethereum/2021/07/27/inner-product-arguments.html
 https://dankradfeist.de/ethereum/2021/06/18/pcs-multiproofs.html
 
 Installation
@@ -35,25 +35,25 @@ Lets look at how this software is falling short of the ideal.
 
 to use this calculator to get an idea of tree proof speed, im plugging in 20 000 branch accesses, 60 000 chunk accesses, 20 000 branches updated, 60 000 chunks updated, and 60 000 chunks newly created. and I changed the number of elements to 20 000
 
-I changed the field multiplication speed to 6*10^-8, because that is how fast the bitcoin core secp256k1 benchmarks run on my computer. I similarly halved the elliptic cure speed to 8*10-5, because it is bottlenecked by finite field multiplications.
+I changed the field multiplication speed to 6*10^-8, because that is how fast the bitcoin core secp256k1 benchmarks run on my computer. I similarly halved the elliptic curve speed to 8*10-5, because it is bottlenecked by finite field multiplications.
 
 
 The calculator gives: prover time, verify proof, verify updates.
 
 To test out this 20k example, slightly modify the benchmark so that it uses sequential instead of random keys for the leaves. then do a benchmark of 20k
 
-finite field multiplication is estimated in secp256k1.erl, test 15.
+finite field multiplication is estimated in fq2:test(9).
 
-elliptic multiplication is estimated in secp256k1:test(9). speedup in context of ipa is measured in ipa:test(4).
+elliptic multiplication is estimated in fq2:test(22). speedup in context of ipa is measured in ipa:test(4).
 
 | Operation | should be | is | how many times slower this is than the ideal |
 |----------|-------------|-------|------|
-| field multiplication | 6*10^-8 | 6*10^-7 | 10 |
-| elliptic multiplication | 8*10^-5 | 2.6*10^-3 | 33 |
-| elliptic multiplication fixed base | 1*10^-5 | 2.6*10^-4 | 26 |
-| prover time | 5.726 | 15 | 2.62 |
-| verify proof | 0.531 | 8.0 | 15.1 |
-| verify updates | 1.09 | 6.4 | 5.87 |
+| field multiplication | 6*10^-8 | 1.5*10^-7 | 2.5 |
+| elliptic multiplication | 8*10^-5 | 6*10^-5 | 0.75 |
+| elliptic multiplication fixed base | 1*10^-5 | 2.8*10^-5 | 2.8 |
+| prover time | 5.726 | 9.1 | 1.59 |
+| verify proof | 0.531 | 1.44 | 2.7 |
+| verify updates | 1.09 | 5.5 | 5.05 |
 
 
 Benchmark.
@@ -61,32 +61,34 @@ Benchmark.
 
 I loaded 5000 elements into the database. I made a proof of all 5000 of them, and then verified that proof.
 
-Loading took 4.5 seconds.
+Loading took 4.6 seconds.
 
-Making the proof with 1 cpu took 6.0 seconds.
+Making the proof with 1 cpu took 2.5 seconds.
 
-Verifying took 3.0 seconds.
+Verifying took 0.41 seconds.
 
-to run the benchmark `benchmark:doit(1).`
+to run the secp256k1 benchmark `benchmark:doit(1).`
+to run the jubjub benchmark `benchmark:doit(2).`
+This page is recording results from the jubjub benchmark.
 time is measured in millionths of a second. 6 decimals.
 
 [you can see the code of the benchmark.](src/benchmark.erl)
 
 benchmark of 20k elements. (it takes 5.5 seconds to load a normal merkle tree with this many elements)
 
-loading: 25 
+loading: 30
 
-making proof: 18  
+making proof: 12
 
-verifying: 7.3
+verifying: 1.7
 
 40k
 
-loading: 73
+loading: 106
 
-proving: 37
+proving: 45
 
-verifying: 12.5
+verifying: 4.3
 
 80k
 
@@ -106,6 +108,25 @@ After loading 20k elements into a merkle tree, memory usage is 13 megabytes.
 
 after loading 20k into a verkle tree, memory is 1.8 megabytes.
 
+Crypto used in jubjub version
+===========
+
+[jubjub is the same elliptic curve as is used in bitcoin](src/crypto/jubjub.erl)
+
+[the finite field for exponents of jubjub points](src/crypto/fr.erl) [parts of it are written in C](src/crypto/fr.c)
+
+[the finite field for implementing jubjub points](src/crypto/fq2.erl) [parts of it are in C](src/crypto/fq2.c)
+
+[multi-exponentiation of jubjub points](src/crypto/multi_exponent.erl)
+
+[pedersen commitments and inner product arguments](src/crypto/ipa2.erl)
+
+[precomputed bucket algorithm for efficient storage is in here](src/store2.erl)
+
+[polynomial libraries for using polynomials in evaluation format](src/crypto/poly2.erl)
+
+[for combining inner product arguments into a single small proof, based on bullet proof method](src/crypto/multiproof2.erl)
+
 Crypto used in Secp256k1 version
 ==============
 
@@ -119,3 +140,4 @@ Includes a function for batch simplifying jacobian points, to set their Z values
 [polynomial library for polynomials stored in evaluation format, as recommended by Dankrad Feist](src/crypto/poly.erl)
 
 [for combining pedersen commitments into a single constant sized proof](src/crypto/multiproof.erl)
+

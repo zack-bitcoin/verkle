@@ -11,8 +11,9 @@ test() ->
     %V = [1,2,3,5,7,8,9,10,11,12,13,14,16,17,18],
     %V = [5, 6, 12, 13],
     %V = [101, 17],
-    V = [%18, 
-         20],
+    V = [%18%, 
+         20
+        ],
     test_helper(V, CFG).
 test_helper([], _) -> success;
 test_helper([N|T], CFG) -> 
@@ -528,7 +529,7 @@ test(18, CFG) ->
     T4 = erlang:timestamp(),
     true = (length(Leaves2) == length(Many)),
     if
-        false ->
+        true ->
             io:fwrite("measured in millionths of a second. 6 decimals. \n"),
             io:fwrite(
               {{load_tree, timer:now_diff(T2, T1)},

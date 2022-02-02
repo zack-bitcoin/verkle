@@ -91,6 +91,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     %43% of total. (impossible, because inside it was 70%
     EllDiff = precomputed_multi_exponent(Rs, MEP),
 %    true = secp256k1:jacob_equal(EllDiff, EllDiff2, ?p#p.e),
+    %io:fwrite({EllDiff, Root}),
     NewRoot = secp256k1:jacob_add(
                 EllDiff, Root, ?p#p.e),% 0.3%
     %clumping is 0.6%

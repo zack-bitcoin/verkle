@@ -118,11 +118,12 @@ power_of_2(N) when ((N rem 2) == 0) ->
 power_of_2(_) -> false.
 
 %todo. binary:encode_unsigned(X, little) is probably faster.
-reverse_bytes(X) ->
-    reverse_bytes(X, <<>>).
-reverse_bytes(<<A, B/binary>>, R) ->
-    reverse_bytes(B, <<A, R/binary>>);
-reverse_bytes(<<>>, R) -> R.
+reverse_bytes(<<X:256>>) -> <<X:256/little>>.
+%reverse_bytes(X) ->
+%    reverse_bytes(X, <<>>).
+%reverse_bytes(<<A, B/binary>>, R) ->
+%    reverse_bytes(B, <<A, R/binary>>);
+%reverse_bytes(<<>>, R) -> R.
 
 encode(0) -> <<0:256>>;
 encode(1) ->
@@ -130,14 +131,13 @@ encode(1) ->
   245,79,188,236,239,79,140,153,111,5,197,172,89,
   177,36,24>>;
 encode(A) when ((A < ?q) and (A > -1)) ->
-    mul(reverse_bytes(<<A:256>>),
-        reverse_bytes(<<?r2:256>>)).
+    mul(<<A:256/little>>,
+        <<?r2:256/little>>).
 
 decode(C) ->
-    X = mul(C, reverse_bytes(<<1:256>>)),
-    <<Y:256>> = reverse_bytes(X),
+    X = mul(C, (<<1:256/little>>)),
+    <<Y:256/little>> = X,
     Y.
-    %binary:decode_unsigned(X, little).
    
 
 encode_extended(
@@ -180,8 +180,8 @@ decode_extended_niels(
          t2d = decode(<<T2D:256>>),
          z = decode(<<Z:256>>)}.
 
-hash_point(<<U:512>>) ->
-    U rem prime();
+hash_point(<<U:256, _:256>>) ->
+    fr:encode(U rem fr:prime());
 hash_point(X = <<U:(256*5)>>) ->
     hash_point(extended2affine(X)).
 
@@ -320,8 +320,8 @@ e_mul2(Fq, Fr) ->
     case fr:decode(Fr) of
         0 -> e_zero();
         R2 ->
-            R3 = fr:reverse_bytes(<<R2:256>>),
-            e_mul1(Fq, R3)
+            %R3 = fr:reverse_bytes(<<R2:256>>),
+            e_mul1(Fq, <<R2:256/little>>)
     end.
 e_neg(<<U:256, VZ:512, T1:256, T2:256>>) ->
     %neg U and T1
@@ -337,7 +337,8 @@ pis([H|T], A) ->
     [X|pis(T, X)].
 batch_inverse(Vs) ->
     [All|V2] = lists:reverse(pis(Vs, encode(1))),%[v16, v15, v14, v13, v12, v1]
-    AllI = encode(ff:inverse(decode(All), ?q)),%i16
+    %AllI = encode(ff:inverse(decode(All), ?q)),%i16
+    AllI = inv(All),
     VI = lists:map(
            fun(V) -> mul(AllI, V) end,
            V2), %[i6, i56, i46, i36, i26]
@@ -364,12 +365,12 @@ simplify(<<U:256, V:256, _/binary>>, IZ) ->
       U2/binary, V2/binary>>.
 extended2affine(E) ->
     [E2] = e_simplify_batch([E]),
-    <<A:256, B:256, _/binary>> = E2,
+    <<A:256, B:256, _:(256*3)>> = E2,
     <<A:256, B:256>>.
 
 to_affine_batch(L) ->
     L2 = e_simplify_batch(L),
-    lists:map(fun(<<U:256, V:256, _/binary>>) ->
+    lists:map(fun(<<U:256, V:256, _:(256*3)>>) ->
                       <<U:256, V:256>>
               end, L2).
     
@@ -411,7 +412,6 @@ extended2extended_niels(
 %              (encode(0))/binary,
 %              (encode(1))/binary>>;
 %        true ->
-            UV = mul(<<U:256>>, <<V:256>>),
             T3 = mul(<<T1:256>>, <<T2:256>>),
             VPU = add(<<U:256>>, <<V:256>>),
             VMU = sub(<<V:256>>, <<U:256>>),
@@ -866,24 +866,34 @@ test(26) ->
     true = is_zero(Z3),
 
     true = is_zero(e_mul2(fr:encode(0), extended2extended_niels(gen_point()))),
-    
-    
 
-
-    success.
-    
-    
-
-    
-
-    
-    
-
-
-    
-
-
-
-
-    
+    success;
+test(27) ->
+    io:fwrite("encode decode speed test\n"),
+    Many = 100000,
+    R = range(0, Many),
+    R2 = lists:map(fun(X) -> encode(X) end, R),
+    T1 = erlang:timestamp(),
+    lists:foldl(fun(X, _) ->
+                        encode(X),
+                        0
+                end, 0, R),
+    T2 = erlang:timestamp(),
+    lists:foldl(fun(X, _) ->
+                        decode(X),
+                        0
+                end, 0, R2),
+    T3 = erlang:timestamp(),
+    {
+      {encode, (timer:now_diff(T2, T1)/Many)},
+      {decode, (timer:now_diff(T3, T2)/Many)}
+    };
+test(28) ->
+    io:fwrite("testing e_add with niels/extended niels\n"),
+    G = gen_point(),
+    H = gen_point(),
+    HE = extended2extended_niels(H),
+    R1 = e_add(G, H),
+    R2 = e_add(G, HE),
+    eq(R1, R2).
 

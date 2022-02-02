@@ -4,7 +4,8 @@
          make_parameters_jacob/2, 
          primitive_nth_root/2,
          prove/4, verify/5,
-         make_parameters_range/2
+         make_parameters_range/2,
+         calc_G2_2/5
         ]).
 
 %multiproofs for pedersen IPA.
@@ -194,6 +195,11 @@ prove(As, %committed data
     %spend a little time here.
     IPA = ipa:make_ipa(G_sub_E_e, EV, 
                        Gs, Hs, Q, E),
+    %sanity check
+    %{_, CG2} = calc_G2_2(R, T, Ys, Zs, Base),
+    %true = (0 == ?add(CG2, element(2, IPA))),
+    %true = (element(2, IPA) == 
+    %            ipa:dot(G_sub_E_e, EV)),
     io:fwrite("multiprove finished\n"),
     {CommitG_e, 
      IPA}.

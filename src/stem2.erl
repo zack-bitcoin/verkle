@@ -30,6 +30,7 @@ many(X, N) when (N > 0) ->
     [X|many(X, N-1)].
 add(S, N, T, P, <<H:256>>) ->
     %Gs are the generator points for the pedersen commits.
+    1=2,
     #stem{
      types = Ty,
      pointers = Po,
@@ -42,8 +43,12 @@ add(S, N, T, P, <<H:256>>) ->
     %for generator M, subtract Old and add H.
     G = lists:nth(M, Gs),
     %Diff = secp256k1:jacob_mul(G, H-Old, E),
-    Diff = fq2:e_mul2(G, fr:encode((H-Old) rem fr:prime())),
-    Root2 = fq2:e_add(Root, fq2:extended2extended_niels(Diff)),
+    %Diff = fq2:e_mul2(G, fr:encode(H-Old)),
+    Diff = fq2:e_mul2(
+             G, fr:encode(fr:add(H, fr:neg(Old)))),
+    %TODO maybe H and old are fr points???
+    %Root2 = fq2:e_add(Root, fq2:extended2extended_niels(Diff)),
+    Root2 = fq2:e_add(Root, Diff),
     T2 = setelement(M, Ty, T),
     P2 = setelement(M, Po, P),
     H2 = setelement(M, Ha, <<H:256>>),
@@ -133,17 +138,17 @@ deserialize(N, T0,P0,Path,HashDepth,H0,X) when N < (?nwidth + 1) ->
     H1 = setelement(N, H0, <<H:HashDepth>>),
     deserialize(N+1, T1, P1, Path, HashDepth,H1, D).
 empty_hashes(CFG) ->
-    HS = cfg:hash_size(CFG),
+    %HS = cfg:hash_size(CFG),
     %X = hash:hash_depth()*8,
-    X = HS * 8,
-    Y = many(<<0:X>>, ?nwidth),
+    %X = HS * 8,
+    Y = many(<<0:256>>, ?nwidth),
     list_to_tuple(Y).
 
 hash(S) ->
     P = S#stem.root,
     hash_point(P).
 hash_point(P) ->
-    <<(fq2:hash_point(P)):256>>.
+    fq2:hash_point(P).
 
 update(Location, Stem, CFG) ->
     dump:update(Location, serialize(Stem, CFG), ids:stem(CFG)).

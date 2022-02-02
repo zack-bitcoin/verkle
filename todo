@@ -1,8 +1,9 @@
 
 
 working on a jubjub implementation, since it will give us private reading and
-* rewrite test_trie:test(18, CFG) for stem2/store2/get2/verify2/ and jubjub versions of everything.
+* memory leak. possibly in get make multiproof.
 * new benchmark
+* make the jubjub version faster.
 * make a SNARK of a verkle proof.
 
 

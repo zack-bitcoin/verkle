@@ -1,7 +1,7 @@
 -module(ipa).
 -export([make_ipa/6, verify_ipa/6,
          commit/3, eq/3, 
-         basis/2,
+         basis/2, dot/2,
          test/1]).
 %inner product arguments using pedersen commitments.
 

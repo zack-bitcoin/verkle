@@ -2,7 +2,7 @@
 -export([make_ipa/5, verify_ipa/5,
          commit/2, eq/2, 
          gen_point/1,
-         basis/2,
+         basis/2, dot/2,
          test/1]).
 %inner product arguments using pedersen commitments.
 
@@ -51,9 +51,7 @@ commit(V, G) ->
 
     multi_exponent:doit(V, G).
 
-add(A, B = <<_:(256*5)>>) ->
-    add(A, fq2:extended2extended_niels(B));
-add(A = <<_:(256*5)>>, B = <<_:(256*4)>>) ->
+add(A = <<_:(256*5)>>, B) ->
     fq2:e_add(A, B).
 
 mul(X, G) ->
@@ -61,10 +59,11 @@ mul(X, G) ->
 mul2(X, G) ->
     %multiply point G by scalar X.
     %X is a montgomery encoded binary.
-    true = is_binary(X),
-    true = 32 == size(X),
-    true = is_binary(G),
-    true = (32*4) == size(G),
+%    true = is_binary(X),
+%    true = 32 == size(X),
+%    true = is_binary(G),
+%    true = (((32*4) == size(G)) or
+%            ((32*5) == size(G))),
     fq2:e_mul2(G, X).
 mul1(X, G) ->
     %multiply point G by scalar X.
@@ -98,11 +97,14 @@ simplify_v(X) ->
     fq2:e_simplify_batch(X).
 
 points_to_entropy(L) ->
-    L2 = simplify_v(L),
+    lists:map(fun(X) -> fq2:hash_point(X) end,
+              L).
+
+%    L2 = simplify_v(L),
     %io:fwrite({size(hd(L2)), L2}),
-    lists:map(fun(<<X:512, _/binary>>) ->
-                      fr:encode(X rem fr:prime())
-              end, L2).
+%    lists:map(fun(<<X:512, _/binary>>) ->
+%                      fr:encode(X rem fr:prime())
+%              end, L2).
    
 %todo. update below here to not use secp256k1. 
 
@@ -197,8 +199,8 @@ make_ipa2(C1, A, G, B, H, Q, Cs, X, Xi)  ->
                  mul(Zr, Q))),
     A2 = fv_add(Al, fv_mul(X, Ar)),
     B2 = fv_add(Bl, fv_mul(Xi, Br)),
-    C12 = add(mul(X,  fq2:extended2extended_niels(Cl)),
-             mul(Xi, fq2:extended2extended_niels(Cr))),
+    C12 = add(mul(X,Cl),
+             mul(Xi, Cr)),
     C2 = add(C1, C12),
     G20 = v_add(v_mul(Xi, Gr), Gl),
     H20 = v_add(v_mul(X, Hr), Hl),
@@ -216,19 +218,18 @@ get_gn(X, G) ->
     S2 = S div 2,
     {Gl, Gr} = lists:split(S2, G),
     Gr2 = v_mul(X, Gr),
-    Gr3 = simplify_v(Gr2),
-    G2 = v_add(fq2:extended_niels2extended(Gl), 
-               Gr3),
-    get_gn(X, fq2:extended2extended_niels(G2)).
+    %Gr3 = simplify_v(Gr2),
+    %G2 = v_add(Gl, Gr3),
+    G2 = v_add(Gr2, Gl),
+    get_gn(X, G2).
 
 foldh_mul(_, _, [C]) -> 
-    [fq2:extended_niels2extended(C)];
+    [C];
 foldh_mul(X, Xi, [L, R|C]) -> 
     [mul(X, L), mul(Xi, R)|
      foldh_mul(X, Xi, C)].
 fold_cs(X, Xi, Cs) ->
-    Cs2 = fq2:extended2extended_niels(Cs),
-    Cs3 = foldh_mul(X, Xi, Cs2),
+    Cs3 = foldh_mul(X, Xi, Cs),
     lists:foldl(fun(A, B) ->
                         add(A, B)
                 end, fq2:e_zero(), 
@@ -380,29 +381,30 @@ test(4) ->
     verkle_app:start(normal, []),
     %Gs = ?p#p.g,
     %E = ?p#p.e,
-    G2 = ok,
-    E = ok,
+    %G2 = ok,
+    %E = ok,
+    {Gs, _, _} = parameters2:read(),
     Many = 10,
     V = lists:map(fun(_) ->
                           <<R:256>> = 
                               crypto:strong_rand_bytes(32),
-                          R
+                          fr:encode(R)
                   end, range(0, 256)),
     256 = length(V),
-    MEP = parameters:multi_exp(),
+    MEP = parameters2:multi_exp(),
     T1 = erlang:timestamp(),
     lists:map(fun(_) ->
-                      %commit(V, Gs)
-                      commit(V, ok)
+                      commit(V, Gs)
               end, range(0, Many)),
     T2 = erlang:timestamp(),
     lists:map(fun(_) ->
-                          store:precomputed_multi_exponent(V, MEP)
+                          store2:precomputed_multi_exponent(V, MEP)
               end, range(0, Many)),
     T3 = erlang:timestamp(),
     lists:map(fun(_) ->
                        %secp256k1:simple_exponent(V, Gs, fq2:e_zero())
-                       secp256k1:simple_exponent(V, ok, fq2:e_zero())
+                      %multi_exponent:simple_exponent(V, Gs, fq2:e_zero())
+                      ok
               end, range(0, Many)),
     T4 = erlang:timestamp(),
     {timer:now_diff(T2, T1)/Many,%0.115

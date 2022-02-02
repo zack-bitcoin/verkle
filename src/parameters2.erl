@@ -40,7 +40,10 @@ init(ok) ->
           fun() -> poly2:calc_A(Domain) end),
     DA = read_or_gen(
           "precomputes/DA.db",
-          fun() -> poly2:calc_DA(Domain) end),
+          fun() -> poly2:c2e(
+                     poly2:calc_DA(Domain), 
+                     Domain) 
+          end),
     DivE = 
         read_or_gen(
           "precomputes/DivE.db",

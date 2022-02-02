@@ -81,9 +81,7 @@ hash(L, CFG) ->
 	    %Data = <<(L#leaf.key):P, V/binary>>,
             %io:fwrite("\n"),
             %io:fwrite(integer_to_list(size(Data))),
-            %io:fwrite("\n"),
-            %io:fwrite({Data}),
-	    hash:doit(<<(L#leaf.key):P, V/binary>>)
+            hash:doit(<<(L#leaf.key):P, V/binary>>)
     end.
 test() ->
     verkle_app:start(normal, []),

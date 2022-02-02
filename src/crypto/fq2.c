@@ -31,6 +31,12 @@ const uint64_t one[4] =
 
 const uint64_t zero[4] =
   {0U,0U,0U,0U};
+
+const uint64_t D2[4] =
+{6099079700866002271U,
+ 11897366564962777447U,
+ 13895890878914525598U,
+ 4324658502938054420U};
   
 //{8000017657123382296U,
 // 17676554788265757849U,
@@ -344,8 +350,8 @@ static inline void e_add2
 (const uint64_t * u, const uint64_t * v,
  const uint64_t * z1,const uint64_t * t1,
  const uint64_t * t2,
- uint64_t * vpu2, uint64_t * vmu2,
- uint64_t * td2, uint64_t * z2,
+ const uint64_t * vpu2, const uint64_t * vmu2,
+ const uint64_t * td2, const uint64_t * z2,
  uint64_t * ub, uint64_t * vb, uint64_t * z1b,
  uint64_t * t1b, uint64_t * t2b)
 {
@@ -371,6 +377,31 @@ static inline void e_add2
   mul2(t1b, a, ub);
   mul2(t2b, z1b, vb);
   mul2(z1b, a, z1b);
+};
+static inline void extended2extended_niels
+(
+ //extended point
+ uint64_t * u, uint64_t * v, uint64_t * z1,
+ uint64_t * t1, uint64_t * t2,
+ //resulting niels points
+ uint64_t * vpu, uint64_t * vmu,
+ uint64_t * td, uint64_t * z2
+ )
+{
+  mul2(t1, t2, td);
+  mul2(td, D2, td);
+  add2(u, v, vpu);
+  sub2(v, u, vmu);
+  memcpy(z2, z1, 32);
+  /*
+     T3 = mul(<<T1:256>>, <<T2:256>>),
+     VPU = add(<<U:256>>, <<V:256>>),
+     VMU = sub(<<V:256>>, <<U:256>>),
+     T2D = mul(T3, ?D2),
+     <<VPU/binary, VMU/binary, 
+       T2D/binary, Z:256>>.
+  */
+
 };
 static inline void extended_niels2extended
 (uint64_t * vpu, uint64_t * vmu,//niels points
@@ -830,30 +861,57 @@ static ERL_NIF_TERM e_mul_long
     enif_inspect_binary(env, argv[0], &ENiels);
   int checkb =
     enif_inspect_binary(env, argv[1], &B);
-  if((!checka) || (!(ENiels.size == 128))){
+  if((!checka)){
     return(error_atom(env));
   };
+  if((!(ENiels.size == 160)) &&
+     (!(ENiels.size == 128))){
+    return(error_atom(env));
+  }
   if((!checkb) || (!(B.size == 32))){
     return(error_atom(env));
   };
-  uint64_t * VPU = (uint64_t *)&(ENiels.data[0]);
-  uint64_t * VMU = (uint64_t *)&(ENiels.data[32]);
-  uint64_t * T2D = (uint64_t *)&(ENiels.data[64]);
-  uint64_t * NZ = (uint64_t *)&(ENiels.data[96]);
-
   uint64_t * U = (uint64_t *)&(C[0]);
   uint64_t * V = (uint64_t *)&(C[32]);
   uint64_t * Z = (uint64_t *)&(C[64]);
   uint64_t * T1 = (uint64_t *)&(C[96]);
   uint64_t * T2 = (uint64_t *)&(C[128]);
-  
+
+  if(ENiels.size == 160){
+    uint64_t * Ua = (uint64_t *)&ENiels.data[0];
+    uint64_t * Va = (uint64_t *)&ENiels.data[32];
+    uint64_t * Z1a = (uint64_t *)&ENiels.data[64];
+    uint64_t * T1a = (uint64_t *)&ENiels.data[96];
+    uint64_t * T2a = (uint64_t *)&ENiels.data[128];
+    uint64_t VPU[4];
+    uint64_t VMU[4];
+    uint64_t T2D[4];
+    uint64_t NZ[4];
+    extended2extended_niels
+      (
+       Ua, Va, Z1a, T1a, T2a,
+       VPU, VMU, T2D, NZ
+       );
   e_mul_long2(VPU, VMU, T2D, NZ,
          (uint64_t *)B.data,
          U, V, Z, T1, T2);
   enif_release_binary(&ENiels);
   enif_release_binary(&B);
-
   return Extended2;
+    
+  } else if(ENiels.size == 128){
+  uint64_t * VPU = (uint64_t *)&(ENiels.data[0]);
+  uint64_t * VMU = (uint64_t *)&(ENiels.data[32]);
+  uint64_t * T2D = (uint64_t *)&(ENiels.data[64]);
+  uint64_t * NZ = (uint64_t *)&(ENiels.data[96]);
+
+  e_mul_long2(VPU, VMU, T2D, NZ,
+         (uint64_t *)B.data,
+         U, V, Z, T1, T2);
+  enif_release_binary(&ENiels);
+  enif_release_binary(&B);
+  return Extended2;
+  }
 };
 /*
 static ERL_NIF_TERM inv
@@ -922,10 +980,15 @@ static ERL_NIF_TERM e_add
   if((!checka) || (!(Extended.size == 160))){
     return(error_atom(env));
   };
-  if((!checkb) || (!(ENiels.size == 128))){
+  //if((!checkb) || (!(ENiels.size == 128))){
+  if((!checkb)){
     return(error_atom(env));
   };
-
+  if((!(ENiels.size == 160)) &&
+     (!(ENiels.size == 128))){
+    return(error_atom(env));
+  }
+  
   ERL_NIF_TERM Result;
   char * C = enif_make_new_binary
     (env, 160, &Result);
@@ -936,38 +999,45 @@ static ERL_NIF_TERM e_add
   uint64_t * T1 = (uint64_t *)&Extended.data[96];
   uint64_t * T2 = (uint64_t *)&Extended.data[128];
 
-  uint64_t * VPU = (uint64_t *)&ENiels.data[0];
-  uint64_t * VMU = (uint64_t *)&ENiels.data[32];
-  uint64_t * T2D = (uint64_t *)&ENiels.data[64];
-  uint64_t * NZ = (uint64_t *)&ENiels.data[96];
-
   uint64_t * Ub = (uint64_t *)&(C[0]);
   uint64_t * Vb = (uint64_t *)&(C[32]);
   uint64_t * Zb = (uint64_t *)&(C[64]);
   uint64_t * T1b = (uint64_t *)&(C[96]);
   uint64_t * T2b = (uint64_t *)&(C[128]);
 
-  /*
-  if((VPU == VMU) && (VPU == Z)){
-    //the niels point is zero, so
-    //just return the extended point
-    memcpy(C, Extended.data, 160);
-  }else if((U == 0) && (V == Z)){
-    //the extended point is zero, so
-    //just return the niels point converted
-    //into a extended point.
-    extended_niels2extended
-      (VPU, VMU, T2D, NZ,
-       Ub, Vb, Zb, T1b, T2b);
-  } else {
-  */ 
+  if(ENiels.size == 160){
+    uint64_t * Ua = (uint64_t *)&ENiels.data[0];
+    uint64_t * Va = (uint64_t *)&ENiels.data[32];
+    uint64_t * Z1a = (uint64_t *)&ENiels.data[64];
+    uint64_t * T1a = (uint64_t *)&ENiels.data[96];
+    uint64_t * T2a = (uint64_t *)&ENiels.data[128];
+    uint64_t VPU[4];
+    uint64_t VMU[4];
+    uint64_t T2D[4];
+    uint64_t NZ[4];
+    extended2extended_niels
+      (
+       Ua, Va, Z1a, T1a, T2a,
+       VPU, VMU, T2D, NZ
+       );
     e_add2(U, V, Z, T1, T2,
            VPU, VMU, T2D, NZ,
            Ub, Vb, Zb, T1b, T2b);
-    //}
-
-  //return enif_make_binary(env, &Extended);
-  return(Result);
+  enif_release_binary(&ENiels);
+  enif_release_binary(&Extended);
+    return(Result);
+  } else if(ENiels.size == 128){
+    uint64_t * VPU = (uint64_t *)&ENiels.data[0];
+    uint64_t * VMU = (uint64_t *)&ENiels.data[32];
+    uint64_t * T2D = (uint64_t *)&ENiels.data[64];
+    uint64_t * NZ = (uint64_t *)&ENiels.data[96];
+    e_add2(U, V, Z, T1, T2,
+           VPU, VMU, T2D, NZ,
+           Ub, Vb, Zb, T1b, T2b);
+  enif_release_binary(&ENiels);
+  enif_release_binary(&Extended);
+    return(Result);
+  };
 }
 
 

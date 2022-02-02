@@ -11,7 +11,8 @@ update_proof(L, Proof, CFG) ->
     N = length(Proof),
     {LP2, _} = lists:split(N, LP),
     LP3 = lists:reverse(LP2),
-    LH = leaf:hash(L, CFG),
+    %LH = leaf:hash(L, CFG),
+    LH = store2:leaf_hash(L, CFG),
     Proof2 = update_internal(LP3, LH, Proof, CFG),
     Proof2.
 
@@ -42,7 +43,8 @@ update_proofs([{Leaf, Proof}|T], CFG, D, L) ->
     N = length(Proof),
     {LP2, _} = lists:split(N, LP),
     LP3 = lists:reverse(LP2),
-    LH = leaf:hash(Leaf, CFG),
+    %LH = leaf:hash(Leaf, CFG),
+    LH = store2:leaf_hash(Leaf, CFG),
     {D2, NewProof} = 
         update_proofs2(LP3, LH, Proof, D, CFG, []),
     update_proofs(T, CFG, D2, [NewProof|L]).
@@ -85,30 +87,36 @@ proof(Root0, {Tree, CommitG, Open}, CFG) ->
     if
         not(B) -> false;
         true ->
-            io:fwrite("verify unfold \n"),
+            io:fwrite("verify2 unfold \n"),
+            benchmark:now(),
+            %io:fwrite({Root, Rest}),
+            %rest [[{251, {999995, <<0,1>>}}],
+            %      [[{252, {999996, <<0,2>>}}],
             Tree2 = unfold(Root, Rest, [], CFG),
     %[{elliptic, index, hash}, ...]
-            %io:fwrite({Rest}),%[[{1, 35}, [{0, l1}],[{1,l5}]], [{2, 10},{0,l2}, {3, 17},{0, l3}]]
-            %error is in "l2}, {3,", there should be a list seperation here.
             io:fwrite("verify split 3 parts \n"),
+            benchmark:now(),
             {Commits, Zs0, Ys} = 
-                get:split3parts(Tree2, [],[],[]),
+                get2:split3parts(Tree2, [],[],[]),
             io:fwrite("veirfy index2domain \n"),
-            Zs = get:index2domain(
+            benchmark:now(),
+            Zs = get2:index2domain(
                    %Zs0, ?p#p.domain),
                    Zs0, Domain),
             %io:fwrite({Zs}),%[1,4,1,3,2,1,2]
             %io:fwrite({Commits}),%[17,10,10,88,35,35,88]
             %should be [17,88,10,88,35,35,88]
-            io:fwrite("verify decode Ys \n"),
-            Ys2 = lists:map(
-                    fun(<<X:256>>) -> X end,
-                    Ys),
             io:fwrite("verify multiproof \n"),
+            benchmark:now(),
             B2 = multiproof2:verify(
                    {CommitG, Open}, 
-                   Commits, Zs, Ys2),
+                   Commits, Zs, fr:decode(Ys)),
+
+            %sanity check
+            %element(2, Open) = -G2
+
             io:fwrite("verify done \n"),
+            benchmark:now(),
             if
                 not(B) -> false;
                 not(B2) -> false;
@@ -132,16 +140,17 @@ leaves(_) ->  [].
 unfold(Root, {Index, {Key, B}}, T, CFG) %leaf case
   when is_binary(B) ->
     Leaf = #leaf{key = Key, value = B},
-    <<L:256>> = leaf:hash(Leaf, CFG),
+    <<L:256>> = store2:leaf_hash(Leaf, CFG),
     lists:reverse([{Root, Index, <<L:256>>}|T]);
 %unfold(Root, {Index, X ={_, _, _}}, T, CFG) %point case
 %   ->
 %    H = secp256k1:hash_point(X),
 %    [{Root, Index, <<H:256>>}|T];
-unfold(Root, [{Index, X ={_, _, _}}|R], T, CFG) %point case
+unfold(Root, [{Index, X}|R], T, CFG) %stem case
+  when (is_binary(X) and (size(X) == (32*5)))
    ->
     %[{Root, Index, X}|T];
-    H = fq2:hash_point(X),
+    <<H:256>> = fq2:hash_point(X),
     unfold(X, R, [{Root, Index, <<H:256>>}|T], CFG);
 %unfold(Root, [[{Index, X = {_, _, _}}|P]|J], T) -> 
 %    T2 = [{Root, Index, X}|T],

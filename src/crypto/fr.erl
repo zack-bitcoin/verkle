@@ -50,11 +50,12 @@ init() ->
 prime() -> ?q.
 
 %todo. binary:encode_unsigned(X, little) is probably faster.
-reverse_bytes(X) ->
-    reverse_bytes(X, <<>>).
-reverse_bytes(<<A, B/binary>>, R) ->
-    reverse_bytes(B, <<A, R/binary>>);
-reverse_bytes(<<>>, R) -> R.
+reverse_bytes(<<X:256>>) -> <<X:256/little>>.
+%reverse_bytes(X) ->
+%    reverse_bytes(X, <<>>).
+%reverse_bytes(<<A, B/binary>>, R) ->
+%    reverse_bytes(B, <<A, R/binary>>);
+%reverse_bytes(<<>>, R) -> R.
 
 encode([]) -> [];
 encode([H|T]) -> 
@@ -66,8 +67,10 @@ encode(1) ->
   214,21,243,244,20,136,235,238,20,37,147,198,85,
   145,71,111,252,166,9>>;
 encode(A) when ((A < ?q) and (A > -1)) ->
-    mul(reverse_bytes(<<A:256>>),
-        reverse_bytes(<<?r2:256>>));
+    %mul(reverse_bytes(<<A:256>>),
+    %    reverse_bytes(<<?r2:256>>));
+    mul(<<A:256/little>>,
+        <<?r2:256/little>>);
 encode(A) when (A < 0)->
     neg(encode(-A));
 encode(A) when (A > (?q-1)) ->
@@ -78,8 +81,10 @@ decode([]) -> [];
 decode([A|B]) -> 
     [decode(A)|decode(B)];
 decode(C) ->
-    X = mul(C, reverse_bytes(<<1:256>>)),
-    <<Y:256>> = reverse_bytes(X),
+    %X = mul(C, reverse_bytes(<<1:256>>)),
+    X = mul(C, (<<1:256/little>>)),
+    %<<Y:256>> = reverse_bytes(X),
+    <<Y:256/little>> = X,
     Y.
     %binary:decode_unsigned(X, little).
 
@@ -375,7 +380,17 @@ test(20) ->
     A = A0 rem ?q,
     NA = ?q - A,
     NA = decode(neg(encode(A))),
+    success;
+test(21) ->
+    io:fwrite("batch inverse\n"),
+    A = encode([4,5,6,7,8]),
+    AI = batch_inverse(A),
+    [1,1,1,1,1] = 
+        fr:decode(
+          lists:zipwith(fun(X, Y) -> mul(X, Y) end,
+                        A, AI)),
     success.
+                          
 
     
 

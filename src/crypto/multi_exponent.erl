@@ -1,5 +1,6 @@
 -module(multi_exponent).
--export([doit/2, me3/3, test/1]).
+-export([doit/2, me3/3, simple_exponent/3,
+         test/1]).
 
 det_pow(0, _) -> 0;
 det_pow(_, 0) -> 1;
@@ -10,12 +11,12 @@ det_pow(A, N) when N > 1 ->
     A*det_pow(A, N-1).
 
 %break a 256-bit little endian number into Many chunks.
-chunkify(R, C, Many) ->
-    chunkify2(R, C, Many). 
-chunkify2(_, _, 0) -> [];
-chunkify2(R, C, Many) -> 
+%chunkify(R, C, Many) ->
+%    chunkify2(R, C, Many). 
+chunkify(_, _, 0) -> [];
+chunkify(R, C, Many) -> 
     [(R rem C)|
-     chunkify2(R div C, C, Many-1)].
+     chunkify(R div C, C, Many-1)].
 
 matrix_diagonal_flip([[]|_]) -> [];
 matrix_diagonal_flip(M) ->
@@ -43,8 +44,7 @@ simple_exponent(
   Acc) -> %encoded point
     %e_add(extended, eniels)
     %e_mul_long(eniels, exponent)%exponent is a 256 bit little endian number in binary.
-    Acc2 = fq2:extended2extended_niels(Acc),
-    A2 = fq2:e_add(fq2:e_mul2(G, R), Acc2),
+    A2 = fq2:e_add(fq2:e_mul2(G, R), Acc),
     %A2 = fq2:e_add(fq2:e_mul_long(G, (R)), Acc2),
     simple_exponent(RT, GT, A2).
 
@@ -94,7 +94,13 @@ bucketify([BucketNumber|T], BucketsETS,
                    BucketsETS, BucketNumber),
     Bucket2 = 
         case BucketETS0 of
-            [] -> fq2:extended_niels2extended(G);
+            [] -> 
+                case G of
+                    <<_:(256*5)>> -> G;
+                    _ ->
+                        fq2:extended_niels2extended(G)
+                end;
+            %[] -> G;
             [{_, X}] -> fq2:e_add(X, G)
         end,
 
@@ -114,12 +120,8 @@ bucketify2([S|R], L, T) ->
     %L2 = jacob_add(S, L, E),
     %B = fq2:is_zero(S),
     %B2 = fq2:is_zero(L),
-    L2 = fq2:e_add(
-           L, fq2:extended2extended_niels(
-                S)),
-    T2 = fq2:e_add(
-           L2, fq2:extended2extended_niels(
-                 T)),
+    L2 = fq2:e_add(L, S),
+    T2 = fq2:e_add(L2, T),
     bucketify2(R, L2, T2).
 
 
@@ -164,14 +166,10 @@ multi_exponent2(Rs, Gs) ->
         %fr:reverse_bytes(<<F:256>>)).
         fr:encode(F)).
 me3([H], A, _) -> 
-    fq2:e_add(
-      H, fq2:extended2extended_niels(A));
+    fq2:e_add(H, A);
 me3([H|T], A, F) -> 
-    X = fq2:e_add(
-          A, 
-          fq2:extended2extended_niels(H)),
-    X2 = fq2:e_mul2(
-           fq2:extended2extended_niels(X), F),
+    X = fq2:e_add(A, H),
+    X2 = fq2:e_mul2(X, F),
     me3(T, X2, F).
 
 

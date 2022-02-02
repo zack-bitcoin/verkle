@@ -2,11 +2,13 @@
 
 -export(
    [calc_DA/1, calc_A/1, 
-    c2e/3, %lagrange_polynomials/2, 
+    c2e/2, %lagrange_polynomials/2, 
     sub/2, div_e/6, mul_scalar/2, 
     add/2, 
     eval_e/3, eval_outside/5, eval_outside_v/4,
-    all_div_e_parameters/2
+    all_div_e_parameters/2,
+    test/1,
+    symetric_view/2
    ]).
 
 %library for dealing with polynomials over integers mod a prime.
@@ -81,7 +83,7 @@ mul_c_all([A, B|T]) ->
     end,
     mul_c_all([mul_c(A, B)|T]).
 
-%coefficient form
+%coefficient form. multiplying 2 polynomials.
 %only for generating parameters.
 mul_c([], _B) -> [];
 mul_c(_, []) -> [];
@@ -110,6 +112,7 @@ range(A, B) when A < B ->
     [A|range(A+1, B)].
 
 all_div_e_parameters2(Domain, DA) ->
+    1=2,
     io:fwrite("calculating the poly:div_e parameters\n"),
     %P = ok,%?p,
     D = Domain,
@@ -132,6 +135,7 @@ all_div_e_parameters2(Domain, DA) ->
                           X -> fr:neg(X)
                    end
            end, R),
+    io:fwrite({As, Bs, DA}),
     L = fr:batch_inverse(As ++ Bs ++ DA),
     {IAs, L2} = lists:split(length(As), L),
     {IBs, IDA} = lists:split(length(Bs), L2),
@@ -300,17 +304,20 @@ eval_poly2(X, XA, [H|T], Acc) ->
 eval_e(X, [P|_], [X|_]) -> P;
 eval_e(X, [_|P], [_|D]) -> 
     eval_e(X, P, D).
+eval_e_(N, F, _) ->
+    lists:nth(fr:decode(N), F).
 
 %evaluation format, looking up something outside the known domain.
 %DA is also in evaluation format
 eval_outside_v(Z, Domain, A, DA) ->
-    AZ = eval_c(Z, A),
+    %Z is a point not in domain.
+    %A(Z)*sum(P_i/(A'(domain_i) * (z - domain_i)))
     Divisors = 
         lists:zipwith(
-          %fun(D, Dai) -> ?mul(Dai, ?sub2(Z, D))
           fun(D, Dai) -> fr:mul(Dai, fr:sub(Z, D))
           end, Domain, DA),
     IDs = fr:batch_inverse(Divisors),
+    AZ = eval_c(Z, A),
     lists:map(
       fun(D) ->
               %?mul(AZ, D)
@@ -318,6 +325,8 @@ eval_outside_v(Z, Domain, A, DA) ->
       end, IDs).
     
 eval_outside(Z, P, Domain, A, DA) ->
+    %unused. maybe it doesn't work.
+
     %Z is a point not in domain.
     %A(Z)*sum(P_i/(A'(domain_i) * (z - domain_i)))
     EV = eval_outside_v(Z, Domain, A, DA),
@@ -333,7 +342,7 @@ remove_element(X, [X|T]) -> T;
 remove_element(X, [A|T]) -> 
     [A|remove_element(X, T)].
 
-c2e(P, Domain, Base) ->
+c2e(P, Domain) ->
     %cost is (length of polynomial)*(elements in the domain). 
     %currently: O(length(P)^2)
     %can be made faster with the DFT: P*log(P)/2 only if our domain is the roots of unity.
@@ -341,5 +350,116 @@ c2e(P, Domain, Base) ->
       fun(X) -> eval_c(X, P) end,
       Domain).
 
+decode_ele({X, L1, L2}) ->
+    {fr:decode(X),
+     fr:decode(L1),
+     fr:decode(L2)}.
+
+lagrange(Z, Domain, DA, DivEAll) ->
+    lagrange2(Z, Domain, Domain, DA, DivEAll, fr:encode([1,1,1,1])).
+lagrange2(_, [], _, _, _, A) -> A;
+lagrange2(Z, [Z|D], Domain, DA, DivEAll, A) -> 
+    lagrange2(Z, D, Domain, DA, DivEAll, A);
+lagrange2(Z, [H|D], Domain, DA, DivEAll, A) -> 
+    B = div_e(base_polynomial_c(H)++fr:encode([0,0]), Domain, DA, Z, DivEAll, 0),
+    %io:fwrite({B, A}),
+    A2 = lists:zipwith(fun(X, Y) -> fr:add(X, Y) end, A, B),
+    %A2 = mul_scalar(A, B),
+    %A *= (base_polynomial_c(H) / (Z - H)),
+    lagrange2(Z, D, Domain, DA, DivEAll, A2).
+
+
+test(1) ->    
+    Ps = fr:encode([9,12,15,18]),
+    Domain = fr:encode([1,2,3,4]),
+    A = calc_A(Domain),
+    DA = c2e(calc_DA(Domain), Domain),
+    DivEAll = all_div_e_parameters(Domain, DA),
+
+    %div_e should be
+    % P(x) / (x - M)
+
+    DM = 2,
+    DZ = 5,
+    Inv = fr:inv(fr:encode(DZ - DM)),
+    %Inv = fr:encode(DZ - DM),
+
+    M = fr:encode(DM),
+    Ps2 = div_e(Ps, Domain, DA, M, DivEAll, 0),
+    Ps3 = lists:zipwith(
+            fun(A, B) ->
+                    fr:mul(A, B)
+            end, Ps2, c2e(base_polynomial_c(M), Domain)),
+    %io:fwrite(fr:decode([Ps2, Ps3])),
+    %fr:decode(Ps2).
+    Z = fr:encode(DZ),
+    EP = eval_outside(Z, Ps, Domain, A, DA),
+    EP2 = eval_outside(Z, Ps2, Domain, A, DA),
+    %EP3 = fr:mul(EP, Inv),
+    EP3 = fr:mul(EP2, fr:encode(DZ - DM)),
+    {symetric_view(fr:decode([EP, EP2, EP3]), fr:prime())};
+test(2) -> 
+    Domain = fr:encode([1,2,3,4]),
+    A = calc_A(Domain),
+    DA = c2e(calc_DA(Domain), Domain),
+    C = fr:encode([1,0,0,0]),
+    E = c2e(C, Domain),
+    %io:fwrite({fr:decode([E])}),
+    Z = fr:encode(0),
+
+    Result = eval_c(Z, C),
+    Result2 = eval_outside(Z, E, Domain, A, DA),
+    Result3 = eval_outside_v(Z, Domain, A, DA),
+
+    io:fwrite({symetric_view(fr:decode([ipa2:dot(Result3, E), Result, Result2, E]), fr:prime())}),
+    success;
+test(3) -> 
+    %testing mul_c_all
+    L = fr:encode(
+          [[2,1,0,0],
+           [1,1,0,0],
+           [0,1,0,0]]),
+    %(x+2)(x+1)x = x^3 + 3x^2 + 2x
+    [0,2,3,1|_] = fr:decode(mul_c_all(L)),
+    success;
+test(4) -> 
+    io:fwrite("calc_A\n"),
+    Domain = [1,2,3,4],
+    V1 = symetric_view(
+           fr:decode(
+             calc_A(
+               fr:encode(Domain))), 
+           fr:prime()),
+    E = secp256k1:make(),
+    V2 = symetric_view(
+           poly:calc_A(Domain, 
+                       secp256k1:order(E)), 
+           secp256k1:order(E)),
+    V1 = V2,
+    success;
+test(5) -> 
+    io:fwrite("calc_DA\n"),
+    Domain = [1,2,3,4],
+    V1 = symetric_view(
+           fr:decode(
+             calc_DA(fr:encode(Domain))),
+           fr:prime()),
+    E = secp256k1:make(),
+    V2 = symetric_view(
+           poly:calc_DA(Domain, E), 
+           secp256k1:order(E)),
+    V1 = V2,
+    success;
+test(6) -> 
+    io:fwrite("deriving eval_outside\n"),
+    %f(z) = sum i: f_i * l_i(z)
+    %l_i(X) = mul i, j (i != j): 
+    %   (X - x_j) / (x_i - x_j)
+    Domain = fr:encode([1,2,3,4]),
+    DA = c2e(calc_DA(Domain), Domain),
+    DivEAll = all_div_e_parameters(Domain, DA),
+    fr:decode(lagrange(hd(tl(Domain)), Domain, DA, DivEAll)).
+    
+    
     
     

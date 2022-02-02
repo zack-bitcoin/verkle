@@ -3,7 +3,8 @@
          batch/3,
          multi_exponent_parameters/2,
          test/1,
-         precomputed_multi_exponent/2
+         precomputed_multi_exponent/2,
+         leaf_hash/2
         ]).
 %-include("constants.hrl").
 -define(nindex, 8).
@@ -23,6 +24,7 @@ store(Leaf, RP, CFG) ->
 batch(Leaves0, RP, CFG) ->%returns {location, stem/leaf, #stem{}/#leaf{}}
     %put them in an ordered list.
     io:fwrite("store sorting 0\n"),
+    % 2%
     Leaves = sort_by_path2(Leaves0, CFG),
     io:fwrite("store parameters 1\n"),
     MEP = parameters2:multi_exp(),
@@ -53,7 +55,8 @@ batch(Leaves0, RP, leaf, Depth, CFG, MEP) ->
           Depth, CFG, MEP);
 batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     %cut the list into sub lists that get included in each sub-branch.
-    Leaves2 = clump_by_path(%  0.6%
+    % %6
+    Leaves2 = clump_by_path(
                 Depth, Leaves, CFG),
     %depth first recursion over the sub-lists on teh sub-trees to calculate the pointers and hashes for this node.
     RootStem = stem2:get(RP, CFG),
@@ -63,6 +66,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
            types = Types,
            root = Root
          } = RootStem,
+    % %0
     HPT1 = lists:map(
              fun(I) -> {element(I, Hashes),
                         element(I, Pointers),
@@ -75,15 +79,14 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
                    {P2, Type, Tree} = 
                        batch(Leaves3, P, 
                              T, Depth+1, CFG, MEP),
-                   H2 = hash_thing(% 0.3%
+                   H2 = hash_thing(%  2.45%
                           P2, Type, Tree, H, CFG),
-                   <<HN:256>> = H,
-                   <<HN2:256>> = H2,
-                   Sub = fr:sub(fr:encode(HN2 rem fr:prime()), 
-                                fr:encode(HN rem fr:prime())),
+                   Sub = fr:sub(H2, H),
                    {Sub, H2, P2, Type}
            end,
             Leaves2, HPT1),
+
+    % 0.65%
     {Rs, Hashes2, Pointers2, Types20} = 
         split4ways(RHPT),
     Types2 = lists:map(
@@ -95,21 +98,17 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
                            0 -> 0
                        end
                end, Types20),
-%    EllDiff = 
-%        secp256k1:multi_exponent(
-%          Rs, ?p#p.g, ?p#p.e),
-    %4.71
-    %43% of total. (impossible, because inside it was 70%
+    %4.59
+
+    % 30.5%
     EllDiff = precomputed_multi_exponent(Rs, MEP),
-%    true = secp256k1:jacob_equal(EllDiff, EllDiff2, ?p#p.e),
-    NewRoot = fq2:e_add(EllDiff, fq2:extended2extended_niels(Root)),
-%    NewRoot = secp256k1:jacob_add(
-%                EllDiff, Root, ?p#p.e),% 0.3%
-    %clumping is 0.6%
-    %hashing is 0.3%
-    %reading + writing is 15%
-    %pme is 58%
-    %me3 is 5%
+
+    % 3.6%
+    NewRoot = fq2:e_add(EllDiff, Root),
+    %clumping is 6%
+    %hashing is 2.45%
+    %reading + writing is ???
+    %multi exponent is 30.5%
     %[{location, type, #stem{}/#leaf{}}, ...]
     NewStem = 
         RootStem#stem{
@@ -173,9 +172,12 @@ hash_thing(_, leaf, leaf_not_recorded,
 hash_thing(_, stem, stem_not_recorded,
            OldHash, _) -> OldHash;
 hash_thing(_, leaf, L = #leaf{}, _, CFG) -> 
-    leaf:hash(L, CFG);
+    leaf_hash(L, CFG);
 hash_thing(_, stem, S = #stem{}, _, _) -> 
     stem2:hash(S).
+leaf_hash(L, CFG) ->
+    <<N:256>> = leaf:hash(L, CFG),
+    fr:encode(N).
 sort_by_path2(L, CFG) ->
     %this time we want to sort according to the order of a depth first search.
     lists:sort(
@@ -267,23 +269,26 @@ precomputed_multi_exponent(Rs0, MEP) ->
 %          end, Rs),
     %Rs2 = lists:map(fun(R) -> <<R:256>> end, Rs),
     %Rs2 = to_binaries(Rs),%almost 0.
-    %Ts = lists:reverse(
-    %        batch_chunkify2(Rs2, C, Lim)),%8.9
+%    Rs2 = lists:map(fun(X) -> <<(fr:decode(X)):256>> end, Rs),
+%    Ts = lists:reverse(
+%            batch_chunkify2(Rs2, C, Lim)),%8.9
+
+    % 14% of storage
     Ts = batch_chunkify(
-           fr:decode(Rs), F, Lim),%  1.8%
+           fr:decode(Rs), F, Lim),
 
-    %4.5
-
-    Ss = lists:map(%  30% of storage
+    %  4.5% of storage
+    Mepl = tuple_to_list(MEP),
+    EZero = fq2:e_zero(),
+    Ss = lists:map(
            fun(T) ->
-                   pme2(T, Domain, MEP, 
-                        fq2:e_zero())
+                   pme22(T, Mepl, EZero)
            end, Ts),
 
-    %40% of storage
+    % 3.5% of storage
     Result = multi_exponent:me3(
                lists:reverse(Ss), 
-               fq2:e_zero(), 
+               EZero, 
                fr:encode(F)),%  5%
     Result.
                       
@@ -292,27 +297,14 @@ precomputed_multi_exponent(Rs0, MEP) ->
     %Each row is an instance of a multi-exponential problem, with C-bit exponents. We will use the precalculated parameters for this.
 %io:fwrite(Ts),
 
-    %    secp256k1:multi_exponent(
-    %      Rs, ?p#p.g, ?p#p.e),
-%    lists:zipwith(fun(D, R) ->
-%                      pme2(D, R)
-%              end, ?p#p.domain, Rs),
-    %then sum up the results.
-%    ok.
-to_binaries(Rs) ->
-    lists:map(fun(R) -> <<R:256>> end, Rs).
+pme22([], [], Acc) -> Acc;
+pme22([0|T], [_|D], Acc) -> 
+    pme22(T, D, Acc);
+pme22([Power|T], [H|MEP], Acc) -> 
+    X = element(Power+1, H),
+    Acc2 = fq2:e_add(X, Acc),
+    pme22(T, MEP, Acc2).
     
-pme2([], [], _MEP, Acc) -> Acc;
-pme2([0|T], [_|Domain], MEP, Acc) ->
-    pme2(T, Domain, MEP, Acc);
-pme2([Power|T], [Gid|Domain], MEP, Acc) ->
-    X = element(
-          Power+1,
-          element(
-            fr:decode(Gid), MEP)),
-%    X = parameters:multi_exp(Gid, Power+1),
-    Acc2 = fq2:e_add(X, fq2:extended2extended_niels(Acc)),
-    pme2(T, Domain, MEP, Acc2).
     
 
 many(_, 0) -> [];
@@ -328,7 +320,6 @@ test(1) ->
     R = R4,
     {Gs, _, _} = parameters2:read(),
     Old = multi_exponent:doit(fr:encode(R), Gs),
-    %Old = fq2:extended2affine(Old0),
     MEP = parameters2:multi_exp(),
     New = precomputed_multi_exponent(
             R, MEP), 
@@ -339,15 +330,15 @@ test(1) ->
     %io:fwrite({Old, New, Saved0}),
     fq2:eq(Old, New);
 test(2) ->
+    io:fwrite("ftrace of precomputed multi exponent\n"),
     %multi exponent precompute speed comparison.
-    1=2,
-    verkle_app:start(normal, []),
+    %verkle_app:start(normal, []),
     Many = 20,
     Rs = lists:map(fun(_) ->
                            <<X:256>> = crypto:strong_rand_bytes(32),
-                           X
+                           fr:encode(X)
                    end, range(1, 256)),
-    MEP = parameters:multi_exp(),
+    MEP = parameters2:multi_exp(),
     T1 = erlang:timestamp(),
     fprof:trace(start),
     lists:map(fun(_) ->
@@ -365,7 +356,28 @@ test(2) ->
     {timer:now_diff(T2, T1)/Many,
      timer:now_diff(T3, T2)/Many},
     fprof:profile(file, "fprof.trace"),
+    fprof:analyse();
+test(3) ->
+    io:fwrite("fprof of storing a batch"),
+    CFG = trie:cfg(trie01),
+    Loc = 1,
+    Times = 200,
+    Leaves = 
+        lists:map(
+          fun(N) -> 
+                  <<Key0:256>> = 
+                      crypto:strong_rand_bytes(32),
+                  #leaf{key = Key0, value = <<N:16>>}%random version
+          end, range(1, Times+1)),
+    Many = lists:map(fun(#leaf{key = K}) -> K end,
+                     Leaves),
+    fprof:trace(start),
+    store2:batch(Leaves, Loc, CFG),
+    fprof:trace(stop),
+    fprof:profile(file, "fprof.trace"),
     fprof:analyse().
+    
+
     
 
     

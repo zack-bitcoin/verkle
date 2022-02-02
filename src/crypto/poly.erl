@@ -9,7 +9,8 @@
     evaluation_add/2,
     eval_e/4, eval_outside/6, eval_outside_v/5,
     all_div_e_parameters/1,
-    all_div_e_parameters2/0
+    all_div_e_parameters2/0,
+    test/1
    ]).
 
 %library for dealing with polynomials over integers mod a prime.
@@ -92,6 +93,12 @@ mul_c([A|AT], B, Base) ->
     add_c(mul_scalar(A, B, Base),
         mul_c(AT, [0|B], Base),
         Base).
+
+%execution form
+mul_e([], [], _) -> [];
+mul_e([A|AT], [B|BT], Base) ->
+    [ff:mul(A, B, Base)|
+     mul_e(AT, BT, Base)].
 
 range(N, N) -> [N];
 range(A, B) when A < B -> 
@@ -226,6 +233,46 @@ div_e3([P|PT], D, [ID1|IDs1], [ID2|IDs2],
     NP = ?mul(P, ID1),
     div_e3(PT, D+1, IDs1, IDs2, M, 
            [NP|Poly], Zeroth+NZ).
+is_all_zeros([]) -> true;
+is_all_zeros([0|T]) -> 
+    is_all_zeros(T);
+is_all_zeros(_) -> false.
+many(_, 0) -> [];
+many(X, N) when (N > 0) -> 
+    [X|many(X, N-1)].
+%coefficient form. 
+% O(length(A)*length(B)).
+div_c(A, [], _) -> A;%doesn't end a recursion. just a simple case.
+div_c(A, B, Base) -> 
+    %polynomial long division, doesn't handle remainders.
+    D = length(A) - length(B),
+    AllZeros = is_all_zeros(A),
+    if
+        AllZeros -> many(0, max(0, D+1));
+        true ->
+            if
+                D < 0 ->
+                    io:fwrite("impossible division\n"),
+                    io:fwrite({A, B}),
+                    ok;
+                true -> ok
+            end,
+            %io:fwrite({A, B}),
+            LA = hd(lists:reverse(A)),
+            LB = hd(lists:reverse(B)),
+            M = ff:divide(LA, LB, Base),
+            BM = mul_scalar(M, B, Base),
+            %BM2 = all_zeros(D) ++ BM,
+            BM2 = many(0, D) ++ BM,
+            A2 = sub(A, BM2, Base),
+           %A3 = remove_trailing_zeros(A2),
+            A3 = lists:reverse(tl(lists:reverse(A2))),
+    %io:fwrite({A, B, M, A2, A3}),
+    %io:fwrite({A, BM2, A2}),
+            %io:fwrite({A3, B}),
+            div_c(A3, B, Base) ++ [M]
+    end.
+
 
 calc_A(Domain, Base) -> 
     %in roots of unity case, it is (x^d - 1)
@@ -306,6 +353,7 @@ remove_element(X, [A|T]) ->
     [A|remove_element(X, T)].
 
 c2e(P, Domain, Base) ->
+    %coefficient format to evaluation format
     %cost is (length of polynomial)*(elements in the domain). 
     %currently: O(length(P)^2)
     %can be made faster with the DFT: P*log(P)/2 only if our domain is the roots of unity.
@@ -313,5 +361,81 @@ c2e(P, Domain, Base) ->
       fun(X) -> eval_c(X, P, Base) end,
       Domain).
 
+test(1) ->    
+    %Ps = [12,24,36,48],
+    Ps = [48,48,48,48],
+    Domain = [1,2,3,4],
+    A = calc_A(Domain, ?order),
+    E = secp256k1:make(),
+    DA = calc_DA(Domain, E),
+%-record(p, {e, b, g, h, q, domain, a, da, ls}).
+    P = {p, E,0,0,0,0,Domain, A, DA, 0},
+    DivEAll = all_div_e_parameters(P),
+
+    M = 2,
+    Z = 5,
+    %Inv = ff:inverse(Z-M, ?order),
+   
+    %Ps(X) / (X-3)
+    Ps2 = div_e(Ps, Domain, DA, M, DivEAll, 0),
+    %Ps3 = div_e(Ps2, Domain, DA, M, DivEAll, 0),
+    Ps3 = lists:zipwith(
+           fun(A, B) ->
+                   ?mul(A, B)
+           end, Ps2, c2e(base_polynomial_c(M, ?order), Domain, ?order)),
+    io:fwrite({Ps2, c2e(base_polynomial_c(M, ?order), Domain, ?order), Ps3}),
+    EP = eval_outside(Z, Ps, Domain, A, DA, ?order),
+    EP2 = eval_outside(Z, Ps3, Domain, A, DA, ?order),%EP(X) / (X-M)
+    EP3 = (EP2 * (Z-M)) rem ?order,
+    [Ps, symetric_view(Ps2, ?order), 
+     symetric_view(Ps3, ?order),
+     ?order,
+     ?order div 2,
+    symetric_view(EP, ?order),
+     symetric_view(EP2, ?order)];
+test(2) -> 
+    Domain = [1,2,3,4],
+    Curve = secp256k1:make(),
+    A = calc_A(Domain, ?order),
+    DA = c2e(calc_DA(Domain, Curve), Domain, ?order),
+    P = {p, Curve,0,0,0,0,Domain, A, DA, 0},
+    C = [1,0,0,0],
+    E = c2e(C, Domain, ?order),
+    Z = 5,
     
+    Result = eval_c(Z, C, ?order),
+    Result2 = eval_outside(Z, E, Domain, A, DA, ?order),
+    Result3 = eval_outside_v(Z, Domain, A, DA, ?order),
+    io:fwrite({symetric_view([ipa:dot(E, Result3), Result, Result2, E], ?order)}),
+    success;
+test(3) -> 
+    E = secp256k1:make(),
+    Base = secp256k1:order(E),
+    Domain = [1,2,3],
+    P1 = base_polynomial_c(2, Base),
+    P2 = base_polynomial_c(3, Base),
+    P3 = mul_c(P1, P2, Base),
     
+    P1 = div_c(P3, P2, Base),
+    P2 = div_c(P3, P1, Base),
+
+    P1b = c2e(P1, Domain, Base), 
+    P2b = c2e(P2, Domain, Base), 
+    P3b = c2e(P3, Domain, Base), 
+    P3b = mul_e(P1b, P2b, Base),
+
+    DAC = calc_DA(Domain, E),
+    DA = c2e(DAC, Domain, Base),
+    %P1b = div_e(P3b, Domain, DA, 3, Base),
+    %P2b = div_e(P3b, Domain, DA, 2, Base),
+    DivEAll = all_div_e_parameters(ok),
+    P1b = div_e(P3b, Domain, DA, 3, DivEAll, 0),
+    P2b = div_e(P3b, Domain, DA, 2, DivEAll, 0),
+
+    PA = calc_A(Domain, Base),
+    P5 = eval_outside(5, P3b, Domain, PA, DA, Base),
+    P5 = eval_c(5, P3, Base),
+    
+    success.
+    
+
