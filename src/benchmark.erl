@@ -25,7 +25,7 @@ doit(1) ->
     verkle_app:start(normal, []),
     CFG = trie:cfg(?ID),
     Loc = 1,
-    Times = 20000,
+    Times = 5000,
     %Times = 3,
     %Many = range(1, min(100, Times)),
     %Many = range(1, Times - 2),
@@ -76,7 +76,7 @@ doit(2) ->
 % {verify,4 350 000}}
     CFG = trie:cfg(?ID),
     Loc = 1,
-    Times = 80000,
+    Times = 20000,
     %Times = 100,
     %Many = range(1, min(100, Times)),
     %Many = range(1, Times - 2),

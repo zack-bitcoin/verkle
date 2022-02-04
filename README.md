@@ -51,9 +51,9 @@ elliptic multiplication is estimated in fq2:test(22). speedup in context of ipa 
 | field multiplication | 6*10^-8 | 1.5*10^-7 | 2.5 |
 | elliptic multiplication | 8*10^-5 | 6*10^-5 | 0.75 |
 | elliptic multiplication fixed base | 1*10^-5 | 2.8*10^-5 | 2.8 |
-| prover time | 5.726 | 9.1 | 1.59 |
-| verify proof | 0.531 | 1.44 | 2.7 |
-| verify updates | 1.09 | 5.5 | 5.05 |
+| prover time | 5.726 | 7.9 | 1.38 |
+| verify proof | 0.531 | 1.45 | 2.7 |
+| verify updates | 1.09 | 3.5 | 3.2 |
 
 
 Benchmark.
