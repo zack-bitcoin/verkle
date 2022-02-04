@@ -1,7 +1,7 @@
 %The purpose of this file is to define stems as a data structure in ram, and give some simple functions to operate on them.
 
 -module(stem2).
--export([test/0,get/2,put/2,type/2,
+-export([test/1,get/2,put/2,type/2,
          hash/1,hash_point/1,
          pointers/1,
 	 types/1,hashes/1,pointer/2,new/5,add/5,
@@ -110,33 +110,63 @@ serialize(S, CFG) ->
            types = T,
            root = Root
          } = S,
-    <<R1:512>> = fq2:extended2affine(Root),
-    X = serialize(P, H, T, Path, 1),
+    <<R1:512>> = fq2:extended2affine(Root),% 2%
+    %<<R1:(256*5)>> = Root,
+    %X = serialize(P, H, T, 1),
+    X = serialize2(tuple_to_list(P), 
+                   tuple_to_list(H), 
+                   tuple_to_list(T), 
+                   []),
     <<R1:512, X/binary>>.
-serialize(_, _, _, _, N) when N>?nwidth -> <<>>;
-serialize(P, H, T, Path, N) -> 
-    P1 = element(N, P),
-    H1 = element(N, H),
-    T1 = element(N, T),
-    D = serialize(P, H, T, Path, N+1),
-    << T1:2, P1:Path, H1/binary, D/bitstring >>.
+    %<<R1:(256*5), X/binary>>.
+%serialize(_, _, _, N) when N>?nwidth -> <<>>;
+%serialize(P, H, T, N) -> 
+%    P1 = element(N, P),
+%    H1 = element(N, H),
+%    T1 = element(N, T),
+%    D = serialize(P, H, T, N+1),
+%    << T1, P1:256, H1/binary, %3.5%
+%       D/binary >>. % 60%
+
+serialize2([], [], [], R) -> 
+    erlang:iolist_to_binary(
+      lists:reverse(R));
+serialize2([P|PT], [H|HT], [T|TT], R) -> 
+    N = <<T, P:256, H/binary>>,
+    serialize2(PT, HT, TT, [N|R]).
+
 deserialize(<<R1:512, B/binary>>, CFG) -> 
+%deserialize(<<R1:(256*5), B/binary>>, CFG) -> 
     X = empty_tuple(),
     %deserialize(1,X,X,cfg:path(CFG)*8,hash:hash_depth()*8,X, B).
     HS = cfg:hash_size(CFG),
-    Y = deserialize(1,X,X,cfg:path(CFG)*8,
-                    HS*8,X, B),
+    %Y = deserialize(1,X,X,X, B), % 50% of store and make_proof.
+    Y = deserialize2([],[],[], B),
     R = fq2:affine2extended(<<R1:512>>),
+    %R = <<R1:(256*5)>>,
             
     Y#stem{root = R}.
-deserialize(?nwidth + 1, T,P,_,_,H, <<>>) -> 
+deserialize(?nwidth + 1, T,P,H, <<>>) -> 
     #stem{types = T, pointers = P, hashes = H};
-deserialize(N, T0,P0,Path,HashDepth,H0,X) when N < (?nwidth + 1) ->
-    <<T:2, P:Path, H:HashDepth, D/bitstring>> = X,
+deserialize(N, T0,P0,H0,X) when N < (?nwidth + 1) ->
+    %<<T:2, P:Path, H:HashDepth, D/bitstring>> = X,
+    <<T, P:256, H:256, D/binary>> = X,
     T1 = setelement(N, T0, T),
     P1 = setelement(N, P0, P),
-    H1 = setelement(N, H0, <<H:HashDepth>>),
-    deserialize(N+1, T1, P1, Path, HashDepth,H1, D).
+    H1 = setelement(N, H0, <<H:256>>),
+    deserialize(N+1, T1, P1, H1, D).
+
+deserialize2(T, P, H, <<>>) ->
+    #stem{types = list_to_tuple(
+                    lists:reverse(T)),
+          pointers = list_to_tuple(
+                       lists:reverse(P)),
+          hashes = list_to_tuple(
+                     lists:reverse(H))};
+deserialize2(TT, PT, HT, 
+             <<T, P:256, H:256, R/binary>>) ->
+    deserialize2([T|TT], [P|PT], [<<H:256>>|HT], R).
+
 empty_hashes(CFG) ->
     %HS = cfg:hash_size(CFG),
     %X = hash:hash_depth()*8,
@@ -153,7 +183,9 @@ hash_point(P) ->
 update(Location, Stem, CFG) ->
     dump:update(Location, serialize(Stem, CFG), ids:stem(CFG)).
 put(Stem, CFG) ->
-    dump:put(serialize(Stem, CFG), ids:stem(CFG)).
+    S = serialize(Stem, CFG),
+    ID = ids:stem(CFG),
+    dump:put(S, ID).
 put_batch(Leaves, CFG) ->
     SL = serialize_stems(Leaves, CFG),
     dump:put_batch(SL, ids:stem(CFG)).
@@ -178,8 +210,12 @@ equal(S, T) ->
            root = R3
           },
     S2 == T2.
+
+range(N, N) -> [N];
+range(A, B) when A < B -> 
+    [A|range(A+1, B)].
     
-test() ->
+test(1) ->
     P = list_to_tuple(many(5, ?nwidth)),
     T = list_to_tuple(many(1, ?nwidth)),
     %P = {6,5,4,3,7,8,9,4,5,3,2,6,7,8,3,4},
@@ -204,5 +240,23 @@ test() ->
     Pointer = stem2:put(Stem2, CFG),
     Stem2b = get(Pointer, CFG),
     true = equal(Stem2b, Stem2),
-    success.
+    success;
+test(2) ->
+    %binary vs bitstring speed.
+    T1 = erlang:timestamp(),
+    Many = 10000,
+    R = range(1, Many),
+    lists:foldl(fun(_, _) ->
+                        <<45:33>>
+                end, 0, R),
+    T2 = erlang:timestamp(),
+    lists:foldl(fun(_, _) ->
+                        <<45:32>>
+                end, 0, R),
+    T3 = erlang:timestamp(),
+    {timer:now_diff(T2, T1),
+     timer:now_diff(T3, T2)}.
+
+    
+
     

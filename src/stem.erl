@@ -99,7 +99,11 @@ serialize(S, CFG) ->
            root = Root
          } = S,
     {R1, R2} = secp256k1:to_affine(Root),
-    X = serialize(P, H, T, Path, 1),
+    %X = serialize(P, H, T, Path, 1),
+    X = serialize2(tuple_to_list(P), 
+                   tuple_to_list(H), 
+                   tuple_to_list(T), 
+                   []),
     <<R1:256, R2:256, X/binary>>.
 serialize(_, _, _, _, N) when N>?nwidth -> <<>>;
 serialize(P, H, T, Path, N) -> 
@@ -107,13 +111,24 @@ serialize(P, H, T, Path, N) ->
     H1 = element(N, H),
     T1 = element(N, T),
     D = serialize(P, H, T, Path, N+1),
-    << T1:2, P1:Path, H1/binary, D/bitstring >>.
+    %<< T1:2, P1:Path, H1/binary, D/bitstring >>.
+    << T1, P1:256, H1/binary, D/binary >>.
+serialize2([], [], [], R) -> 
+    erlang:iolist_to_binary(
+      lists:reverse(R));
+serialize2([P|PT], [H|HT], [T|TT], R) -> 
+    N = <<T, P:256, H/binary>>,
+    serialize2(PT, HT, TT, [N|R]).
+
+
+
 deserialize(<<R1:256, R2:256, B/binary>>, CFG) -> 
     X = empty_tuple(),
     %deserialize(1,X,X,cfg:path(CFG)*8,hash:hash_depth()*8,X, B).
     HS = cfg:hash_size(CFG),
-    Y = deserialize(1,X,X,cfg:path(CFG)*8,
-                    HS*8,X, B),
+    %Y = deserialize(1,X,X,cfg:path(CFG)*8,
+    %                HS*8,X, B),
+    Y = deserialize2([],[],[], B),
     R = 
         case {R1, R2} of
             {0,0} -> secp256k1:jacob_zero();
@@ -124,11 +139,22 @@ deserialize(<<R1:256, R2:256, B/binary>>, CFG) ->
 deserialize(?nwidth + 1, T,P,_,_,H, <<>>) -> 
     #stem{types = T, pointers = P, hashes = H};
 deserialize(N, T0,P0,Path,HashDepth,H0,X) when N < (?nwidth + 1) ->
-    <<T:2, P:Path, H:HashDepth, D/bitstring>> = X,
+    %<<T:2, P:Path, H:HashDepth, D/bitstring>> = X,
+    <<T, P:256, H:HashDepth, D/binary>> = X,
     T1 = setelement(N, T0, T),
     P1 = setelement(N, P0, P),
     H1 = setelement(N, H0, <<H:HashDepth>>),
     deserialize(N+1, T1, P1, Path, HashDepth,H1, D).
+deserialize2(T, P, H, <<>>) ->
+    #stem{types = list_to_tuple(
+                    lists:reverse(T)),
+          pointers = list_to_tuple(
+                       lists:reverse(P)),
+          hashes = list_to_tuple(
+                     lists:reverse(H))};
+deserialize2(TT, PT, HT, 
+             <<T, P:256, H:256, R/binary>>) ->
+    deserialize2([T|TT], [P|PT], [<<H:256>>|HT], R).
 empty_hashes(CFG) ->
     HS = cfg:hash_size(CFG),
     %X = hash:hash_depth()*8,

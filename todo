@@ -1,9 +1,11 @@
 
 
 working on a jubjub implementation, since it will give us private reading and
-* memory leak. possibly in get make multiproof.
-* new benchmark
 * make the jubjub version faster.
+ - when we store a stem, it is doing extended2affine, which computes an inverse. it needs to be batched.
+ - we should first compute the verkle tree in ram. so we can calculate the extended point that is the root of each stem.
+ - use batched method to convert all the roots to affine format.
+ - store all the stems, putting pointers into the correct spots as we go.
 * make a SNARK of a verkle proof.
 
 

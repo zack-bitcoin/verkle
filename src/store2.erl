@@ -79,7 +79,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
                    {P2, Type, Tree} = 
                        batch(Leaves3, P, 
                              T, Depth+1, CFG, MEP),
-                   H2 = hash_thing(%  2.45%
+                   H2 = hash_thing(%  3%
                           P2, Type, Tree, H, CFG),
                    Sub = fr:sub(H2, H),
                    {Sub, H2, P2, Type}
@@ -117,7 +117,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
           types = list_to_tuple(Types2),
           root = NewRoot
          },
-    Loc = stem2:put(NewStem, CFG),
+    Loc = stem2:put(NewStem, CFG), %   %60!!
     {Loc, stem, NewStem}.
 
 range(X, X) -> [X];

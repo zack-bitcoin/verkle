@@ -14,6 +14,7 @@ init(CFG) ->
     process_flag(trap_exit, true),
     %ID = cfg:id(CFG),
     Empty = stem:put(stem:new_empty(CFG), CFG),
+    %Empty = stem2:put(stem2:new_empty(CFG), CFG),
     %CFG2 = CFG#cfg{empty = Empty},
     CFG2 = cfg:set_empty(CFG, Empty),
     {ok, CFG2}.

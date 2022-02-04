@@ -966,6 +966,7 @@ static ERL_NIF_TERM e_double
   e_double2(U, V, Z, T1, T2,
             Ub, Vb, Zb, T1b, T2b);
   //  return enif_make_binary(env, &A);
+  enif_release_binary(&A);
   return(Result);
 }
 static ERL_NIF_TERM e_add

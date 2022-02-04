@@ -3,10 +3,12 @@
 batch/3, index2domain/2, paths2tree/1,
 %get/3, same_end/3, 
 split3parts/4, 
-keys2paths/2, points_values/3, 
+keys2paths/2, 
 withdraw_points/1, withdraw_points2/1,
 test/0]).
 -include("constants.hrl").
+
+-define(pipe, false).
 
 keys2paths(Keys, CFG) ->
     Paths0 = lists:map(
@@ -28,9 +30,9 @@ batch(Keys, Root, CFG) ->
                  %      RootStem0#stem.hashes},
                  hashes = 
                      %binary2int2(
-                     fr:decode(
+                     %fr:decode(
                        tuple_to_list(
-                         RootStem0#stem.hashes))},
+                         RootStem0#stem.hashes)},
     io:fwrite("get keys2paths\n"),
     benchmark:now(),
     Paths0 = keys2paths(Keys, CFG),
@@ -42,12 +44,11 @@ batch(Keys, Root, CFG) ->
     Tree = paths2tree(Paths),
     %Tree example [[1|[[4,3,2], [1,1|[[1], [2]]]]], [2,1,1,1]],
     %list of lists means or. list of integers means and.
-    io:fwrite("get lookup stems and leaves\n"),
+    io:fwrite("get lookup stems and leaves\n"),% 25%
     benchmark:now(),
     %slow. todo
     %[[1,0,0,0],[2,0,0,0]...
     Tree2 = points_values(Tree, RootStem, CFG),
-    %io:fwrite(Tree2),
     %obtains the stems and leaves by reading from the database.
     %[stem, {I, stem}, [{I, leaf}], [{I, stem}, {I, leaf}], [{I, stem}, [{I, leaf}], [{I, leaf}]]]
     %list of things is AND, list of lists is OR.
@@ -59,6 +60,7 @@ batch(Keys, Root, CFG) ->
     benchmark:now(),
     Tree4 = remove_hashes(Tree3),%the hashes in each stem aren't needed to verify the verkle proof, so they are removed.
     %[El, {I, El}, [{I, leaf}], [{I, El}, {I, El}], [{I, El}, [{I, El}], [{I, El}]]]
+
 
     io:fwrite("get flatten\n"),
     benchmark:now(),
@@ -77,19 +79,28 @@ batch(Keys, Root, CFG) ->
     As = As0,
     %io:fwrite({As}),
 
-    io:fwrite("get make multiproof\n"),
+    io:fwrite("get make multiproof\n"),% 8%
     benchmark:now(),
     %the slow step.
+    io:fwrite("param 0\n"),% 8%
     {Gs, Hs, Q} = parameters2:read(),
+    io:fwrite("param 1\n"),% 8%
     DA = parameters2:da(),
+    io:fwrite("param 2\n"),% 8%
     PA = parameters2:a(),
+    io:fwrite("param 3\n"),% 8%
     Domain = parameters2:domain(),
+    io:fwrite("param done\n"),% 8%
+    %io:fwrite({As}),
+    %FAs = fr:encode(As),%crashes here.
+    FAs = As,
+    io:fwrite("Fas done\n"),% 8%
+    FZs = fr:encode(Zs),
+    io:fwrite("Fzs done\n"),% 8%
     {CommitG, Opening} = 
         multiproof2:prove(
-          fr:encode(As), 
-          %As,
-          fr:encode(Zs), Commits,
-         Gs, Hs, Q, DA, PA, Domain),%this is the slow step.
+          FAs, FZs, Commits,
+         Gs, Hs, Q, DA, PA, Domain),
     io:fwrite("get done\n"),
     benchmark:now(),
 
@@ -109,11 +120,11 @@ batch(Keys, Root, CFG) ->
 
     {Tree4, CommitG, Opening}.
    
-binary2int([]) -> [];
-binary2int([H|T]) ->
-    L = tuple_to_list(H),
-    L2 = fr:decode(L),
-    [L2|binary2int(T)].
+%binary2int([]) -> [];
+%binary2int([H|T]) ->
+%    L = tuple_to_list(H),
+%    L2 = fr:decode(L),
+%    [L2|binary2int(T)].
 %binary2int2([]) -> [];
 %binary2int2([<<H:256>>|T]) -> 
 %    [H|binary2int2(T)].
@@ -183,11 +194,11 @@ flatten({Index, S = #stem{}}, T) ->
     %H = binary2int2(tuple_to_list(S#stem.hashes)),
     
     [{Index, S#stem.root, H}|T];
-flatten(X = {_Index, _Point, _Hashes}, T) -> [X|T];
 flatten([H|T], R) -> 
     R2 = flatten(H, []),
     flatten(T, R ++ R2);
 flatten(_, R) -> R.
+
     
 
 split3parts([], A, B, C) -> {A, B, C};
@@ -241,9 +252,9 @@ points_values([<<Loc:?nindex>>|R], Root, CFG) ->
             S = S0#stem{
                   %hashes= fr:decode(S0#stem.hashes)
                   %hashes = binary2int2(
-                  hashes = fr:decode(
+                  hashes = %fr:decode(
                              tuple_to_list(
-                               S0#stem.hashes))
+                               S0#stem.hashes)%)
                  },
             [V|points_values(R, S, CFG)];
         2 -> %leaf

@@ -1,6 +1,7 @@
 -module(multiproof2).
 -export([prove/9, verify/4, test/1]).
 
+-define(sanity_checks, false).
 
 %G is the most important calculation of the multiproof.
     %sum i: r^i * (As_i(t)-Y_i)/(t-z_i)
@@ -124,7 +125,6 @@ prove(As, %committed data
       Commits_e, Gs, Hs, Q, DA, PA, Domain) ->
 
     %todo. instead of accepting the entire list of As, we should receive a tree structure that allows us to stream the As. that way the memory requirement doesn't get so big.
-
     io:fwrite("multiprove Ys from As \n"),
     benchmark:now(),
     Ys0 = lists:zipwith(
@@ -187,35 +187,15 @@ prove(As, %committed data
     %spend a little time here.
     IPA = ipa2:make_ipa(NG2, EV, 
                        Gs, Hs, Q),
-
-    %sanity check
-    %true = (element(2, IPA) == 
-    %            ipa2:dot(NG2, EV)),
-
-    %H_val = poly2:eval_outside(T, He, Domain, PA, DA),
-    %G_val = poly2:eval_outside(T, G, Domain, PA, DA),
-    %NG2_val = poly2:eval_outside(T, NG2, Domain, PA, DA),
-
-    %NG2_val = fr:add(G_val, fr:neg(H_val)),
-    %G_val = fr:add(H_val, NG2_val), %G = G1 - G2
-    
-    %sanity check
-    %{_RIDs, G2b} = 
-    %    calc_G2_2(R, T, Ys, Zs),
-   
-    %io:fwrite({fr:decode([NG2_val, fr:neg(G2b)]), 
-    %           fr:prime()}),
- 
-    %io:fwrite({H_val, G2_val, element(2, IPA), NG2_val, G2b, fr:add(G2b, NG2_val)}),
-
-    %G2b =  %sum_i:  r^i * y_i / (t - z_i)
-    %G2_val = G2(T) = calc_G(R, As, Ys, Zs)(T)
-    % = sum_i: r^i As_i(X)/(x-z_i)
-
-
-    %true = (fr:encode(0) == 
-    %            fr:add(G2b, element(2, IPA))),
-
+    if
+        ?sanity_checks ->
+            {_RIDs, G2b} = 
+                calc_G2_2(R, T, Ys, Zs),
+            true = (fr:encode(0) 
+                    == fr:add(G2b, element(
+                                     2, IPA)));
+        true -> ok
+    end,
     io:fwrite("multiprove finished\n"),
     benchmark:now(),
     {CommitG_e, 
