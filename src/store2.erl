@@ -100,7 +100,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
                end, Types20),
     %4.59
 
-    % 30.5%
+    % 51%
     EllDiff = precomputed_multi_exponent(Rs, MEP),
 
     % 3.6%

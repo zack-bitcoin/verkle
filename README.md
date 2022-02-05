@@ -51,9 +51,9 @@ elliptic multiplication is estimated in fq2:test(22). speedup in context of ipa 
 | field multiplication | 6*10^-8 | 1.5*10^-7 | 2.5 |
 | elliptic multiplication | 8*10^-5 | 6*10^-5 | 0.75 |
 | elliptic multiplication fixed base | 1*10^-5 | 2.8*10^-5 | 2.8 |
-| prover time | 5.726 | 7.9 | 1.38 |
-| verify proof | 0.531 | 1.45 | 2.7 |
-| verify updates | 1.09 | 3.5 | 3.2 |
+| prover time | 5.726 | 6.2 | 1.08 |
+| verify proof | 0.731 | 1.1 | 1.50 |
+| verify updates | 1.09 | 1.6225 | 1.49 |
 
 
 Benchmark.
@@ -61,11 +61,11 @@ Benchmark.
 
 I loaded 5000 elements into the database. I made a proof of all 5000 of them, and then verified that proof.
 
-Loading took 2.6 seconds.
+Loading took 1.6 seconds.
 
-Making the proof with 1 cpu took 2.4 seconds.
+Making the proof with 1 cpu took 2.0 seconds.
 
-Verifying took 0.41 seconds.
+Verifying took 0.38 seconds.
 
 to run the secp256k1 benchmark `benchmark:doit(1).`
 to run the jubjub benchmark `benchmark:doit(2).`
@@ -76,27 +76,27 @@ time is measured in millionths of a second. 6 decimals.
 
 benchmark of 20k elements. (it takes 5.5 seconds to load a normal merkle tree with this many elements)
 
-loading: 11.3 
+loading: 10.5
 
-making proof: 11.8 
+making proof: 8.4
 
-verifying: 2.2
+verifying: 1.6
 
 40k
 
-loading: 42
+loading: 35
 
-proving: 24
+proving: 20
 
-verifying: 5.0
+verifying: 4.2
 
 80k
 
-loading: 99
+loading: 88
 
-proving: 51
+proving: 47
 
-verifying: 14.3
+verifying: 12.1
 
 It is also possible to run the database in RAM instead of the hard drive, but it doesn't seem to make it any faster. The bottleneck is on CPU computation of the cryptography, not on accessing memory.
 
