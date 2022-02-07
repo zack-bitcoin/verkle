@@ -13,10 +13,10 @@
 init(CFG) ->
     process_flag(trap_exit, true),
     %ID = cfg:id(CFG),
+    Empty2 = stem2:put(stem2:new_empty(CFG), CFG),
     Empty = stem:put(stem:new_empty(CFG), CFG),
-    %Empty = stem2:put(stem2:new_empty(CFG), CFG),
     %CFG2 = CFG#cfg{empty = Empty},
-    CFG2 = cfg:set_empty(CFG, Empty),
+    CFG2 = cfg:set_empty(CFG, Empty2),
     {ok, CFG2}.
 start_link(CFG) -> %keylength, or M is the size outputed by hash:doit(_). 
     gen_server:start_link({global, ids:main(CFG)}, ?MODULE, CFG, []).

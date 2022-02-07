@@ -61,11 +61,11 @@ Benchmark.
 
 I loaded 5000 elements into the database. I made a proof of all 5000 of them, and then verified that proof.
 
-Loading took 1.6 seconds.
+Loading the data took 1.8 seconds.
 
-Making the proof with 1 cpu took 2.0 seconds.
+Making the proof with 1 cpu took 2.2 seconds.
 
-Verifying took 0.38 seconds.
+Verifying took 0.48 seconds.
 
 to run the secp256k1 benchmark `benchmark:doit(1).`
 to run the jubjub benchmark `benchmark:doit(2).`
@@ -80,7 +80,7 @@ loading: 10.5
 
 making proof: 8.4
 
-verifying: 1.6
+verifying: 1.8
 
 40k
 

@@ -24,7 +24,7 @@ doit(1) ->
 
     verkle_app:start(normal, []),
     CFG = trie:cfg(?ID),
-    Loc = 1,
+    Loc = 2,
     Times = 5000,
     %Times = 3,
     %Many = range(1, min(100, Times)),
@@ -69,6 +69,11 @@ doit(1) ->
      {make_proof, 
       timer:now_diff(T3, T2)},
      {verify, timer:now_diff(T4, T3)}};
+
+%many, go,    erl,   erl ordered
+%1000  0.050  0.7   0.7
+%10k   0.475  3.51   1.63
+
 doit(2) ->
     %jubjub version
 %{{load_tree,53 830 000},
@@ -76,10 +81,10 @@ doit(2) ->
 % {verify,4 350 000}}
     CFG = trie:cfg(?ID),
     Loc = 1,
-    Times = 80000,
+    Times = 20000,
     %Times = 100,
     %Many = range(1, min(100, Times)),
-    %Many = range(1, Times - 2),
+    %Many = range(, Times - 2),
     %Many = [1,2],
     io:fwrite("making leaves\n"),
     Leaves = 
@@ -111,6 +116,9 @@ doit(2) ->
     T3 = erlang:timestamp(),
     io:fwrite("verify proof\n"),
     Root = stem2:root(stem2:get(NewLoc, CFG)),
+%    io:fwrite({NewLoc, 
+%               stem2:get(NewLoc, CFG),
+%               base64:encode(Root)}),
     {true, Leaves2} = 
         verify2:proof(Root, Proof, CFG),
     T4 = erlang:timestamp(),

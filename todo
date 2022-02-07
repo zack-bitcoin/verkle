@@ -1,3 +1,8 @@
+jubjub version isn't working. after doing a batch update, the root stem is still empty.
+
+
+
+
 looking at the EIP calculate for dankrad, it seems like during the verification process we should be using store2:multi_exponent on each node of the verkle proof, to verify that it was constructed correctly.
 
 

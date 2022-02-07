@@ -72,7 +72,6 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
                         element(I, Pointers),
                         element(I, Types)}
              end, range(1, size(Hashes))),
-    %maybe we can't zip over batch here if batch is returning the entire stem and leaf. because this ends up filling the ram with all the stems and leaves we will be writing. consider streaming the rest of the function into this zipwith.
     %io:fwrite({HPT1, Leaves2}),
     RHPT = lists:zipwith(
            fun(Leaves3, {H, P, T}) -> 
@@ -105,6 +104,10 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
 
     % 3.6%
     NewRoot = fq2:e_add(EllDiff, Root),
+    NewRoot2 = fq2:e_add(Root, EllDiff),
+    true = fq2:eq(NewRoot, NewRoot2),
+    <<HP:256>> = fq2:hash_point(NewRoot),
+    %io:fwrite({size(EllDiff), size(Root), fq2:decode_extended(NewRoot)}),
     %clumping is 6%
     %hashing is 2.45%
     %reading + writing is ???
@@ -117,7 +120,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
           types = list_to_tuple(Types2),
           root = NewRoot
          },
-    Loc = stem2:put(NewStem, CFG), %   %60!!
+    Loc = stem2:put(NewStem, CFG), 
     {Loc, stem, NewStem}.
 
 range(X, X) -> [X];

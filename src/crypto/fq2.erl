@@ -864,8 +864,12 @@ test(26) ->
     true = is_zero(Z1),
     true = is_zero(Z2),
     true = is_zero(Z3),
-
-    true = is_zero(e_mul2(fr:encode(0), extended2extended_niels(gen_point()))),
+    true = is_zero(extended2extended_niels(Z0)),
+    true = is_zero(extended2extended_niels(Z1)),
+    true = is_zero(extended2extended_niels(Z2)),
+    true = is_zero(extended2extended_niels(Z3)),
+    
+    true = is_zero(e_mul2(extended2extended_niels(gen_point()), fr:encode(0))),
 
     success;
 test(27) ->
@@ -895,5 +899,25 @@ test(28) ->
     HE = extended2extended_niels(H),
     R1 = e_add(G, H),
     R2 = e_add(G, HE),
-    eq(R1, R2).
+    eq(R1, R2);
+test(29) ->
+    io:fwrite("testing e_add error that returns a broken point.\n"),
+    G = gen_point(),
+    Z = e_zero(),
+    Z1 = extended_niels2extended(
+           extended2extended_niels(Z)),
+    Bad = encode_extended(%this is the bad point.
+           {extended_point, 0,0,1,0,0}),
+    {
+      decode_extended(Z1),
+      decode_extended(e_mul2(G, fr:encode(0))),
+
+      decode_extended(e_add(G, Bad)),
+      decode_extended_niels(
+        extended2extended_niels(Bad)),
+      decode_extended(
+        extended_niels2extended(
+          extended2extended_niels(Bad))),
+      decode_extended(e_add(G, extended2extended_niels(Bad)))
+    }.
 
