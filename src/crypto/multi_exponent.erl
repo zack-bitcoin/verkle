@@ -44,8 +44,8 @@ simple_exponent(
   Acc) -> %encoded point
     %e_add(extended, eniels)
     %e_mul_long(eniels, exponent)%exponent is a 256 bit little endian number in binary.
-    A2 = fq2:e_add(fq2:e_mul2(G, R), Acc),
-    %A2 = fq2:e_add(fq2:e_mul_long(G, (R)), Acc2),
+    A2 = fq:e_add(fq:e_mul2(G, R), Acc),
+    %A2 = fq:e_add(fq:e_mul_long(G, (R)), Acc2),
     simple_exponent(RT, GT, A2).
 
 doit(
@@ -58,8 +58,8 @@ doit(
         length(Rs1) < 2 ->
         %true ->
             simple_exponent(
-              Rs1, Gs, fq2:e_zero());
-              %Rs0, Gs0, fq2:e_zero());
+              Rs1, Gs, fq:e_zero());
+              %Rs0, Gs0, fq:e_zero());
         true ->
             multi_exponent2(Rs1, Gs)
     end.
@@ -70,7 +70,7 @@ bucketify([], BucketsETS, [], ManyBuckets) ->
           fun(N) ->
                   X = ets:lookup(BucketsETS, N),
                   case X of
-                      [] -> fq2:e_zero();
+                      [] -> fq:e_zero();
                       [{_, Y}] -> Y
                   end
           end, range(1, ManyBuckets)),
@@ -98,10 +98,10 @@ bucketify([BucketNumber|T], BucketsETS,
                 case G of
                     <<_:(256*5)>> -> G;
                     _ ->
-                        fq2:extended_niels2extended(G)
+                        fq:extended_niels2extended(G)
                 end;
             %[] -> G;
-            [{_, X}] -> fq2:e_add(X, G)
+            [{_, X}] -> fq:e_add(X, G)
         end,
 
 %todo, instead of adding here, we should build up a list. so we can do efficient addition later with simplified format numbers. this can potentially make it twice as fast. This was tried, and it made it slower. but it still seems possible.
@@ -118,16 +118,16 @@ bucketify2([S|R], L, T) ->
     %compute starting at the end. S7 + (S7 + S6) + (S7 + S6 + S5) ...
     %todo. maybe simplify, multiply, simplify and add? something like that should be faster if there are lots of buckets.
     %L2 = jacob_add(S, L, E),
-    %B = fq2:is_zero(S),
-    %B2 = fq2:is_zero(L),
-    L2 = fq2:e_add(L, S),
-    T2 = fq2:e_add(L2, T),
+    %B = fq:is_zero(S),
+    %B2 = fq:is_zero(L),
+    L2 = fq:e_add(L, S),
+    T2 = fq:e_add(L2, T),
     bucketify2(R, L2, T2).
 
 
 
 multi_exponent2([], []) ->
-    fq2:e_zero();
+    fq:e_zero();
 multi_exponent2(Rs0, Gs) 
   when is_binary(hd(Rs0)) ->
     Rs = lists:map(fun(X) -> fr:decode(X) end, 
@@ -162,162 +162,162 @@ multi_exponent2(Rs, Gs) ->
                    ets:delete(BucketsETS),
                    Result
            end, Ts),
-    me3(Ss, fq2:e_zero(), 
+    me3(Ss, fq:e_zero(), 
         %fr:reverse_bytes(<<F:256>>)).
         fr:encode(F)).
 me3([H], A, _) -> 
-    fq2:e_add(H, A);
+    fq:e_add(H, A);
 me3([H|T], A, F) -> 
-    X = fq2:e_add(A, H),
-    X2 = fq2:e_mul2(X, F),
+    X = fq:e_add(A, H),
+    X2 = fq:e_mul2(X, F),
     me3(T, X2, F).
 
 
 test(0) ->
     G = ipa2:gen_point(0),
-    EG = fq2:extended_niels2extended(G),
-     A = fq2:e_add(EG, G),
-     A2 = fq2:e_mul2(G, fr:encode(2)),
-    B = fq2:e_add(A, G),
-     B2 = fq2:e_mul2(G, fr:encode(3)),
+    EG = fq:extended_niels2extended(G),
+     A = fq:e_add(EG, G),
+     A2 = fq:e_mul2(G, fr:encode(2)),
+    B = fq:e_add(A, G),
+     B2 = fq:e_mul2(G, fr:encode(3)),
     {
-      fq2:eq(EG, 
+      fq:eq(EG, 
            multi_exponent2([fr:encode(1)], [G])),
-      fq2:eq(EG, 
+      fq:eq(EG, 
            multi_exponent2(
              [fr:encode(1), fr:encode(0)], 
              [G, G])),
-     fq2:eq(multi_exponent2(
+     fq:eq(multi_exponent2(
               [fr:encode(1), fr:encode(1)], 
               [G, G]),
-            fq2:e_mul2(G, fr:encode(2))),
-     fq2:eq(multi_exponent2([fr:encode(2)], 
+            fq:e_mul2(G, fr:encode(2))),
+     fq:eq(multi_exponent2([fr:encode(2)], 
                  [G]),
-            fq2:e_mul2(G, fr:encode(2))),
-      fq2:eq(multi_exponent2(
+            fq:e_mul2(G, fr:encode(2))),
+      fq:eq(multi_exponent2(
                [fr:encode(1), fr:encode(1)], 
                [G, G]), 
-            fq2:e_mul2(G, fr:encode(2))),
-      fq2:eq(multi_exponent2(
+            fq:e_mul2(G, fr:encode(2))),
+      fq:eq(multi_exponent2(
                [fr:encode(2)], 
                [G]), 
-             fq2:e_mul2(G, fr:encode(2))),
-      fq2:eq(multi_exponent2(
+             fq:e_mul2(G, fr:encode(2))),
+      fq:eq(multi_exponent2(
                [fr:encode(4)], 
                [G]), 
-             fq2:e_mul2(G, fr:encode(4))),
-      fq2:eq(doit(
+             fq:e_mul2(G, fr:encode(4))),
+      fq:eq(doit(
                [fr:encode(1), fr:encode(4)], 
                [G, G]), 
-             fq2:e_mul2(G, fr:encode(5)))
+             fq:e_mul2(G, fr:encode(5)))
      %doit([fr:encode(2)], [G]),
-     %fq2:e_mul1(G, fr:reverse_bytes(<<2:256>>)),
+     %fq:e_mul1(G, fr:reverse_bytes(<<2:256>>)),
      %A2, B2
-    % fq2:eq(A, A2),
-    % fq2:eq(B, B2),
-    % fq2:eq(fq2:e_double(B), 
-    %        fq2:e_mul2(G, fr:encode(6)))
+    % fq:eq(A, A2),
+    % fq:eq(B, B2),
+    % fq:eq(fq:e_double(B), 
+    %        fq:e_mul2(G, fr:encode(6)))
      %doit([fr:encode(1), fr:encode(1)], [G, G])
     };
 test(1) ->
     %testing bucketify3. (S7*7 + S6*6 + S5*5 + ...)
     ENiels = ipa2:gen_point(0),
-    Extended = fq2:extended_niels2extended(ENiels),
-    Zero = fq2:e_zero(),
-    NielsZero = fq2:extended2extended_niels(Zero),
+    Extended = fq:extended_niels2extended(ENiels),
+    Zero = fq:e_zero(),
+    NielsZero = fq:extended2extended_niels(Zero),
     L = [Extended, Zero],%[S2, S1]
-    fq2:eq(bucketify3([Extended, Zero]),
-           fq2:e_mul2(ENiels, fr:encode(2))
+    fq:eq(bucketify3([Extended, Zero]),
+           fq:e_mul2(ENiels, fr:encode(2))
           );
 test(2) ->
     %testing addition orders
     ENiels1 = ipa2:gen_point(0),
     ENiels2 = ipa2:gen_point(0),
-    ZeroNiels = fq2:extended2extended_niels(fq2:e_zero()),
+    ZeroNiels = fq:extended2extended_niels(fq:e_zero()),
     Extended1 = 
-        fq2:extended_niels2extended(ENiels1),
+        fq:extended_niels2extended(ENiels1),
     Extended2 = 
-        fq2:extended_niels2extended(ENiels2),
+        fq:extended_niels2extended(ENiels2),
     ZeroPlus = 
-      fq2:e_add(fq2:e_zero(), 
+      fq:e_add(fq:e_zero(), 
                 ZeroNiels),
     ZeroMul = 
-        fq2:e_mul2(ZeroNiels,
+        fq:e_mul2(ZeroNiels,
                    fr:encode(27)),
     
     {
       % a + b = b + a
-      fq2:eq(fq2:e_add(Extended1, ENiels2),
-            fq2:e_add(Extended2, ENiels1)),
+      fq:eq(fq:e_add(Extended1, ENiels2),
+            fq:e_add(Extended2, ENiels1)),
      % 0 + 0 = 0
-     fq2:eq(fq2:e_zero(), 
-            fq2:e_add(fq2:e_zero(), 
+     fq:eq(fq:e_zero(), 
+            fq:e_add(fq:e_zero(), 
                       ZeroNiels)),
      % 0 * 27 = 0
-     fq2:eq(fq2:e_zero(), 
-            fq2:e_mul2(ZeroNiels,
+     fq:eq(fq:e_zero(), 
+            fq:e_mul2(ZeroNiels,
                        fr:encode(27))),
       %can niels encode the default version of zero.
-      fq2:eq(fq2:e_zero(),
-             fq2:extended_niels2extended(fq2:extended2extended_niels(fq2:e_zero()))),
+      fq:eq(fq:e_zero(),
+             fq:extended_niels2extended(fq:extended2extended_niels(fq:e_zero()))),
       %cannot niel encode other versions of zero.
-      fq2:is_zero(ZeroPlus),
-      fq2:is_zero(
-             fq2:extended_niels2extended(fq2:extended2extended_niels(ZeroPlus)))
+      fq:is_zero(ZeroPlus),
+      fq:is_zero(
+             fq:extended_niels2extended(fq:extended2extended_niels(ZeroPlus)))
     };
 test(3) ->
     G = ipa2:gen_point(0),
-    EG = fq2:extended_niels2extended(G),
+    EG = fq:extended_niels2extended(G),
     F = fr:encode(4),
     R = multi_exponent2([F], 
                         [G]),
     {
-      fq2:e_double(fq2:e_double(EG)),
-      fq2:e_mul2(G, F),
-      fq2:e_mul2(fq2:extended2extended_niels(EG), 
+      fq:e_double(fq:e_double(EG)),
+      fq:e_mul2(G, F),
+      fq:e_mul2(fq:extended2extended_niels(EG), 
                  F),
       R,
-      fq2:eq(R,
-             fq2:e_mul2(G, F))
+      fq:eq(R,
+             fq:e_mul2(G, F))
     };
 test(4) ->
     N = ipa2:gen_point(0),
-    E0 = fq2:extended_niels2extended(N),
-    Nb = fq2:extended2extended_niels(E0),
-    E0b = fq2:extended_niels2extended(Nb),
+    E0 = fq:extended_niels2extended(N),
+    Nb = fq:extended2extended_niels(E0),
+    E0b = fq:extended_niels2extended(Nb),
 
-    E = fq2:e_mul2(N, fr:encode(2)),
-    N2 = fq2:extended2extended_niels(E),
-    Eb = fq2:extended_niels2extended(N2),
-    N2b = fq2:extended2extended_niels(Eb),
+    E = fq:e_mul2(N, fr:encode(2)),
+    N2 = fq:extended2extended_niels(E),
+    Eb = fq:extended_niels2extended(N2),
+    N2b = fq:extended2extended_niels(Eb),
 
-    E2 = fq2:e_mul2(N2, fr:encode(2)),
-    E4 = fq2:e_mul2(N, fr:encode(4)),
-    DD = fq2:e_double(fq2:e_double(E0)),
+    E2 = fq:e_mul2(N2, fr:encode(2)),
+    E4 = fq:e_mul2(N, fr:encode(4)),
+    DD = fq:e_double(fq:e_double(E0)),
 
 
 
     {
-      fq2:eq(E0, E0b),%false.
-      fq2:eq(E, Eb),%false.
-      fq2:eq(E, fq2:e_double(E0)),%true
+      fq:eq(E0, E0b),%false.
+      fq:eq(E, Eb),%false.
+      fq:eq(E, fq:e_double(E0)),%true
 
-      fq2:eq(E2, E4),%false
-      fq2:eq(E2, DD),%false
-      fq2:eq(DD, E4)%true
+      fq:eq(E2, E4),%false
+      fq:eq(E2, DD),%false
+      fq:eq(DD, E4)%true
     };
 test(5) ->
     G = ipa2:gen_point(0),
-    fq2:eq(multi_exponent2(
+    fq:eq(multi_exponent2(
              [fr:encode(4)], 
              [G]), 
-           fq2:e_mul2(G, fr:encode(4)));
+           fq:e_mul2(G, fr:encode(4)));
 test(6) ->
     G = ipa2:gen_point(0),
     H = ipa2:gen_point(0),
     B = [fr:encode(4), fr:encode(5)],
-    fq2:eq(multi_exponent2(B, [G, H]),
+    fq:eq(multi_exponent2(B, [G, H]),
            simple_exponent(B, [G, H], 
-                          fq2:e_zero())).
+                          fq:e_zero())).
     
 

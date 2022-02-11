@@ -146,7 +146,7 @@ prove(As, %committed data
     io:fwrite("multiprove calc random R\n"),% 4%
     benchmark:now(),
     AffineCommits = 
-        fq2:to_affine_batch(
+        fq:to_affine_batch(
           Commits_e),
     R = calc_R(AffineCommits, Zs, Ys, <<>>),
     %R = fr:encode(1),%todo!!
@@ -164,7 +164,7 @@ prove(As, %committed data
     CommitG_e = ipa2:commit(G, Gs),
     io:fwrite("multiprove calc random T\n"),
     benchmark:now(),
-    T = calc_T(fq2:extended2affine(CommitG_e), R),
+    T = calc_T(fq:extended2affine(CommitG_e), R),
     %T = fr:encode(5),%todo!!!
     %io:fwrite("multiprove 6\n"),
     %spend very little time here.
@@ -210,7 +210,7 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     benchmark:now(),
     T1 = erlang:timestamp(),
     [ACG|AffineCommits] = 
-        fq2:to_affine_batch(
+        fq:to_affine_batch(
           [CommitG|Commits]),
     T2 = erlang:timestamp(),
 %    io:fwrite({hd(AffineCommits), hd(Zs),
@@ -252,7 +252,7 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     CommitE = 
         multi_exponent:doit(
           RIDs, Commits),%this is the slowest step.
-    CommitNegE = fq2:e_neg(CommitE),
+    CommitNegE = fq:e_neg(CommitE),
     %true = secp256k1:jacob_equal(CommitNegE, CommitNegE2, E),
     T7 = erlang:timestamp(),
     
@@ -260,7 +260,7 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     io:fwrite("multiproof verify commit G-E\n"),
     benchmark:now(),
     CommitG_sub_E = 
-        fq2:e_add(CommitG, CommitNegE),
+        fq:e_add(CommitG, CommitNegE),
     T8 = erlang:timestamp(),
     io:fwrite("multiproof verify ipa eq\n"),
     benchmark:now(),
@@ -366,7 +366,7 @@ test(3) ->
       fun(A) ->
               Commit1
       end, As),
-    Commits = fq2:e_simplify_batch(Commits0),
+    Commits = fq:e_simplify_batch(Commits0),
     %io:fwrite({fr:decode(A)}),
     io:fwrite("location 5 "),
     io:fwrite(integer_to_list(fr:decode(poly2:eval_outside(fr:encode(5), A, Domain, PA, DA)))),
@@ -423,7 +423,7 @@ test(7) ->
       end, As),
     %Commits = secp256k1:simplify_Zs_batch(
     %            Commits0),
-    Commits = fq2:e_simplify_batch(Commits0),
+    Commits = fq:e_simplify_batch(Commits0),
     io:fwrite("make proof\n"),
     T1 = erlang:timestamp(),
     {Gs, Hs, Q} = parameters2:read(),

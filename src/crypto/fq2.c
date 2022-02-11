@@ -21,7 +21,7 @@ const uint64_t i2[4] =
    869855177390326455U};
 
 
-//<<A:64, B:64, C:64, D:64>> = fq2:reverse_bytes(fq2:encode(1)).
+//<<A:64, B:64, C:64, D:64>> = fq:reverse_bytes(fq:encode(1)).
 //{D, C, B, A}.
 const uint64_t one[4] =
 {8589934590U,
@@ -1061,4 +1061,4 @@ static ErlNifFunc nif_funcs[] =
    {"ctest", 1, ctest}
   };
 
-ERL_NIF_INIT(fq2,nif_funcs,NULL,NULL,NULL,NULL)
+ERL_NIF_INIT(fq,nif_funcs,NULL,NULL,NULL,NULL)

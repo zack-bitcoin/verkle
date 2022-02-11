@@ -1,4 +1,4 @@
--module(fq2).
+-module(fq).
 -export([
          mul/2, 
          add/2, 
@@ -546,7 +546,7 @@ test(8) ->
     %erl sub
     lists:foldl(fun({X, Y}, _) ->
                       if
-                          X > Y -> X - Y;
+                          (X >= Y) -> X - Y;
                           true -> ?q - Y + X
                       end,
                         0
@@ -557,15 +557,17 @@ test(8) ->
                         sub(X, Y)
                 end, 0, R2),
     T5 = erlang:timestamp(),
+    %erl add
     lists:foldl(fun({X, Y}, _) ->
                       C = X+Y,
                       if
-                          C > ?q -> C - ?q;
+                          (C > ?q) -> C - ?q;
                           true -> C
                       end,
                         0
                 end, 0, R),
     T6 = erlang:timestamp(),
+    %c add
     lists:foldl(fun({X, Y}, _) ->
                   add(X, Y),
                   0

@@ -52,7 +52,7 @@ commit(V, G) ->
     multi_exponent:doit(V, G).
 
 add(A = <<_:(256*5)>>, B) ->
-    fq2:e_add(A, B).
+    fq:e_add(A, B).
 
 mul(X, G) ->
     mul2(X, G).
@@ -64,7 +64,7 @@ mul2(X, G) ->
 %    true = is_binary(G),
 %    true = (((32*4) == size(G)) or
 %            ((32*5) == size(G))),
-    fq2:e_mul2(G, X).
+    fq:e_mul2(G, X).
 mul1(X, G) ->
     %multiply point G by scalar X.
     %X is a little endian integer.
@@ -72,10 +72,10 @@ mul1(X, G) ->
     true = 32 == size(X),
     true = is_binary(G),
     true = (32*4) == size(G),
-    fq2:e_mul1(G, X).
+    fq:e_mul1(G, X).
 eq(G, H) ->
     %secp256k1:jacob_equal(G, H, E).
-    fq2:eq(G, H).
+    fq:eq(G, H).
 v_add(As, Bs) ->
     lists:zipwith(
       fun(A, B) ->
@@ -93,11 +93,11 @@ v_mul(A, Bs) ->
 simplify_v(X) ->
     %simplifies jacobian points to make the denomenator of the projective points Z = 1.
     %secp256k1:simplify_Zs_batch(X).
-    %fq2:e_simplify_batch(X).
-    fq2:e_simplify_batch(X).
+    %fq:e_simplify_batch(X).
+    fq:e_simplify_batch(X).
 
 points_to_entropy(L) ->
-    lists:map(fun(X) -> fq2:hash_point(X) end,
+    lists:map(fun(X) -> fq:hash_point(X) end,
               L).
 
 %    L2 = simplify_v(L),
@@ -132,21 +132,21 @@ make_ipa2(C1, [A], [G], [B], [H], Q, Cs, _, _) ->
                          mul(B, H)),
                      mul(fr:mul(A, B), Q)),
             %io:fwrite("last C1\n"),
-            %io:fwrite(base64:encode(fq2:extended2affine(C1))),
+            %io:fwrite(base64:encode(fq:extended2affine(C1))),
             %io:fwrite("\n"),
             %io:fwrite("last C2\n"),
-            %io:fwrite(base64:encode(fq2:extended2affine(C2))),
+            %io:fwrite(base64:encode(fq:extended2affine(C2))),
             %io:fwrite("\n"),
             io:fwrite("B is: "),
             io:fwrite(integer_to_list(fr:decode(B))),
             io:fwrite("\n"),
-            Bool = fq2:eq(C1, C2),
+            Bool = fq:eq(C1, C2),
             if
                 not(Bool) ->
                     io:fwrite("sanity check\n"),
-                    io:fwrite(base64:encode(fq2:extended2affine(C1))),
+                    io:fwrite(base64:encode(fq:extended2affine(C1))),
                     io:fwrite("\n"),
-                    io:fwrite(base64:encode(fq2:extended2affine(C2))),
+                    io:fwrite(base64:encode(fq:extended2affine(C2))),
                     io:fwrite("\n"),
                     1=2;
                 true -> 
@@ -161,13 +161,13 @@ make_ipa2(C1, A, G, B, H, Q, Cs, X, Xi)  ->
             C1b =  add(add(commit(A, G), 
                           commit(B, H)),
                       mul(dot(A, B), Q)),
-            Bool = fq2:eq(C1, C1b),
+            Bool = fq:eq(C1, C1b),
             if
                 not(Bool) ->
                     io:fwrite("sanity check\n"),
-                    io:fwrite(base64:encode(fq2:extended2affine(C1))),
+                    io:fwrite(base64:encode(fq:extended2affine(C1))),
                     io:fwrite("\n"),
-                    io:fwrite(base64:encode(fq2:extended2affine(C1b))),
+                    io:fwrite(base64:encode(fq:extended2affine(C1b))),
                     io:fwrite("\n"),
                     1=2;
                 true -> 
@@ -206,8 +206,8 @@ make_ipa2(C1, A, G, B, H, Q, Cs, X, Xi)  ->
     H20 = v_add(v_mul(X, Hr), Hl),
     %G20 = v_add(simplify_v(v_mul(Xi, Gr)), Gl),
     %H20 = v_add(simplify_v(v_mul(X, Hr)), Hl),
-    G2 = fq2:extended2extended_niels(G20),
-    H2 = fq2:extended2extended_niels(H20),
+    G2 = fq:extended2extended_niels(G20),
+    H2 = fq:extended2extended_niels(H20),
                
     make_ipa2(C2, A2, G2, B2, 
               H2, Q, [Cl, Cr|Cs], X, Xi).
@@ -232,7 +232,7 @@ fold_cs(X, Xi, Cs) ->
     Cs3 = foldh_mul(X, Xi, Cs),
     lists:foldl(fun(A, B) ->
                         add(A, B)
-                end, fq2:e_zero(), 
+                end, fq:e_zero(), 
                 Cs3).
 
 %-define(comp(X), secp256k1:compress(X)).
@@ -277,13 +277,13 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
                 B2 -> true;
                 true ->
                     io:fwrite("verify ipa false 2\n"),
-                    io:fwrite({size(CNa), size(CNb), base64:encode(fq2:extended2affine(CNa)), base64:encode(fq2:extended2affine(CNb))})
+                    io:fwrite({size(CNa), size(CNb), base64:encode(fq:extended2affine(CNa)), base64:encode(fq:extended2affine(CNb))})
             end
     end.
 
 gen_point(_E) ->
-    fq2:extended2extended_niels(
-      fq2:gen_point()).
+    fq:extended2extended_niels(
+      fq:gen_point()).
 %    secp256k1:to_jacob(
 %      secp256k1:gen_point(E)).
 basis(S, E) ->
@@ -402,8 +402,8 @@ test(4) ->
               end, range(0, Many)),
     T3 = erlang:timestamp(),
     lists:map(fun(_) ->
-                       %secp256k1:simple_exponent(V, Gs, fq2:e_zero())
-                      %multi_exponent:simple_exponent(V, Gs, fq2:e_zero())
+                       %secp256k1:simple_exponent(V, Gs, fq:e_zero())
+                      %multi_exponent:simple_exponent(V, Gs, fq:e_zero())
                       ok
               end, range(0, Many)),
     T4 = erlang:timestamp(),

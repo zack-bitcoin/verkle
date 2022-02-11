@@ -83,7 +83,7 @@ proof(Root0, {Tree, CommitG, Open}, CFG) ->
     %P = parameters:read(),
     Domain = parameters2:domain(),
     %B = secp256k1:jacob_equal(Root0, Root, ?p#p.e),
-    B = fq2:eq(Root0, Root),
+    B = fq:eq(Root0, Root),
     if
         not(B) -> false;
         true ->
@@ -150,7 +150,7 @@ unfold(Root, [{Index, X}|R], T, CFG) %stem case
   when (is_binary(X) and (size(X) == (32*5)))
    ->
     %[{Root, Index, X}|T];
-    <<H:256>> = fq2:hash_point(X),
+    <<H:256>> = fq:hash_point(X),
     unfold(X, R, [{Root, Index, <<H:256>>}|T], CFG);
 %unfold(Root, [[{Index, X = {_, _, _}}|P]|J], T) -> 
 %    T2 = [{Root, Index, X}|T],

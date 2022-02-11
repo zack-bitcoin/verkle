@@ -13,7 +13,7 @@
 	 empty_trie/2]).
 %-include("constants.hrl").
 %-export_type([stem/0,types/0,empty_t/0,stem_t/0,leaf_t/0,pointers/0,empty_p/0,hashes/0,hash/0,empty_hash/0,stem_p/0,nibble/0]).
--record(stem, { root = fq2:e_zero()
+-record(stem, { root = fq:e_zero()
                 , types
                 , pointers
                 , hashes
@@ -43,12 +43,12 @@ add(S, N, T, P, <<H:256>>) ->
     %for generator M, subtract Old and add H.
     G = lists:nth(M, Gs),
     %Diff = secp256k1:jacob_mul(G, H-Old, E),
-    %Diff = fq2:e_mul2(G, fr:encode(H-Old)),
-    Diff = fq2:e_mul2(
+    %Diff = fq:e_mul2(G, fr:encode(H-Old)),
+    Diff = fq:e_mul2(
              G, fr:encode(fr:add(H, fr:neg(Old)))),
     %TODO maybe H and old are fr points???
-    %Root2 = fq2:e_add(Root, fq2:extended2extended_niels(Diff)),
-    Root2 = fq2:e_add(Root, Diff),
+    %Root2 = fq:e_add(Root, fq:extended2extended_niels(Diff)),
+    Root2 = fq:e_add(Root, Diff),
     T2 = setelement(M, Ty, T),
     P2 = setelement(M, Po, P),
     H2 = setelement(M, Ha, <<H:256>>),
@@ -58,7 +58,7 @@ new_empty(CFG) ->
     #stem{hashes = empty_hashes(CFG),
          types = empty_tuple(),
          pointers = empty_tuple(),
-         root = fq2:e_zero()}.
+         root = fq:e_zero()}.
 recover(M, T, P, H, Hashes, CFG) ->
     Types = onify2(Hashes, CFG),
     %Types = list_to_tuple(onify(tuple_to_list(Hashes), CFG)),
@@ -110,7 +110,7 @@ serialize(S, CFG) ->
            types = T,
            root = Root
          } = S,
-    <<R1:512>> = fq2:extended2affine(Root),% 2%
+    <<R1:512>> = fq:extended2affine(Root),% 2%
     %<<R1:(256*5)>> = Root,
     %X = serialize(P, H, T, 1),
     X = serialize2(tuple_to_list(P), 
@@ -142,7 +142,7 @@ deserialize(<<R1:512, B/binary>>, CFG) ->
     HS = cfg:hash_size(CFG),
     %Y = deserialize(1,X,X,X, B), % 50% of store and make_proof.
     Y = deserialize2([],[],[], B),
-    R = fq2:affine2extended(<<R1:512>>),
+    R = fq:affine2extended(<<R1:512>>),
     %R = <<R1:(256*5)>>,
             
     Y#stem{root = R}.
@@ -178,7 +178,7 @@ hash(S) ->
     P = S#stem.root,
     hash_point(P).
 hash_point(P) ->
-    fq2:hash_point(P).
+    fq:hash_point(P).
 
 update(Location, Stem, CFG) ->
     dump:update(Location, serialize(Stem, CFG), ids:stem(CFG)).
@@ -201,7 +201,7 @@ empty_trie(Root, CFG) ->
     update_pointers(Stem, empty_tuple()).
 
 equal(S, T) ->
-    [R2, R3] = fq2:e_simplify_batch(
+    [R2, R3] = fq:e_simplify_batch(
                  [S#stem.root, T#stem.root]),
     S2 = S#stem{
            root = R2
@@ -232,7 +232,7 @@ test(1) ->
     %io:fwrite({size(?p)}),%9
     %io:fwrite({S#stem.root, Sb#stem.root}),
     true = equal(S, Sb),
-    true = fq2:eq(S#stem.root, Sb#stem.root),
+    true = fq:eq(S#stem.root, Sb#stem.root),
     Hash = hash:doit(<<>>),
     Stem2 = add(S, 3, 1, 5, Hash),
     hash(Stem2),

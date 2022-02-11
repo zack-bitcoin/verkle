@@ -77,15 +77,15 @@ make_ghq() ->
                           io:fwrite(integer_to_list(X)),
                           io:fwrite("\n"),
                           Y = get_fr(X),
-                          fq2:gen_point(Y)
+                          fq:gen_point(Y)
                   end, R),
     H = lists:map(fun(X) ->
                           io:fwrite(integer_to_list(X)),
                           io:fwrite("\n"),
                           Y = get_fr(X + Many),
-                          fq2:gen_point(Y)
+                          fq:gen_point(Y)
                   end, R),
     QN = get_fr(513),
-    Q = fq2:gen_point(QN),
+    Q = fq:gen_point(QN),
     {G, H, Q}.
 

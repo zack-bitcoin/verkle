@@ -1,23 +1,13 @@
-jubjub version isn't working. after doing a batch update, the root stem is still empty.
+we need code for calculating the new state root after updating some elements in a verkle proof.
 
-
-
-
-looking at the EIP calculate for dankrad, it seems like during the verification process we should be using store2:multi_exponent on each node of the verkle proof, to verify that it was constructed correctly.
-
-
-
-working on a jubjub implementation, since it will give us private reading and
-* make the jubjub version faster.
- - when we store a stem, in order to serialize, it is doing extended2affine, which computes an inverse. it needs to be batched.
- - we should first compute the verkle tree in ram. so we can calculate the extended point that is the root of each stem.
- - use batched method to convert all the roots to affine format.
- - store all the stems, putting pointers into the correct spots as we go.
 * make a SNARK of a verkle proof.
 
 
+we want to store all the different sized things in a single tree.
 
-we need a plan for exactly which parts should be re-written in c/rust to make it fast.
+
+
+which parts could be re-written in c to make it fast.
 
 * for storage. store:pme2 + secp256k1:me3. We want to pass in a list of points, and have it add them all up fast.
  - pme2 accepts a matrix as input, it is looking up points from a precompute, and then summing them all. the precompute is powers of the generator points.
@@ -30,16 +20,6 @@ involves a polynomial addition, multiplying the polynomials by scalars, multiply
   - we specifically want to implement the calculation of Ss. this is very similar to pme2 from storage, but instead of looking up precomputed powers of generator points, we do that in step bucketify2/4
 
 libraries we need in a fast language:
-
-* finite field over the prime
-  - secp256k1 sub2, add_mod, mul, neg
-
-* elliptic calculator
-  - jacob_add
-  - jacob_double
-
-* finite field over the group order
-  - constants.hrl neg, mul, add_mod, sub2
 
 * group order polynomials
   - vector addition.
@@ -56,6 +36,3 @@ but it looks like it would make it slower to look up data.
 
 there are a couple todo notes in store.erl
 
-
-We need a more secure way to generate the 512 base points.
-Maybe use the integers [1,2,3...] as entropy to a deterministic generator.

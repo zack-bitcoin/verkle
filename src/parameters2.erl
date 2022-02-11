@@ -125,8 +125,8 @@ det_point(X) ->
     %deterministicly generated point.
     <<Y:256>> = hash:doit(<<X:256>>),
     Z = Y rem fr:prime(),
-    fq2:extended2extended_niels(
-      fq2:gen_point(Z)).
+    fq:extended2extended_niels(
+      fq:gen_point(Z)).
    
 calc_domain(Many) -> 
     lists:map(fun(X) -> fr:encode(X) end,

@@ -103,11 +103,11 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     EllDiff = precomputed_multi_exponent(Rs, MEP),
 
     % 3.6%
-    NewRoot = fq2:e_add(EllDiff, Root),
-    NewRoot2 = fq2:e_add(Root, EllDiff),
-    true = fq2:eq(NewRoot, NewRoot2),
-    <<HP:256>> = fq2:hash_point(NewRoot),
-    %io:fwrite({size(EllDiff), size(Root), fq2:decode_extended(NewRoot)}),
+    NewRoot = fq:e_add(EllDiff, Root),
+    NewRoot2 = fq:e_add(Root, EllDiff),
+    true = fq:eq(NewRoot, NewRoot2),
+    <<HP:256>> = fq:hash_point(NewRoot),
+    %io:fwrite({size(EllDiff), size(Root), fq:decode_extended(NewRoot)}),
     %clumping is 6%
     %hashing is 2.45%
     %reading + writing is ???
@@ -193,7 +193,7 @@ multi_exponent_parameters2(_, X, 0) -> [X];
 multi_exponent_parameters2(Base, X, Times) ->
     [X|multi_exponent_parameters2(
          Base, 
-         fq2:e_add(X, Base),
+         fq:e_add(X, Base),
          Times - 1)].
 det_pow(0, _) -> 0;
 det_pow(_, 0) -> 1;
@@ -210,8 +210,8 @@ multi_exponent_parameters(C, Gs) ->
                   String = "ME # " ++ integer_to_list(R) ++ "\n",
                   %io:fwrite(String),
                   X = multi_exponent_parameters2(
-                        G, fq2:e_zero(), F),
-                  X3 = fq2:e_simplify_batch(X),
+                        G, fq:e_zero(), F),
+                  X3 = fq:e_simplify_batch(X),
                   list_to_tuple(X3)
           end, Gs, range(1, length(Gs))),
     io:fwrite("multi exponent parameters done\n"),
@@ -282,7 +282,7 @@ precomputed_multi_exponent(Rs0, MEP) ->
 
     %  4.5% of storage
     Mepl = tuple_to_list(MEP),
-    EZero = fq2:e_zero(),
+    EZero = fq:e_zero(),
     Ss = lists:map(
            fun(T) ->
                    pme22(T, Mepl, EZero)
@@ -305,7 +305,7 @@ pme22([0|T], [_|D], Acc) ->
     pme22(T, D, Acc);
 pme22([Power|T], [H|MEP], Acc) -> 
     X = element(Power+1, H),
-    Acc2 = fq2:e_add(X, Acc),
+    Acc2 = fq:e_add(X, Acc),
     pme22(T, MEP, Acc2).
     
     
@@ -331,7 +331,7 @@ test(1) ->
 %    Saved = secp256k1:to_affine(secp256k1:jacob_add(Saved0, Saved0, ?p#p.e)),
     %Saved1 = element(2, element(2, MEP)),
     %io:fwrite({Old, New, Saved0}),
-    fq2:eq(Old, New);
+    fq:eq(Old, New);
 test(2) ->
     io:fwrite("ftrace of precomputed multi exponent\n"),
     %multi exponent precompute speed comparison.
