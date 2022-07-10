@@ -81,7 +81,9 @@ proof(Root0, {Tree, CommitG, Open}, CFG) ->
     %B = secp256k1:jacob_equal(Root0, Root, ?p#p.e),
     B = secp256k1:jacob_equal(Root0, Root, P#p.e),
     if
-        not(B) -> false;
+        not(B) -> 
+            io:fwrite("invalid root\n"),
+            false;
         true ->
             io:fwrite("verify unfold \n"),
             Tree2 = unfold(Root, Rest, [], CFG),
@@ -106,11 +108,12 @@ proof(Root0, {Tree, CommitG, Open}, CFG) ->
             B2 = multiproof:verify(
                    {CommitG, Open}, 
                    Commits, Zs, Ys2, P),
-            io:fwrite("verify done \n"),
             if
-                not(B) -> false;
-                not(B2) -> false;
+                not(B2) -> 
+                    io:fwrite("invalid multiproof\n"),
+                    false;
                 true ->
+                    io:fwrite("verify done \n"),
                     {true, leaves(Rest)}
                     %get all the leaves
                         %ok

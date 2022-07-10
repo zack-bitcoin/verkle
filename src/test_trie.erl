@@ -568,7 +568,7 @@ test(19, CFG) ->
     ok;
 test(20, CFG) ->
     Loc = 1,
-    Times = 5,
+    Times = 2000,
     Leaves = 
         lists:map(
           fun(N) -> 
@@ -587,22 +587,43 @@ test(20, CFG) ->
     T2 = erlang:timestamp(),
     io:fwrite("make proof\n"),
     Proof = 
-        get2:batch(Many, NewLoc, CFG),
+        get2:batch([5|Many], NewLoc, CFG),
+        %get2:batch([5], 
+        %           NewLoc, CFG),
+    %io:fwrite(Proof),
+    %{K1, _} = element(2, hd(hd(tl(hd(tl(element(1, Proof))))))),
+    %L2 = #leaf{key = K1, value = <<27:16>>},
+    %io:fwrite({Proof, 
+    %           verify2:update(
+    %             L2, Proof, CFG)}),
+    %[{location, type, stem/leaf}, ...]
+
+    %{[B, {N, B, leaf}], B, {B, B, [B x16] B, B}}
+    %[B, [{N, B}, {N, B, L}], [{N, B}, {N, B, L}]]
+    %{tree, commit, opening}
+
+    %how to update this and calculate the new root, without storing it in the database?
+    %H2 = hash_thing(P2, Type, Tree, H, CFG),
+    %Sub = fr:sub(H2, H),
+    %EllDiff = precomputed_multi_exponent(Rs, MEP),
+    %NewRoot = fq:e_add(EllDiff, Root),
+
+    %focus on the tree. update the leaves. subtract the old elliptic point, and add the new one. work the stems backward to the root.
     T3 = erlang:timestamp(),
     io:fwrite("verify proof\n"),
     Root = stem2:root(stem2:get(NewLoc, CFG)),
     {true, Leaves2} = 
         verify2:proof(Root, Proof, CFG),
     T4 = erlang:timestamp(),
-    true = (length(Leaves2) == length(Many)),
+    %true = (length(Leaves2) == length(Many)),
     if
         true ->
-    io:fwrite("measured in millionths of a second. 6 decimals. \n"),
-    io:fwrite(
-      {{load_tree, timer:now_diff(T2, T1)},
-       {make_proof, 
-        timer:now_diff(T3, T2)},
-       {verify, timer:now_diff(T4, T3)}});
+            io:fwrite("measured in millionths of a second. 6 decimals. \n"),
+            io:fwrite(
+              {{load_tree, timer:now_diff(T2, T1)},
+               {make_proof, 
+                timer:now_diff(T3, T2)},
+               {verify, timer:now_diff(T4, T3)}});
         true -> ok
     end,
     success.

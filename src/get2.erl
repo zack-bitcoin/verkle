@@ -49,6 +49,7 @@ batch(Keys, Root, CFG) ->
     %slow. todo
     %[[1,0,0,0],[2,0,0,0]...
     Tree2 = points_values(Tree, RootStem, CFG),
+    %io:fwrite({Tree}),
     %obtains the stems and leaves by reading from the database.
     %[stem, {I, stem}, [{I, leaf}], [{I, stem}, {I, leaf}], [{I, stem}, [{I, leaf}], [{I, leaf}]]]
     %list of things is AND, list of lists is OR.
@@ -60,6 +61,7 @@ batch(Keys, Root, CFG) ->
     benchmark:now(),
     Tree4 = remove_hashes(Tree3),%the hashes in each stem aren't needed to verify the verkle proof, so they are removed.
     %[El, {I, El}, [{I, leaf}], [{I, El}, {I, El}], [{I, El}, [{I, El}], [{I, El}]]]
+    
 
 
     io:fwrite("get flatten\n"),
@@ -163,6 +165,8 @@ withdraw_points3(X = [{I, _},
     [{I, P}|withdraw_points2(Xs)];
 withdraw_points3([{I, _}, L = #leaf{}]) ->
     [{I, L}];
+withdraw_points3([{I, _}, {Next, 0}]) ->
+    [{I, {Next, 0}}];
 withdraw_points3([{_, #stem{}}|R]) -> 
     withdraw_points3(R);
 %withdraw_points3([{_, S = #stem{}}]) -> S;
@@ -246,7 +250,8 @@ points_values([<<Loc:?nindex>>|R], Root, CFG) ->
     V = {Loc, Root},
     case Type of
         0 -> %empty
-            [V];
+            [<<NextLoc:?nindex>>|_] = R,
+            [V, {NextLoc, 0}];
         1 -> %stem
             S0 = stem2:get(P, CFG),
             S = S0#stem{

@@ -1,8 +1,58 @@
 -module(verify2).
--export([proof/3%, 
-         %update_proof/3, update_proofs/2, unfold/4
+-export([proof/3, update/3
+         %update_proof/3 %update_proofs/2, unfold/4
         ]).
 -include("constants.hrl").
+
+
+update(ProofTree, Leaves, CFG) ->
+    %walk down the tree, then update everything in reverse in the callback stack.
+    Leaves2 = store2:sort_by_path2(Leaves, CFG),
+    MEP = parameters2:multi_exp(),
+    update_batch(Leaves, ProofTree, stem, 
+                 0, CFG, MEP).
+
+empty_stem() ->
+    [].
+
+update_batch([], 0, _, _, _, _) -> 
+    %type 0 is empty
+    {0,0,empty};
+update_batch([], P, leaf, _, _, _) -> 
+    {P, leaf, leaf_not_recorded};
+update_batch([], P, stem, _, _, _) -> 
+    {P, stem, stem_not_recorded};
+update_batch([Leaf], 0, 0, _, CFG, _) ->
+    %storing a leaf in a previously empty spot.
+    {Leaf, leaf};
+update_batch(Leaves, 0, 0, Depth, CFG, MEP) ->
+    %storing multiple leaves in a previously empty spot.
+    update_batch(Leaves, empty_stem(), stem, 
+                 Depth, CFG, MEP);
+update_batch(Leaves, Tree, leaf, Depth, CFG, MEP) 
+->
+    update_batch([Tree|Leaves], empty_stem(), stem,
+                 Depth, CFG, MEP);
+update_batch(Leaves, Tree, stem, Depth, CFG, MEP) 
+->
+    
+    Leaves2 = store2:clump_by_path(
+                Depth, Leaves, CFG),
+    %todo
+    %for each thing we are changing.
+    %new_hash. <<0:256>> is for empty. store2:leaf_hash(L, CFG) or stem2:hash(S)
+    %diff = fr:sub(new_hash, old_hash)
+    %EllDiff = store2:precomputed_multi_exponent(
+    %            Diffs, MEP),
+    %NewRoot = fq:e_add(EllDiff, Root),
+    io:fwrite("todo, copying from store2:batch"),
+    ok;
+update_batch([], P, _, _, _, _) -> P;
+update_batch([Leaf], 0, 0, _, CFG, _) -> 
+    ok. 
+    
+
+
 
 
 update_proof(L, Proof, CFG) ->
@@ -137,6 +187,8 @@ leaves([H|T]) ->
     leaves(H) ++ leaves(T);
 leaves(_) ->  [].
 
+unfold(Root, {Index, {0, 0}}, T, CFG) ->%empty case
+    lists:reverse([{Root, Index, <<0:256>>}|T]);
 unfold(Root, {Index, {Key, B}}, T, CFG) %leaf case
   when is_binary(B) ->
     Leaf = #leaf{key = Key, value = B},

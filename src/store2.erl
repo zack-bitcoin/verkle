@@ -4,7 +4,8 @@
          multi_exponent_parameters/2,
          test/1,
          precomputed_multi_exponent/2,
-         leaf_hash/2
+         leaf_hash/2,
+         clump_by_path/3
         ]).
 %-include("constants.hrl").
 -define(nindex, 8).
@@ -31,7 +32,7 @@ batch(Leaves0, RP, CFG) ->%returns {location, stem/leaf, #stem{}/#leaf{}}
     io:fwrite("store storing 1\n"),
     batch(Leaves, RP, stem, 0, CFG, MEP).
 
-batch([], 0, 0, _, _CFG, _) ->
+batch([], 0, _, _, _CFG, _) ->
     %type 0 is empty
     {0, 0, empty};
 batch([], P, leaf, _, _CFG, _) ->
@@ -104,8 +105,8 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
 
     % 3.6%
     NewRoot = fq:e_add(EllDiff, Root),
-    NewRoot2 = fq:e_add(Root, EllDiff),
-    true = fq:eq(NewRoot, NewRoot2),
+    %NewRoot2 = fq:e_add(Root, EllDiff),
+    %true = fq:eq(NewRoot, NewRoot2),
     <<HP:256>> = fq:hash_point(NewRoot),
     %io:fwrite({size(EllDiff), size(Root), fq:decode_extended(NewRoot)}),
     %clumping is 6%
