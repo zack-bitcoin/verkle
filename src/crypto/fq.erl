@@ -448,7 +448,7 @@ gen_point() ->
           jubjub:gen_point()),
     encode_extended(G).
 gen_point(X) ->
-    fq2:encode_extended(
+    fq:encode_extended(
       jubjub:affine2extended(
         jubjub:gen_point(X))).
     
