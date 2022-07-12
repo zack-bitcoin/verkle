@@ -586,11 +586,10 @@ test(20, CFG) ->
         store2:batch(Leaves, Loc, CFG),
     T2 = erlang:timestamp(),
     io:fwrite("make proof\n"),
+    Keys = [5|Many],
+    %Keys = [5],
     Proof = 
-        get2:batch([5|Many], NewLoc, CFG),
-        %get2:batch([5], 
-        %           NewLoc, CFG),
-    %io:fwrite(Proof),
+        get2:batch(Keys, NewLoc, CFG),
     %{K1, _} = element(2, hd(hd(tl(hd(tl(element(1, Proof))))))),
     %L2 = #leaf{key = K1, value = <<27:16>>},
     %io:fwrite({Proof, 
@@ -615,7 +614,8 @@ test(20, CFG) ->
     {true, Leaves2} = 
         verify2:proof(Root, Proof, CFG),
     T4 = erlang:timestamp(),
-    %true = (length(Leaves2) == length(Many)),
+    %io:fwrite({Leaves2}),
+    true = (length(Leaves2) == length(Keys)),
     if
         true ->
             io:fwrite("measured in millionths of a second. 6 decimals. \n"),
@@ -626,6 +626,42 @@ test(20, CFG) ->
                {verify, timer:now_diff(T4, T3)}});
         true -> ok
     end,
+    success;
+test(21, CFG) ->
+    Loc = 1,
+    Times = 3,
+    Leaves = 
+        lists:map(
+          fun(N) -> 
+                  %Key0 = Times + 1 - N,
+                  %<<Key:256>> = <<(-Key0):256>>,
+                  Key = 1000000000 - (128 * N),
+                  #leaf{key = Key, value = <<N:16>>}
+          %end, Many),
+          end, range(1, Times+1)),
+    Many = lists:map(fun(#leaf{key = K}) -> K end,
+                     Leaves),
+    {NewLoc, stem, _} = 
+        store2:batch(Leaves, Loc, CFG),
+    {ProofTree, Commit, Opening} = 
+        %get2:batch([5|Many], NewLoc, CFG),
+        get2:batch(Many, NewLoc, CFG),
+    %io:fwrite(ProofTree),
+    {true, _} = 
+        verify2:proof(hd(ProofTree), {ProofTree, Commit, Opening}, CFG),
+    %io:fwrite(ProofTree),
+    1=2,
+    {Root2, Proof2} = 
+        verify2:update(
+          tl(ProofTree), [hd(Leaves)], CFG),
+    {true, Leaves2} = 
+        verify2:proof(Root2, Proof2, CFG),
+
+    %todo.
+    %load the new version into the database.
+    %   don't re-calculate the vector commitments.
+
+    %try updating the database in other ways, make sure the root hash is the same.
     success.
 
 

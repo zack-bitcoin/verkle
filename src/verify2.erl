@@ -171,6 +171,7 @@ proof(Root0, {Tree, CommitG, Open}, CFG) ->
                 not(B) -> false;
                 not(B2) -> false;
                 true ->
+                    %io:fwrite({Rest}),
                     {true, leaves(Rest)}
                     %get all the leaves
                         %ok
@@ -182,6 +183,7 @@ proof(Root0, {Tree, CommitG, Open}, CFG) ->
     %[L3, p2,   L2, L1, p1] %unhashed ys
 
     %[{1, p1}, [{0, L1},{1, L2}], [{3, p2},{0,L3}]]
+leaves({Y, X = {0, 0}}) -> [{5, X}];
 leaves({_, X = {_, B}}) when is_binary(B) -> [X];
 leaves([H|T]) ->
     leaves(H) ++ leaves(T);
