@@ -1,3 +1,5 @@
+the proof tree has a weird format.
+
 we need code for calculating the new state root after updating some elements in a verkle proof.
 
 * make a SNARK of a verkle proof.

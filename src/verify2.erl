@@ -5,7 +5,7 @@
 -include("constants.hrl").
 
 
-update(ProofTree, Leaves, CFG) ->
+update([_OldRoot|ProofTree], Leaves, CFG) ->
     %walk down the tree, then update everything in reverse in the callback stack.
     Leaves2 = store2:sort_by_path2(Leaves, CFG),
     MEP = parameters2:multi_exp(),
@@ -183,13 +183,13 @@ proof(Root0, {Tree, CommitG, Open}, CFG) ->
     %[L3, p2,   L2, L1, p1] %unhashed ys
 
     %[{1, p1}, [{0, L1},{1, L2}], [{3, p2},{0,L3}]]
-leaves({Y, X = {0, 0}}) -> [{5, X}];
+leaves({Y, X = 0}) -> [{Y, X}];
 leaves({_, X = {_, B}}) when is_binary(B) -> [X];
 leaves([H|T]) ->
     leaves(H) ++ leaves(T);
 leaves(_) ->  [].
 
-unfold(Root, {Index, {0, 0}}, T, CFG) ->%empty case
+unfold(Root, {Index, 0}, T, CFG) ->%empty case
     lists:reverse([{Root, Index, <<0:256>>}|T]);
 unfold(Root, {Index, {Key, B}}, T, CFG) %leaf case
   when is_binary(B) ->

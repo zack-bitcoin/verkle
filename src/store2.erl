@@ -5,7 +5,8 @@
          test/1,
          precomputed_multi_exponent/2,
          leaf_hash/2,
-         clump_by_path/3
+         clump_by_path/3,
+         sort_by_path2/2
         ]).
 %-include("constants.hrl").
 -define(nindex, 8).

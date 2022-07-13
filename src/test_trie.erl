@@ -12,7 +12,8 @@ test() ->
     %V = [5, 6, 12, 13],
     %V = [101, 17],
     V = [%18%, 
-         20
+         20,
+         21
         ],
     test_helper(V, CFG).
 test_helper([], _) -> success;
@@ -531,11 +532,13 @@ test(18, CFG) ->
     if
         true ->
             io:fwrite("measured in millionths of a second. 6 decimals. \n"),
-            io:fwrite(
-              {{load_tree, timer:now_diff(T2, T1)},
-               {make_proof, 
-                timer:now_diff(T3, T2)},
-               {verify, timer:now_diff(T4, T3)}});
+            io:fwrite("load tree: "),
+            io:fwrite(integer_to_list(timer:now_diff(T2, T1))),
+            io:fwrite("\nmake proof: "),
+            io:fwrite(integer_to_list(timer:now_diff(T3, T2))),
+            io:fwrite("\nverify: "),
+            io:fwrite(integer_to_list(timer:now_diff(T4, T3))),
+            io:fwrite("\n");
         true -> ok
     end,
     success;
@@ -619,17 +622,19 @@ test(20, CFG) ->
     if
         true ->
             io:fwrite("measured in millionths of a second. 6 decimals. \n"),
-            io:fwrite(
-              {{load_tree, timer:now_diff(T2, T1)},
-               {make_proof, 
-                timer:now_diff(T3, T2)},
-               {verify, timer:now_diff(T4, T3)}});
+            io:fwrite("load tree: "),
+            io:fwrite(integer_to_list(timer:now_diff(T2, T1))),
+            io:fwrite("\nmake proof: "),
+            io:fwrite(integer_to_list(timer:now_diff(T3, T2))),
+            io:fwrite("\nverify: "),
+            io:fwrite(integer_to_list(timer:now_diff(T4, T3))),
+            io:fwrite("\n");
         true -> ok
     end,
     success;
 test(21, CFG) ->
     Loc = 1,
-    Times = 3,
+    Times = 5,
     Leaves = 
         lists:map(
           fun(N) -> 
@@ -649,11 +654,11 @@ test(21, CFG) ->
     %io:fwrite(ProofTree),
     {true, _} = 
         verify2:proof(hd(ProofTree), {ProofTree, Commit, Opening}, CFG),
-    %io:fwrite(ProofTree),
     1=2,
+    io:fwrite(ProofTree),
     {Root2, Proof2} = 
         verify2:update(
-          tl(ProofTree), [hd(Leaves)], CFG),
+          ProofTree, [hd(Leaves)], CFG),
     {true, Leaves2} = 
         verify2:proof(Root2, Proof2, CFG),
 

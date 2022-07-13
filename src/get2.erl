@@ -165,8 +165,10 @@ withdraw_points3(X = [{I, _},
     [{I, P}|withdraw_points2(Xs)];
 withdraw_points3([{I, _}, L = #leaf{}]) ->
     [{I, L}];
-withdraw_points3([{I, _}, {Next, 0}]) ->
-    [{I, {Next, 0}}];
+%withdraw_points3([{I, _}, {Next, 0}]) ->
+withdraw_points3([{I, _}, 0]) ->
+    %[{I, {Next, 0}}];
+    [{I, 0}];
 withdraw_points3([{_, #stem{}}|R]) -> 
     withdraw_points3(R);
 %withdraw_points3([{_, S = #stem{}}]) -> S;
@@ -177,6 +179,7 @@ withdraw_points3([H|T]) when is_list(H) ->
         [] -> Y;
         _ -> [X|Y]
     end;
+withdraw_points3([0]) -> [];
 withdraw_points3([]) -> [].
 
    
@@ -223,17 +226,29 @@ setup_domain_dict(I, [A|T], D) ->
     D2 = dict:store(I, A, D),
     setup_domain_dict(I+1, T, D2).
     
-paths2tree([Path]) -> Path;
+paths2tree([]) -> [];
+paths2tree([[]]) -> [];
+paths2tree([Path]) -> [Path];
+%paths2tree([Path]) -> Path;
 paths2tree(Paths) ->
     {Same, Others} = starts_same_split(Paths),
     H = hd(hd(Same)),
     Same2 = lists:map(fun(S) -> tl(S) end,
                       Same),
     Path1 = [H|paths2tree(Same2)],
-    case Others of
-        [] -> Path1;
-        _ -> [Path1,paths2tree(Others)]
+    %Path1 = [H] ++ paths2tree(Same2),
+    Recurse = paths2tree(Others),
+    if
+        (Others == []) -> Path1;
+        (is_list(hd(Recurse))) -> 
+            [Path1|Recurse];
+        true -> [Path1, Recurse]
     end.
+    %case Others of
+    %    [] -> Path1;
+        %_ -> [Path1|paths2tree(Others)]
+    %    _ -> [Path1, paths2tree(Others)]
+    %end.
 starts_same_split([[X|B]|T]) ->
     starts_same_split2(X, T, [[X|B]]).
 starts_same_split2(X, [[X|B]|T], Sames) ->
@@ -250,8 +265,9 @@ points_values([<<Loc:?nindex>>|R], Root, CFG) ->
     V = {Loc, Root},
     case Type of
         0 -> %empty
-            [<<NextLoc:?nindex>>|_] = R,
-            [V, {NextLoc, 0}];
+            %[<<NextLoc:?nindex>>|_] = R,
+            %[V, {NextLoc, 0}];
+            [V, 0];
         1 -> %stem
             S0 = stem2:get(P, CFG),
             S = S0#stem{
