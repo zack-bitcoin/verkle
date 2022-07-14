@@ -649,13 +649,12 @@ test(21, CFG) ->
     {NewLoc, stem, _} = 
         store2:batch(Leaves, Loc, CFG),
     {ProofTree, Commit, Opening} = 
-        %get2:batch([5|Many], NewLoc, CFG),
-        get2:batch(Many, NewLoc, CFG),
+        get2:batch([5|Many], NewLoc, CFG),
+        %get2:batch(Many, NewLoc, CFG),
     %io:fwrite(ProofTree),
     {true, _} = 
         verify2:proof(hd(ProofTree), {ProofTree, Commit, Opening}, CFG),
-    1=2,
-    io:fwrite(ProofTree),
+    %io:fwrite(ProofTree),
     {Root2, Proof2} = 
         verify2:update(
           ProofTree, [hd(Leaves)], CFG),

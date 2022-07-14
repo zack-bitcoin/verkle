@@ -1,4 +1,7 @@
-the proof tree has a weird format.
+in verify2:update_batch2, when we calculate the precomputed multi exponent, it is crashing.
+the format must be wrong somehow.
+
+
 
 we need code for calculating the new state root after updating some elements in a verkle proof.
 

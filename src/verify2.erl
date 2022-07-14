@@ -5,15 +5,154 @@
 -include("constants.hrl").
 
 
-update([_OldRoot|ProofTree], Leaves, CFG) ->
+update([OldRoot|ProofTree], Leaves, CFG) ->
     %walk down the tree, then update everything in reverse in the callback stack.
     Leaves2 = store2:sort_by_path2(Leaves, CFG),
     MEP = parameters2:multi_exp(),
-    update_batch(Leaves, ProofTree, stem, 
-                 0, CFG, MEP).
+    {Diff, Tree2} = 
+        update_batch2(Leaves, ProofTree,
+                      0, CFG, MEP),
+    [fq:e_add(Diff, OldRoot)|Tree2].
 
 empty_stem() ->
     [].
+
+%leaves are made with leaf:new/4
+update_batch2([], Tree, _Depth, _CFG, _MEP) 
+->
+    {0, Tree};
+update_batch2(Leaves, Tree,
+              Depth, CFG, MEP) ->
+    %adding leaves to an existing stem.
+    Leaves2 = store2:clump_by_path(
+                Depth, Leaves, CFG),
+    {Diffs, Tree2} = 
+        update_merge(Leaves2, 
+                     Tree, Depth, CFG, MEP, 
+                     [], [], 0),
+    256 = length(Leaves2),
+    256 = length(Diffs),
+    %diffs can contain zeros, for empty slots.
+
+    %todo. this is crashing the precompute. format must be wrong somehow.
+
+    EllDiff = store2:precomputed_multi_exponent(
+                Diffs, MEP),
+    {EllDiff, Tree2}.
+
+
+
+%update_batch3(Leaves,
+%              Tree = [{N, {Key, Value}},
+%              Depth, CFG, MEP) ->
+    %mixing new leaves with an existing leaf.
+%    NewLeaf = leaf:new(Key, Value, 0, CFG),
+    %creates a new stem
+%    update_batch2([NewLeaf|Leaves], Root,
+%                  [{N, fq:e_zero()}], 
+%                  Depth, CFG, MEP);
+%update_batch3(Leaves, Tree = {N, 0},
+%              Depth, CFG, MEP) ->
+    %adding leaves to an empty spot. 
+    %creates a new stem
+%    update_batch3(Leaves, [{N, fq:e_zero()}],
+%                  Depth, CFG, MEP);
+%update_batch3([L = #leaf{}], Tree = {N, 0},
+%              Depth, CFG, MEP) ->
+    %storing a leaf into an empty spot.
+%    {N, {L#leaf.key, L#leaf.value}}.
+
+
+update_merge([], Rest, _,_,_, Merged, Diffs, _) ->
+    %finished updating this stem.
+    Subtrees = lists:reverse(Merged) ++ Rest,
+    {lists:reverse(Diffs), Subtrees};
+update_merge([[]|Leaves], [], 
+             _, _, _, R, Diff, _) ->
+    update_merge(Leaves, [], ok, ok, ok, 
+                 R, [0|Diff], ok);
+update_merge([[]|Leaves], 
+             Tree = [[{N, _}|_]|SubTree], Depth, 
+             CFG, MEP, R, Diff, N) ->
+    %not changing this element that is recorded in our proof.
+    update_merge(Leaves, SubTree, Depth, CFG, MEP,
+                 [hd(Tree)|R], [0|Diff], N+1);
+update_merge([LH|Leaves], 
+             Subtrees = [[{M, _}|_]|_], Depth, 
+             CFG, MEP, R, Diff, N) 
+  when (not(M == N)) ->
+    %this part is not recorded in our proof, it cannot be changed.
+    if
+        not(LH == []) ->
+            io:fwrite({LH, N, M, Subtrees});
+        true -> ok
+    %verify that we are not trying to change it.
+    end,
+    update_merge(Leaves, 
+                 Subtrees, Depth, CFG, MEP, R, 
+                 [0|Diff], N+1);
+update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees], 
+             Depth, CFG, MEP, R, Diffs, N) 
+  when is_binary(B) ->
+    %io:fwrite({N, Leaves, Subtrees}),
+    {Point, Tree2} = 
+        update_batch2(LH, S1, Depth+1, CFG, MEP),
+    New = stem2:hash_point(Point),
+    Diff = fr:sub(New, stem2:hash_point(B)),
+    update_merge(Leaves, Subtrees, Depth, CFG, MEP,
+                 [Tree2|R], [Diff|Diffs], N+1);
+update_merge([LH|Leaves], 
+             [[{N, {Key, Value}}]|Subtrees], 
+             Depth, CFG, MEP, R, Diffs, N) ->
+    %there is already a leaf here.
+    NewLeaf = leaf:new(Key, Value, 0, CFG),
+    B = leaf_in_list(NewLeaf, LH),
+    L2 = if
+             B -> LH;
+             true -> [NewLeaf|LH]
+         end,
+    update_merge(
+      [L2|Leaves], 
+      [[{N, 0}]
+       |Subtrees],
+      Depth, CFG, MEP, R, Diffs, N);
+update_merge([LH|Leaves],
+             [[{N, 0}]|Subtrees],
+             Depth, CFG, MEP, R, Diffs, N) 
+  when (length(LH) > 1) ->
+    update_merge([LH|Leaves],
+                 [[{N, fq:e_zero()}]|Subtrees],
+                 Depth, CFG, MEP, R, Diffs, N);
+update_merge([LH|Leaves],
+             [[{N, 0}]|Subtrees],
+             Depth, CFG, MEP, R, Diffs, N) ->
+    #leaf{key = Key, value = Value} = hd(LH),
+    Diff = store2:leaf_hash(hd(LH), CFG),
+    update_merge(Leaves,
+                 Subtrees,
+                 Depth, CFG, MEP, 
+                 [[{N, {Key, Value}}]|R], 
+                 [Diff|Diffs], N+1).
+
+    
+    %todo.
+    %new_hash. <<0:256>> is for empty. store2:leaf_hash(L, CFG) or stem2:hash(S)
+    %diff = fr:sub(new_hash, old_hash)
+
+    %EllDiff = store2:precomputed_multi_exponent(
+    %            Diffs, MEP),
+    %NewRoot = fq:e_add(EllDiff, Root),
+
+    
+leaf_in_list(_, []) ->
+    false;
+leaf_in_list(#leaf{key = K}, 
+             [#leaf{key = K}|_]) -> 
+    true;
+leaf_in_list(Leaf, [_|T]) -> 
+    leaf_in_list(Leaf, T).
+
+    
 
 update_batch([], 0, _, _, _, _) -> 
     %type 0 is empty
@@ -31,16 +170,23 @@ update_batch(Leaves, 0, 0, Depth, CFG, MEP) ->
                  Depth, CFG, MEP);
 update_batch(Leaves, Tree, leaf, Depth, CFG, MEP) 
 ->
+    %storing new leaves in a spot that previously had a leaf.
     update_batch([Tree|Leaves], empty_stem(), stem,
                  Depth, CFG, MEP);
 update_batch(Leaves, Tree, stem, Depth, CFG, MEP) 
 ->
-    
+    %storing leaves in an existing stem.
     Leaves2 = store2:clump_by_path(
                 Depth, Leaves, CFG),
+    lists:map(fun(Clump) ->
+                      {P, Type, Tree2} = 
+                          update_batch(Clump,  ok, ok, ok, ok, ok),
+                      ok
+              end, Leaves2),
     %todo
     %for each thing we are changing.
     %new_hash. <<0:256>> is for empty. store2:leaf_hash(L, CFG) or stem2:hash(S)
+    
     %diff = fr:sub(new_hash, old_hash)
     %EllDiff = store2:precomputed_multi_exponent(
     %            Diffs, MEP),
