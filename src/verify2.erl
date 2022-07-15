@@ -85,12 +85,13 @@ update_merge([], Rest, _,_,_, Merged, Diffs, _) ->
     {lists:reverse(Diffs), Subtrees};
 update_merge([[]|Leaves], [], 
              _, _, _, R, Diff, _) ->
+    %the proof ended, so there is nothing left to update. checking that we aren't trying to update anyting else.
     update_merge(Leaves, [], ok, ok, ok, 
                  R, [fr:encode(0)|Diff], ok);
 update_merge([[]|Leaves], 
              Tree = [[{N, _}|_]|SubTree], Depth, 
              CFG, MEP, R, Diff, N) ->
-    %not changing this element that is recorded in our proof.
+    %not changing this element that is recorded in our proof. 
     update_merge(Leaves, SubTree, Depth, CFG, MEP,
                  [hd(Tree)|R], [fr:encode(0)|Diff], N+1);
 update_merge([LH|Leaves], 
@@ -98,11 +99,12 @@ update_merge([LH|Leaves],
              CFG, MEP, R, Diff, N) 
   when (not(M == N)) ->
     %this part is not recorded in our proof, it cannot be changed.
+    %verify that we are not trying to change it.
     if
         not(LH == []) ->
+            io:fwrite("verkls2 error. tried to edit inaccessible state."),
             io:fwrite({LH, N, M, Subtrees});
         true -> ok
-    %verify that we are not trying to change it.
     end,
     update_merge(Leaves, 
                  Subtrees, Depth, CFG, MEP, R, 
@@ -110,21 +112,16 @@ update_merge([LH|Leaves],
 update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees], 
              Depth, CFG, MEP, R, Diffs, N) 
   when is_binary(B) ->
-    %io:fwrite({N, Leaves, Subtrees}),
+    %adding one or more leaves to an existing stem.
+
     {Point, Tree2} = 
         update_batch2(LH, S1, Depth+1, CFG, MEP),
-    <<New:256>> = stem2:hash_point(Point),
-    <<BV:256>> = stem2:hash_point(B),
-    %<<P2:256>> = Point,
-    %<<B2:256>> = B,
-    %Diff = fr:encode(?sub2(New, BV)),
-    %Diff0 = ?sub2(New, BV),
-    %Diff = fr:encode(Diff0),
-    %Diff = fr:add(fr:encode(New),
-    %              fr:encode(BV)),
-    Diff = fr:encode(New),
-    %New = stem2:hash_point(Point),
-    %Diff = fr:sub(New, stem2:hash_point(B)),
+    NewPoint = fq:e_add(B, Point),
+    NewN = stem2:hash_point(NewPoint),
+    OldN = stem2:hash_point(B),
+    Diff = fr:sub(NewN, OldN),
+
+    io:fwrite("merging stems diff calculation.\n"),
     update_merge(Leaves, Subtrees, Depth, CFG, MEP,
                  [Tree2|R], [Diff|Diffs], N+1);
 update_merge([LH|Leaves], 
@@ -138,19 +135,19 @@ update_merge([LH|Leaves],
     if
         (B and B2) -> 
             Leaf2 = hd(LH),
-            <<OldN:256>> = store2:leaf_hash(
-                             NewLeaf, CFG),
-            <<NewN:256>> = store2:leaf_hash(
-                             Leaf2, CFG),
+            OldN = store2:leaf_hash(
+                     NewLeaf, CFG),
+            NewN = store2:leaf_hash(
+                     Leaf2, CFG),
             LeafDiff = 
                 if
-                    OldN == NewN -> fr:encode(0);
+                    OldN == NewN -> 
+                        %leaf unchanged.
+                        fr:encode(0);
                     true ->
-                        fr:sub(fr:encode(NewN),
-                               fr:encode(OldN))
+                        io:fwrite("updating leaf diff calculation.\n"),
+                        fr:sub(NewN, OldN)
                 end,
-                                                %todo. error.
-                                                %we need to return the 2 things.
             update_merge(
               Leaves, Subtrees, Depth, CFG, 
               MEP, [[{N, {Leaf2#leaf.key,
@@ -158,16 +155,15 @@ update_merge([LH|Leaves],
                     R],
               [LeafDiff|Diffs], N+1);
         B -> 
-                %<<Hash:256>> = store2:leaf_hash(
-                %         NewLeaf, CFG),
-                %{LH, fr:neg(fr:encode(Hash))};
-                %{LH, 0};
+            io:fwrite("adding leaves to a spot where there was a leaf, and changing the existing leaf\n"),
             update_merge(
               [LH|Leaves], 
               [[{N, 0}]
                |Subtrees],
               Depth, CFG, MEP, R, Diffs, N);
-        true -> %{[NewLeaf|LH], 0}
+        true -> 
+            %adding leaves to this spot where there was a leaf, without updating our leaf
+            io:fwrite("adding a leaves to this spot where there is a leaf, and not changing the existing leaf\n"),
             update_merge(
               [[NewLeaf|LH]|Leaves], 
               [[{N, 0}]
@@ -190,10 +186,10 @@ update_merge([LH|Leaves],
              [[{N, 0}]|Subtrees],
              Depth, CFG, MEP, R, Diffs, N) ->
     #leaf{key = Key, value = Value} = hd(LH),
-    <<Diff0:256>> = store2:leaf_hash(hd(LH), CFG),
-    Diff = fr:encode(Diff0),
+    io:fwrite("new leaf diff calculation"),
+    Diff = store2:leaf_hash(hd(LH), CFG),
     io:fwrite("new leaf diff "),
-    io:fwrite(integer_to_list(Diff0)),
+    io:fwrite(integer_to_list(Diff)),
     io:fwrite("\n"),
     %io:fwrite({length(LH), N, Depth, Key div 256 rem 256, Value}),
     %Diff = Diff0,

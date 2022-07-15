@@ -656,7 +656,8 @@ test(21, CFG) ->
         verify2:proof(hd(ProofTree), {ProofTree, Commit, Opening}, CFG),
     %io:fwrite(ProofTree),
     Leaf0 = hd(Leaves),
-    Leaf1 = Leaf0#leaf{value = <<2,2>>},
+    Leaf1 = Leaf0#leaf{value = <<0,2>>},
+    %io:fwrite({Leaf0, Leaf1}),
     ProofTree2 = 
         verify2:update(
           ProofTree, [Leaf1], CFG),
