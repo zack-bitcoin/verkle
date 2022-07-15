@@ -1,3 +1,6 @@
+in store2:verified, we need to walk down the hard drive's tree at the same time as the ram tree. that way we can update stems.
+
+
 in verify2:update_batch2, when we calculate the precomputed multi exponent, it is crashing.
 the format must be wrong somehow.
 

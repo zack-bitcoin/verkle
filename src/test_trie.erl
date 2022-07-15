@@ -665,12 +665,18 @@ test(21, CFG) ->
     {Loc3, _, _} = 
         store2:batch(Leaves2, 1, CFG),
     RootStem = stem2:get(Loc3, CFG),
-    RootHash = stem2:hash(RootStem),
     true = fq:eq(NewRoot2, RootStem#stem.root),
-    %true = (RootHash == fq:hash_point(NewRoot2)),
+
     %todo.
     %load the new version into the database.
     %   don't re-calculate the vector commitments.
+    RootStem2 = stem2:get(NewLoc, CFG),
+    %{_Loc4, _, Pointer} = 
+    RootStem3 = 
+        store2:verified2(tl(ProofTree2), RootStem2, CFG),
+    RootStem4 = RootStem3#stem{root = hd(ProofTree2)},
+    
+    true = fq:eq(NewRoot2, RootStem4#stem.root),
 
     %try updating the database in other ways, make sure the root hash is the same.
     success.
