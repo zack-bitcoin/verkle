@@ -655,12 +655,20 @@ test(21, CFG) ->
     {true, _} = 
         verify2:proof(hd(ProofTree), {ProofTree, Commit, Opening}, CFG),
     %io:fwrite(ProofTree),
-    {Root2, Proof2} = 
+    Leaf0 = hd(Leaves),
+    Leaf1 = Leaf0#leaf{value = <<2,2>>},
+    ProofTree2 = 
         verify2:update(
-          ProofTree, [hd(Leaves)], CFG),
-    {true, Leaves2} = 
-        verify2:proof(Root2, Proof2, CFG),
-
+          ProofTree, [Leaf1], CFG),
+    NewRoot2 = hd(ProofTree2),
+    %NewRoot0 = hd(ProofTree),
+    Leaves2 = [Leaf1|tl(Leaves)],
+    {Loc3, _, _} = 
+        store2:batch(Leaves2, 1, CFG),
+    RootStem = stem2:get(Loc3, CFG),
+    RootHash = stem2:hash(RootStem),
+    true = fq:eq(NewRoot2, RootStem#stem.root),
+    %true = (RootHash == fq:hash_point(NewRoot2)),
     %todo.
     %load the new version into the database.
     %   don't re-calculate the vector commitments.

@@ -102,6 +102,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     %4.59
 
     % 51%
+    %io:fwrite(Rs), [<<0,0,0,0...>>,...]
     EllDiff = precomputed_multi_exponent(Rs, MEP),
 
     % 3.6%
@@ -261,6 +262,7 @@ precomputed_multi_exponent(Rs0, MEP) ->
     Domain0 = parameters2:domain(),
     {Domain, Rs} = get_domain(% 0.4%
                      Domain0, Rs0, [], []),
+%    {Domain, Rs} = {Domain0, Rs0},
     C = 8,
     F = det_pow(2, C),
     B = 256,
@@ -281,13 +283,29 @@ precomputed_multi_exponent(Rs0, MEP) ->
     % 14% of storage
     Ts = batch_chunkify(
            fr:decode(Rs), F, Lim),
-
-    %  4.5% of storage
     Mepl = tuple_to_list(MEP),
+    32 = length(Ts),
+    256 = length(Rs0),
+    256 = length(Rs),
+    true = (length(Domain) == length(Rs)),
+    256 = length(Mepl),
+    lists:map(fun(X) -> 
+                      if
+                          (length(Rs) == 
+                               length(X)) -> ok;
+                          true -> io:fwrite({X})
+                      end
+              end, Ts),
+    %  4.5% of storage
     EZero = fq:e_zero(),
     Ss = lists:map(
            fun(T) ->
-                   pme22(T, Mepl, EZero)
+                   if
+                       (length(T) == length(Mepl)) ->
+                           pme22(T, Mepl, EZero);
+                       true ->
+                           io:fwrite({T, Ts})
+                   end
            end, Ts),
 
     % 3.5% of storage
@@ -308,7 +326,11 @@ pme22([0|T], [_|D], Acc) ->
 pme22([Power|T], [H|MEP], Acc) -> 
     X = element(Power+1, H),
     Acc2 = fq:e_add(X, Acc),
-    pme22(T, MEP, Acc2).
+    pme22(T, MEP, Acc2);
+pme22(A, B, C) -> 
+    io:fwrite("store2 pme22 failure\n"),
+    io:fwrite({length(A), length(B), C}),
+    io:fwrite("\n").
     
     
 

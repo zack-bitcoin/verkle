@@ -20,7 +20,7 @@ empty_stem() ->
 %leaves are made with leaf:new/4
 update_batch2([], Tree, _Depth, _CFG, _MEP) 
 ->
-    {0, Tree};
+    {fq:e_zero(), Tree};
 update_batch2(Leaves, Tree,
               Depth, CFG, MEP) ->
     %adding leaves to an existing stem.
@@ -32,15 +32,31 @@ update_batch2(Leaves, Tree,
                      [], [], 0),
     256 = length(Leaves2),
     256 = length(Diffs),
+    %io:fwrite(Diffs),
     %diffs can contain zeros, for empty slots.
 
     %todo. this is crashing the precompute. format must be wrong somehow.
-
+    %io:fwrite({remove_empty(Diffs)}),
+    lists:map(fun(X) ->
+                      32 = size(X)
+              end, Diffs),
     EllDiff = store2:precomputed_multi_exponent(
                 Diffs, MEP),
     {EllDiff, Tree2}.
 
+%for testing only.
+remove_empty([[]|T]) ->
+    remove_empty(T);
+remove_empty([0|T]) ->
+    remove_empty(T);
+remove_empty([<<0:256>>|T]) ->
+    remove_empty(T);
+remove_empty([H|T]) ->
+    [H|remove_empty(T)];
+remove_empty([]) -> [].
 
+
+    
 
 %update_batch3(Leaves,
 %              Tree = [{N, {Key, Value}},
@@ -70,13 +86,13 @@ update_merge([], Rest, _,_,_, Merged, Diffs, _) ->
 update_merge([[]|Leaves], [], 
              _, _, _, R, Diff, _) ->
     update_merge(Leaves, [], ok, ok, ok, 
-                 R, [0|Diff], ok);
+                 R, [fr:encode(0)|Diff], ok);
 update_merge([[]|Leaves], 
              Tree = [[{N, _}|_]|SubTree], Depth, 
              CFG, MEP, R, Diff, N) ->
     %not changing this element that is recorded in our proof.
     update_merge(Leaves, SubTree, Depth, CFG, MEP,
-                 [hd(Tree)|R], [0|Diff], N+1);
+                 [hd(Tree)|R], [fr:encode(0)|Diff], N+1);
 update_merge([LH|Leaves], 
              Subtrees = [[{M, _}|_]|_], Depth, 
              CFG, MEP, R, Diff, N) 
@@ -90,15 +106,25 @@ update_merge([LH|Leaves],
     end,
     update_merge(Leaves, 
                  Subtrees, Depth, CFG, MEP, R, 
-                 [0|Diff], N+1);
+                 [fr:encode(0)|Diff], N+1);
 update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees], 
              Depth, CFG, MEP, R, Diffs, N) 
   when is_binary(B) ->
     %io:fwrite({N, Leaves, Subtrees}),
     {Point, Tree2} = 
         update_batch2(LH, S1, Depth+1, CFG, MEP),
-    New = stem2:hash_point(Point),
-    Diff = fr:sub(New, stem2:hash_point(B)),
+    <<New:256>> = stem2:hash_point(Point),
+    <<BV:256>> = stem2:hash_point(B),
+    %<<P2:256>> = Point,
+    %<<B2:256>> = B,
+    %Diff = fr:encode(?sub2(New, BV)),
+    %Diff0 = ?sub2(New, BV),
+    %Diff = fr:encode(Diff0),
+    %Diff = fr:add(fr:encode(New),
+    %              fr:encode(BV)),
+    Diff = fr:encode(New),
+    %New = stem2:hash_point(Point),
+    %Diff = fr:sub(New, stem2:hash_point(B)),
     update_merge(Leaves, Subtrees, Depth, CFG, MEP,
                  [Tree2|R], [Diff|Diffs], N+1);
 update_merge([LH|Leaves], 
@@ -107,15 +133,52 @@ update_merge([LH|Leaves],
     %there is already a leaf here.
     NewLeaf = leaf:new(Key, Value, 0, CFG),
     B = leaf_in_list(NewLeaf, LH),
-    L2 = if
-             B -> LH;
-             true -> [NewLeaf|LH]
-         end,
-    update_merge(
-      [L2|Leaves], 
-      [[{N, 0}]
-       |Subtrees],
-      Depth, CFG, MEP, R, Diffs, N);
+    B2 = (1 == length(LH)),
+%    {L2, NextHash} = 
+    if
+        (B and B2) -> 
+            Leaf2 = hd(LH),
+            <<OldN:256>> = store2:leaf_hash(
+                             NewLeaf, CFG),
+            <<NewN:256>> = store2:leaf_hash(
+                             Leaf2, CFG),
+            LeafDiff = 
+                if
+                    OldN == NewN -> fr:encode(0);
+                    true ->
+                        fr:sub(fr:encode(NewN),
+                               fr:encode(OldN))
+                end,
+                                                %todo. error.
+                                                %we need to return the 2 things.
+            update_merge(
+              Leaves, Subtrees, Depth, CFG, 
+              MEP, [[{N, {Leaf2#leaf.key,
+                          Leaf2#leaf.value}}]|
+                    R],
+              [LeafDiff|Diffs], N+1);
+        B -> 
+                %<<Hash:256>> = store2:leaf_hash(
+                %         NewLeaf, CFG),
+                %{LH, fr:neg(fr:encode(Hash))};
+                %{LH, 0};
+            update_merge(
+              [LH|Leaves], 
+              [[{N, 0}]
+               |Subtrees],
+              Depth, CFG, MEP, R, Diffs, N);
+        true -> %{[NewLeaf|LH], 0}
+            update_merge(
+              [[NewLeaf|LH]|Leaves], 
+              [[{N, 0}]
+               |Subtrees],
+              Depth, CFG, MEP, R, Diffs, N)
+    end;
+%    update_merge(
+%      [L2|Leaves], 
+%      [[{N, NextHash}]
+%       |Subtrees],
+%      Depth, CFG, MEP, R, Diffs, N);
 update_merge([LH|Leaves],
              [[{N, 0}]|Subtrees],
              Depth, CFG, MEP, R, Diffs, N) 
@@ -127,7 +190,13 @@ update_merge([LH|Leaves],
              [[{N, 0}]|Subtrees],
              Depth, CFG, MEP, R, Diffs, N) ->
     #leaf{key = Key, value = Value} = hd(LH),
-    Diff = store2:leaf_hash(hd(LH), CFG),
+    <<Diff0:256>> = store2:leaf_hash(hd(LH), CFG),
+    Diff = fr:encode(Diff0),
+    io:fwrite("new leaf diff "),
+    io:fwrite(integer_to_list(Diff0)),
+    io:fwrite("\n"),
+    %io:fwrite({length(LH), N, Depth, Key div 256 rem 256, Value}),
+    %Diff = Diff0,
     update_merge(Leaves,
                  Subtrees,
                  Depth, CFG, MEP, 
