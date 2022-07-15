@@ -634,7 +634,7 @@ test(20, CFG) ->
     success;
 test(21, CFG) ->
     Loc = 1,
-    Times = 5,
+    Times = 3,
     Leaves = 
         lists:map(
           fun(N) -> 
@@ -642,7 +642,6 @@ test(21, CFG) ->
                   %<<Key:256>> = <<(-Key0):256>>,
                   Key = 1000000000 - (128 * N),
                   #leaf{key = Key, value = <<N:16>>}
-          %end, Many),
           end, range(1, Times+1)),
     Many = lists:map(fun(#leaf{key = K}) -> K end,
                      Leaves),
@@ -650,8 +649,6 @@ test(21, CFG) ->
         store2:batch(Leaves, Loc, CFG),
     {ProofTree, Commit, Opening} = 
         get2:batch([5|Many], NewLoc, CFG),
-        %get2:batch(Many, NewLoc, CFG),
-    %io:fwrite(ProofTree),
     {true, _} = 
         verify2:proof(hd(ProofTree), {ProofTree, Commit, Opening}, CFG),
     %io:fwrite(ProofTree),
@@ -661,6 +658,7 @@ test(21, CFG) ->
     ProofTree2 = 
         verify2:update(
           ProofTree, [Leaf1], CFG),
+    %io:fwrite({ProofTree, ProofTree2}),
     NewRoot2 = hd(ProofTree2),
     %NewRoot0 = hd(ProofTree),
     Leaves2 = [Leaf1|tl(Leaves)],

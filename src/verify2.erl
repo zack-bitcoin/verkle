@@ -123,7 +123,7 @@ update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees],
 
     io:fwrite("merging stems diff calculation.\n"),
     update_merge(Leaves, Subtrees, Depth, CFG, MEP,
-                 [Tree2|R], [Diff|Diffs], N+1);
+                 [[{N, NewPoint}|Tree2]|R], [Diff|Diffs], N+1);
 update_merge([LH|Leaves], 
              [[{N, {Key, Value}}]|Subtrees], 
              Depth, CFG, MEP, R, Diffs, N) ->
