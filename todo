@@ -1,4 +1,7 @@
-in store2:verified, we need to walk down the hard drive's tree at the same time as the ram tree. that way we can update stems.
+now we can use the updated proof to update the database. but we need more tests to be sure that this works.
+
+
+when we calculate the precomputed multi exponent in verify2:update, it seems like we are putting a bunch of zeros in unnecessarily.
 
 
 in verify2:update_batch2, when we calculate the precomputed multi exponent, it is crashing.

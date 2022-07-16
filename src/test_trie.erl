@@ -617,7 +617,8 @@ test(20, CFG) ->
     {true, Leaves2} = 
         verify2:proof(Root, Proof, CFG),
     T4 = erlang:timestamp(),
-    %io:fwrite({Leaves2}),
+    %io:fwrite({lists:reverse(Leaves2)}),
+    %io:fwrite({length(Leaves2), length(Keys)}),
     true = (length(Leaves2) == length(Keys)),
     if
         true ->
@@ -634,7 +635,7 @@ test(20, CFG) ->
     success;
 test(21, CFG) ->
     Loc = 1,
-    Times = 3,
+    Times = 5,
     Leaves = 
         lists:map(
           fun(N) -> 
@@ -649,34 +650,62 @@ test(21, CFG) ->
         store2:batch(Leaves, Loc, CFG),
     {ProofTree, Commit, Opening} = 
         get2:batch([5|Many], NewLoc, CFG),
+        %get2:batch(Many, NewLoc, CFG),
+    %io:fwrite(ProofTree),
     {true, _} = 
         verify2:proof(hd(ProofTree), {ProofTree, Commit, Opening}, CFG),
     %io:fwrite(ProofTree),
-    Leaf0 = hd(Leaves),
-    Leaf1 = Leaf0#leaf{value = <<0,2>>},
+    Leaf01 = hd(Leaves),
+    Leaf02 = hd(tl(Leaves)),
+    Leaf1 = Leaf01#leaf{value = <<0,0>>},
+    Leaf2 = Leaf02,%#leaf{value = <<0,0>>},
+    %Leaf2 = {Leaf02#leaf.key, 0},
+    %Leaf3 = leaf:new(5, <<0,0>>, 0, CFG),%writing to the previously empty location.
     %io:fwrite({Leaf0, Leaf1}),
-    ProofTree2 = 
-        verify2:update(
-          ProofTree, [Leaf1], CFG),
-    %io:fwrite({ProofTree, ProofTree2}),
-    NewRoot2 = hd(ProofTree2),
     %NewRoot0 = hd(ProofTree),
-    Leaves2 = [Leaf1|tl(Leaves)],
+    Leaves2 = [Leaf1,Leaf2|tl(tl(Leaves))],
     {Loc3, _, _} = 
         store2:batch(Leaves2, 1, CFG),
     RootStem = stem2:get(Loc3, CFG),
+    ProofTree2 = 
+        verify2:update(
+          ProofTree, [Leaf1, Leaf2], CFG),
+    %io:fwrite({ProofTree, ProofTree2}),
+    NewRoot2 = hd(ProofTree2),
     true = fq:eq(NewRoot2, RootStem#stem.root),
+    Loc2 = store2:verified(
+                  NewLoc, ProofTree2, CFG),
+    RootStem4 = stem2:get(Loc2, CFG),
+    RootStem5 = RootStem,
+    true = fq:eq(RootStem5#stem.root, RootStem4#stem.root),
+    if
+        false ->
+    io:fwrite({fq:hash_point(
+                 element(
+                   2, hd(hd(tl(element(
+                                 1, get2:batch(
+                                      [Leaf01#leaf.key],
+                                      Loc2, CFG))))))),
+               fq:hash_point(
+                 element(
+                   2, hd(hd(tl(element(
+                                 1, get2:batch(
+                                      [Leaf01#leaf.key],
+                                      Loc3, CFG))))))),
+              ProofTree2});
+        true -> ok
+    end,
+    if
+      not(RootStem5#stem.hashes == 
+              RootStem4#stem.hashes) ->
+            io:fwrite({verify2:remove_empty(
+                         tuple_to_list(RootStem5#stem.hashes)),
+                       verify2:remove_empty(
+                         tuple_to_list(RootStem4#stem.hashes))}),
+            ok;
+        true -> ok
+    end,
 
-    %todo.
-    %load the new version into the database.
-    %   don't re-calculate the vector commitments.
-    RootStem2 = stem2:get(NewLoc, CFG),
-    %{_Loc4, _, Pointer} = 
-    RootStem3 = 
-        store2:verified2(tl(ProofTree2), RootStem2, CFG),
-    RootStem4 = RootStem3#stem{root = hd(ProofTree2)},
-    
-    true = fq:eq(NewRoot2, RootStem4#stem.root),
 
     %try updating the database in other ways, make sure the root hash is the same.
     success.

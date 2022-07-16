@@ -7,7 +7,8 @@
          leaf_hash/2,
          clump_by_path/3,
          sort_by_path2/2,
-         verified2/3
+         %verified2/3
+         verified/3
         ]).
 %-include("constants.hrl").
 -define(nindex, 8).
@@ -128,26 +129,18 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     {Loc, stem, NewStem}.
 
 
-verified([[{N, {Key, Value}}]|Tree], 
-         RP, CFG) ->
-    Stem = stem2:get(RP, CFG),
-    Leaf = leaf:new(Key, Value, 0, CFG),
-    Loc2 = leaf:put(Leaf, CFG),
-    {Loc2, leaf, leaf_hash(Leaf, CFG)};
-verified([[{N, P}|Children]|Tree], RP, CFG) ->
-    true = is_binary(P),
-    Stem = stem2:get(RP, CFG),
-    %stem#{root, types, pointers, hashes}
-    Stem2 = verified2(Children, Stem, CFG),
-    NewStem = Stem2#stem{
-                root = P
-               },
-    Loc2 = stem2:put(NewStem, CFG),
-    {Loc2, stem, P}.
+verified(Loc, ProofTree, CFG) ->
+    RootStem = stem2:get(Loc, CFG),
+    RootStem2 = verified2(tl(ProofTree), RootStem, CFG),
+    RootStem3 = 
+        RootStem2#stem{root = hd(ProofTree)},
+    Loc2 = stem2:put(RootStem3, CFG),
+    Loc2.
+    
 
 verified2([], Stem, _) -> Stem;
 verified2([[{N, 0}]|T], Stem, CFG) -> 
-    Stem2 = verified3(N, Stem, 0, 0, 0),
+    Stem2 = verified3(N, Stem, 0, 0, <<0:256>>),
     verified2(T, Stem2, CFG);
 verified2([[{N, {Key, Value}}]|T], Stem, CFG) -> 
    % {Loc, leaf, Pointer} = 
@@ -183,7 +176,7 @@ range(X, Y) when (X < Y) ->
     [X|range(X+1, Y)].
 
 clump_by_path(D, Leaves, CFG) ->
-    Paths = lists:map(
+    Paths0 = lists:map(
               fun(L) -> 
                       <<B:?nindex>> = 
                           lists:nth(
@@ -191,6 +184,10 @@ clump_by_path(D, Leaves, CFG) ->
                                    L, CFG)),
                       {B, L} end,
               Leaves),
+    Paths = lists:sort(fun({A, _}, {B, _}) ->
+                               A < B
+                       end, Paths0),
+                               
     {Gs, _, _} = parameters2:read(),
     Result0 = 
         clump_by_path2(
@@ -201,11 +198,12 @@ remove_pointers([]) -> [];
 remove_pointers([H|T]) -> 
     [remove_pointers(H)|
      remove_pointers(T)].
-clump_by_path2(I, Limit, _, C) 
-  when (I == Limit) -> C;
-clump_by_path2(I, Limit, [], C) -> 
-    [lists:reverse(C)|
-     clump_by_path2(I+1, Limit, [], [])];
+clump_by_path2(I, Limit, _, _) 
+  when (I == Limit) -> [];
+%clump_by_path2(I, Limit, [], C) -> 
+%    [lists:reverse(C)|
+%     clump_by_path2(I+1, Limit, [], [])];
+%clump_by_path2(I, Limit, T, C) -> 
 clump_by_path2(I, Limit, [{I, L}|T], C) -> 
     clump_by_path2(I, Limit, T, [{I, L}|C]);
 clump_by_path2(I, Limit, T, C) -> 

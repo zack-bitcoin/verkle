@@ -1,5 +1,6 @@
 -module(verify2).
--export([proof/3, update/3
+-export([proof/3, update/3, remove_empty/1,
+         test/0
          %update_proof/3 %update_proofs/2, unfold/4
         ]).
 -include("constants.hrl").
@@ -7,7 +8,7 @@
 
 update([OldRoot|ProofTree], Leaves, CFG) ->
     %walk down the tree, then update everything in reverse in the callback stack.
-    Leaves2 = store2:sort_by_path2(Leaves, CFG),
+    %Leaves2 = store2:sort_by_path2(Leaves, CFG),
     MEP = parameters2:multi_exp(),
     {Diff, Tree2} = 
         update_batch2(Leaves, ProofTree,
@@ -26,6 +27,9 @@ update_batch2(Leaves, Tree,
     %adding leaves to an existing stem.
     Leaves2 = store2:clump_by_path(
                 Depth, Leaves, CFG),
+%    io:fwrite({remove_empty(Leaves), 
+%               remove_empty(Leaves2),
+%               Depth}),
     {Diffs, Tree2} = 
         update_merge(Leaves2, 
                      Tree, Depth, CFG, MEP, 
@@ -143,6 +147,7 @@ update_merge([LH|Leaves],
                 if
                     OldN == NewN -> 
                         %leaf unchanged.
+                        io:fwrite("Leaf unchanged\n"),
                         fr:encode(0);
                     true ->
                         io:fwrite("updating leaf diff calculation.\n"),
@@ -188,9 +193,9 @@ update_merge([LH|Leaves],
     #leaf{key = Key, value = Value} = hd(LH),
     io:fwrite("new leaf diff calculation"),
     Diff = store2:leaf_hash(hd(LH), CFG),
-    io:fwrite("new leaf diff "),
-    io:fwrite(integer_to_list(Diff)),
-    io:fwrite("\n"),
+    %io:fwrite("new leaf diff "),
+    %io:fwrite(integer_to_list(Diff)),
+    %io:fwrite("\n"),
     %io:fwrite({length(LH), N, Depth, Key div 256 rem 256, Value}),
     %Diff = Diff0,
     update_merge(Leaves,
@@ -395,10 +400,16 @@ proof(Root0, {Tree, CommitG, Open}, CFG) ->
 
     %[{1, p1}, [{0, L1},{1, L2}], [{3, p2},{0,L3}]]
 leaves({Y, X = 0}) -> [{Y, X}];
-leaves({_, X = {_, B}}) when is_binary(B) -> [X];
+leaves(X = {_, B}) when is_binary(B) -> [];
+leaves({_, X = {I, B}}) 
+  when is_binary(B) and is_integer(I) -> [X];
 leaves([H|T]) ->
     leaves(H) ++ leaves(T);
-leaves(_) ->  [].
+leaves([]) ->  [];
+leaves(X) ->  
+    %leaf getter error.
+    io:fwrite({X}).
+              
 
 unfold(Root, {Index, 0}, T, CFG) ->%empty case
     lists:reverse([{Root, Index, <<0:256>>}|T]);
@@ -425,3 +436,16 @@ unfold(Root, [H|J], T, CFG) ->
     unfold(Root, H, T, CFG)
         ++ unfold(Root, J, [], CFG);
 unfold(_, [], _, _) -> [].
+
+
+
+test() ->
+    CFG = trie:cfg(trie01),
+    Leaves = [leaf:new(999999872, <<0,0>>, 0, CFG),
+              leaf:new(999999744, <<0,0>>, 0, CFG)],
+    Leaves2 = store2:clump_by_path(
+                0, Leaves, CFG),
+    %todo. each should have the same number of leaves.
+    true = (length(remove_empty(Leaves))) ==
+        (length(remove_empty(Leaves2))),
+    success.
