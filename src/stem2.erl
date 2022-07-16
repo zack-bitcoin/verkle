@@ -4,12 +4,13 @@
 -export([test/1,get/2,put/2,type/2,
          hash/1,hash_point/1,
          pointers/1,
-	 types/1,hashes/1,pointer/2,new/5,add/5,
-	 new_empty/1,recover/6, empty_hashes/1, 
+	 types/1,hashes/1,pointer/2,%new/5,%add/5,
+	 new_empty/1,%recover/6, 
+         empty_hashes/1, 
 	 update_pointers/2, empty_tuple/0,
 	 make/3, make/2, update/3, onify2/2,
 	 put_batch/2, serialize/2,
-         root/1,
+         root/1, check_root_integrity/1,
 	 empty_trie/2]).
 %-include("constants.hrl").
 %-export_type([stem/0,types/0,empty_t/0,stem_t/0,leaf_t/0,pointers/0,empty_p/0,hashes/0,hash/0,empty_hash/0,stem_p/0,nibble/0]).
@@ -28,7 +29,7 @@ empty_tuple() ->
 many(_, 0) -> [];
 many(X, N) when (N > 0) -> 
     [X|many(X, N-1)].
-add(S, N, T, P, <<H:256>>) ->
+unused_add(S, N, T, P, <<H:256>>) ->
     %Gs are the generator points for the pedersen commits.
     1=2,
     #stem{
@@ -59,11 +60,11 @@ new_empty(CFG) ->
          types = empty_tuple(),
          pointers = empty_tuple(),
          root = fq:e_zero()}.
-recover(M, T, P, H, Hashes, CFG) ->
+unused_recover(M, T, P, H, Hashes, CFG) ->
     Types = onify2(Hashes, CFG),
     %Types = list_to_tuple(onify(tuple_to_list(Hashes), CFG)),
     S = #stem{hashes = Hashes, types = Types},
-    add(S, M, T, P, H).
+    unused_add(S, M, T, P, H).
 onify2(H, CFG) ->
     list_to_tuple(onify(tuple_to_list(H), CFG)).
 onify([], _) -> [];
@@ -86,11 +87,11 @@ make(Types, Pointers, Hashes) ->
     #stem{types = Types,
 	  pointers = Pointers,
 	  hashes = Hashes}.
-new(N, T, P, H, CFG) ->
+unused_new(N, T, P, H, CFG) ->
     %N is the nibble being pointed to.
     %T is the type, P is the pointer, H is the Hash
     S = new_empty(CFG),
-    add(S, N, T, P, H).
+    unused_add(S, N, T, P, H).
 pointers(R) -> R#stem.pointers.
 update_pointers(Stem, NP) ->
     Stem#stem{pointers = NP}.
@@ -182,6 +183,12 @@ hash_point(P) ->
 
 update(Location, Stem, CFG) ->
     dump:update(Location, serialize(Stem, CFG), ids:stem(CFG)).
+check_root_integrity(Stem) ->
+    MEP = parameters2:multi_exp(),
+    R = store2:precomputed_multi_exponent(
+          tuple_to_list(Stem#stem.hashes),
+          MEP),%C1 has an incorrect stem
+    true = fq:eq(R, Stem#stem.root).
 put(Stem, CFG) ->
     S = serialize(Stem, CFG),
     ID = ids:stem(CFG),
@@ -234,7 +241,7 @@ test(1) ->
     true = equal(S, Sb),
     true = fq:eq(S#stem.root, Sb#stem.root),
     Hash = hash:doit(<<>>),
-    Stem2 = add(S, 3, 1, 5, Hash),
+    Stem2 = unused_add(S, 3, 1, 5, Hash),
     hash(Stem2),
     %testing reading and writing to the hard drive.
     Pointer = stem2:put(Stem2, CFG),

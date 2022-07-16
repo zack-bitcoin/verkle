@@ -122,6 +122,7 @@ update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees],
         update_batch2(LH, S1, Depth+1, CFG, MEP),
     NewPoint = fq:e_add(B, Point),
     NewN = stem2:hash_point(NewPoint),
+    %NewN = stem2:hash_point(Point),
     OldN = stem2:hash_point(B),
     Diff = fr:sub(NewN, OldN),
 

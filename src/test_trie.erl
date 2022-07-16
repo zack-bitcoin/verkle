@@ -635,7 +635,7 @@ test(20, CFG) ->
     success;
 test(21, CFG) ->
     Loc = 1,
-    Times = 5,
+    Times = 2000,
     Leaves = 
         lists:map(
           fun(N) -> 
@@ -649,7 +649,7 @@ test(21, CFG) ->
     {NewLoc, stem, _} = 
         store2:batch(Leaves, Loc, CFG),
     {ProofTree, Commit, Opening} = 
-        get2:batch([5|Many], NewLoc, CFG),
+        get2:batch([5,6|Many], NewLoc, CFG),
         %get2:batch(Many, NewLoc, CFG),
     %io:fwrite(ProofTree),
     {true, _} = 
@@ -658,7 +658,7 @@ test(21, CFG) ->
     Leaf01 = hd(Leaves),
     Leaf02 = hd(tl(Leaves)),
     Leaf1 = Leaf01#leaf{value = <<0,0>>},
-    Leaf2 = Leaf02,%#leaf{value = <<0,0>>},
+    Leaf2 = Leaf02#leaf{value = <<0,0>>},
     %Leaf2 = {Leaf02#leaf.key, 0},
     %Leaf3 = leaf:new(5, <<0,0>>, 0, CFG),%writing to the previously empty location.
     %io:fwrite({Leaf0, Leaf1}),
@@ -678,6 +678,7 @@ test(21, CFG) ->
     RootStem4 = stem2:get(Loc2, CFG),
     RootStem5 = RootStem,
     true = fq:eq(RootStem5#stem.root, RootStem4#stem.root),
+    true = fq:eq(RootStem4#stem.root, hd(ProofTree2)),
     if
         false ->
     io:fwrite({fq:hash_point(
@@ -698,10 +699,38 @@ test(21, CFG) ->
     if
       not(RootStem5#stem.hashes == 
               RootStem4#stem.hashes) ->
+            CP1 = hd(tl(
+                       verify2:remove_empty(
+                         tuple_to_list(
+                           RootStem4#stem.pointers)))),
+            CP2 = hd(tl(
+                       verify2:remove_empty(
+                         tuple_to_list(
+                           RootStem5#stem.pointers)))),
+            C1 = stem2:get(CP1, CFG),
+            C2 = stem2:get(CP2, CFG),
+            MEP = parameters2:multi_exp(),
+            RC1 = store2:precomputed_multi_exponent(
+                    tuple_to_list(C1#stem.hashes),
+                    MEP),%C1 has an incorrect stem
+            RC2 = store2:precomputed_multi_exponent(
+                    tuple_to_list(C2#stem.hashes),
+                    MEP),
             io:fwrite({verify2:remove_empty(
                          tuple_to_list(RootStem5#stem.hashes)),
                        verify2:remove_empty(
-                         tuple_to_list(RootStem4#stem.hashes))}),
+                         tuple_to_list(RootStem4#stem.hashes)),
+                       verify2:remove_empty(
+                         tuple_to_list(
+                           C1#stem.hashes)) ==
+                       verify2:remove_empty(
+                         tuple_to_list(
+                           C2#stem.hashes)),
+                      fq:eq(C1#stem.root, C2#stem.root),
+                      fq:eq(RC1, C1#stem.root),
+                      fq:eq(RC2, C2#stem.root)
+                      }),
+            
             ok;
         true -> ok
     end,

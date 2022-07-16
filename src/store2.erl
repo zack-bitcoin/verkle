@@ -134,6 +134,7 @@ verified(Loc, ProofTree, CFG) ->
     RootStem2 = verified2(tl(ProofTree), RootStem, CFG),
     RootStem3 = 
         RootStem2#stem{root = hd(ProofTree)},
+    %stem2:check_root_integrity(RootStem3),
     Loc2 = stem2:put(RootStem3, CFG),
     Loc2.
     
@@ -143,25 +144,24 @@ verified2([[{N, 0}]|T], Stem, CFG) ->
     Stem2 = verified3(N, Stem, 0, 0, <<0:256>>),
     verified2(T, Stem2, CFG);
 verified2([[{N, {Key, Value}}]|T], Stem, CFG) -> 
-   % {Loc, leaf, Pointer} = 
-   %     verified([{N, {Key, Value}}], 0, CFG),
-    
     Leaf = leaf:new(Key, Value, 0, CFG),
     Loc = leaf:put(Leaf, CFG),
-    Stem2 = verified3(N, Stem, 2, Loc, 
-                     leaf_hash(Leaf, CFG)),
+    Stem2 = verified3(
+              N, Stem, 2, Loc, 
+              leaf_hash(Leaf, CFG)),
     verified2(T, Stem2, CFG);
 verified2([[{N, B}|T1]|T2], Stem, CFG) 
   when is_binary(B) -> 
-    %{Loc, stem, Pointer} = verified(T1, element(N, Stem#stem.pointers), CFG),
     1 = element(N+1, Stem#stem.types),
-    ChildStem = verified2(T1, stem2:get(element(N+1, Stem#stem.pointers), CFG), CFG),
+    ChildStem0 = verified2(T1, stem2:get(element(N+1, Stem#stem.pointers), CFG), CFG),
+    ChildStem = ChildStem0#stem{root = B},
+    %stem2:check_root_integrity(ChildStem),
     Loc = stem2:put(ChildStem, CFG),
     Hash = stem2:hash(ChildStem),
     Stem2 = verified3(N, Stem, 1, Loc, Hash),
     verified2(T2, Stem2, CFG).
 verified3(N, Stem, Type, Loc, Hash) ->
-    Stem#stem{
+    Stem2 = Stem#stem{
       types = setelement(N+1, Stem#stem.types, Type),
       pointers = setelement(
                    N+1, Stem#stem.pointers, Loc),
@@ -169,7 +169,9 @@ verified3(N, Stem, Type, Loc, Hash) ->
                  N+1, Stem#stem.hashes, 
                  %fq:hash_point(Pointer))
                  Hash)
-     }.
+     },
+    %stem2:check_root_integrity(Stem2),
+    Stem2.
                 
 range(X, X) -> [X];
 range(X, Y) when (X < Y) -> 
