@@ -658,12 +658,13 @@ test(21, CFG) ->
     Leaf01 = hd(Leaves),
     Leaf02 = hd(tl(Leaves)),
     Leaf1 = Leaf01#leaf{value = <<0,0>>},
-    Leaf2 = Leaf02#leaf{value = <<0,0>>},
+    Leaf2 = Leaf02#leaf{key = 5, value = <<0,1>>},
     %Leaf2 = {Leaf02#leaf.key, 0},
     %Leaf3 = leaf:new(5, <<0,0>>, 0, CFG),%writing to the previously empty location.
     %io:fwrite({Leaf0, Leaf1}),
     %NewRoot0 = hd(ProofTree),
-    Leaves2 = [Leaf1,Leaf2|tl(tl(Leaves))],
+    Leaves2 = [Leaf1,Leaf2|tl(Leaves)],
+    %io:fwrite(Leaves2),
     {Loc3, _, _} = 
         store2:batch(Leaves2, 1, CFG),
     RootStem = stem2:get(Loc3, CFG),
@@ -672,12 +673,11 @@ test(21, CFG) ->
           ProofTree, [Leaf1, Leaf2], CFG),
     %io:fwrite({ProofTree, ProofTree2}),
     NewRoot2 = hd(ProofTree2),
-    true = fq:eq(NewRoot2, RootStem#stem.root),
     Loc2 = store2:verified(
                   NewLoc, ProofTree2, CFG),
     RootStem4 = stem2:get(Loc2, CFG),
-    RootStem5 = RootStem,
-    true = fq:eq(RootStem5#stem.root, RootStem4#stem.root),
+    true = fq:eq(NewRoot2, RootStem#stem.root),
+    true = fq:eq(RootStem#stem.root, RootStem4#stem.root),
     true = fq:eq(RootStem4#stem.root, hd(ProofTree2)),
     if
         false ->
@@ -697,7 +697,7 @@ test(21, CFG) ->
         true -> ok
     end,
     if
-      not(RootStem5#stem.hashes == 
+      not(RootStem#stem.hashes == 
               RootStem4#stem.hashes) ->
             CP1 = hd(tl(
                        verify2:remove_empty(
@@ -706,7 +706,7 @@ test(21, CFG) ->
             CP2 = hd(tl(
                        verify2:remove_empty(
                          tuple_to_list(
-                           RootStem5#stem.pointers)))),
+                           RootStem#stem.pointers)))),
             C1 = stem2:get(CP1, CFG),
             C2 = stem2:get(CP2, CFG),
             MEP = parameters2:multi_exp(),
@@ -717,7 +717,7 @@ test(21, CFG) ->
                     tuple_to_list(C2#stem.hashes),
                     MEP),
             io:fwrite({verify2:remove_empty(
-                         tuple_to_list(RootStem5#stem.hashes)),
+                         tuple_to_list(RootStem#stem.hashes)),
                        verify2:remove_empty(
                          tuple_to_list(RootStem4#stem.hashes)),
                        verify2:remove_empty(

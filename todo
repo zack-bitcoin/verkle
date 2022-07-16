@@ -1,3 +1,6 @@
+remove the check_root_integrity lines that slow us down.
+
+
 now we can use the updated proof to update the database. but we need more tests to be sure that this works.
 
 

@@ -36,10 +36,6 @@ update_batch2(Leaves, Tree,
                      [], [], 0),
     256 = length(Leaves2),
     256 = length(Diffs),
-    %io:fwrite(Diffs),
-    %diffs can contain zeros, for empty slots.
-
-    %todo. this is crashing the precompute. format must be wrong somehow.
     %io:fwrite({remove_empty(Diffs)}),
     lists:map(fun(X) ->
                       32 = size(X)
@@ -58,29 +54,6 @@ remove_empty([<<0:256>>|T]) ->
 remove_empty([H|T]) ->
     [H|remove_empty(T)];
 remove_empty([]) -> [].
-
-
-    
-
-%update_batch3(Leaves,
-%              Tree = [{N, {Key, Value}},
-%              Depth, CFG, MEP) ->
-    %mixing new leaves with an existing leaf.
-%    NewLeaf = leaf:new(Key, Value, 0, CFG),
-    %creates a new stem
-%    update_batch2([NewLeaf|Leaves], Root,
-%                  [{N, fq:e_zero()}], 
-%                  Depth, CFG, MEP);
-%update_batch3(Leaves, Tree = {N, 0},
-%              Depth, CFG, MEP) ->
-    %adding leaves to an empty spot. 
-    %creates a new stem
-%    update_batch3(Leaves, [{N, fq:e_zero()}],
-%                  Depth, CFG, MEP);
-%update_batch3([L = #leaf{}], Tree = {N, 0},
-%              Depth, CFG, MEP) ->
-    %storing a leaf into an empty spot.
-%    {N, {L#leaf.key, L#leaf.value}}.
 
 
 update_merge([], Rest, _,_,_, Merged, Diffs, _) ->
@@ -192,17 +165,10 @@ update_merge([LH|Leaves],
              [[{N, 0}]|Subtrees],
              Depth, CFG, MEP, R, Diffs, N) ->
     #leaf{key = Key, value = Value} = hd(LH),
-    io:fwrite("new leaf diff calculation"),
+    io:fwrite("new leaf diff calculation\n"),
     Diff = store2:leaf_hash(hd(LH), CFG),
-    %io:fwrite("new leaf diff "),
-    %io:fwrite(integer_to_list(Diff)),
-    %io:fwrite("\n"),
-    %io:fwrite({length(LH), N, Depth, Key div 256 rem 256, Value}),
-    %Diff = Diff0,
-    update_merge(Leaves,
-                 Subtrees,
-                 Depth, CFG, MEP, 
-                 [[{N, {Key, Value}}]|R], 
+    update_merge(Leaves, Subtrees, Depth, CFG, 
+                 MEP, [[{N, {Key, Value}}]|R], 
                  [Diff|Diffs], N+1).
 
     
