@@ -13,7 +13,8 @@ test() ->
     %V = [101, 17],
     V = [%18%, 
          20,
-         21
+         21,
+         22
         ],
     test_helper(V, CFG).
 test_helper([], _) -> success;
@@ -635,7 +636,7 @@ test(20, CFG) ->
     success;
 test(21, CFG) ->
     Loc = 1,
-    Times = 2000,
+    Times = 200,
     Leaves = 
         lists:map(
           fun(N) -> 
@@ -651,7 +652,9 @@ test(21, CFG) ->
     {ProofTree, Commit, Opening} = 
         get2:batch([5,6|Many], NewLoc, CFG),
     {true, _} = 
-        verify2:proof(hd(ProofTree), {ProofTree, Commit, Opening}, CFG),
+        verify2:proof(
+          hd(ProofTree), 
+          {ProofTree, Commit, Opening}, CFG),
     %io:fwrite(ProofTree),
     Leaf01 = hd(Leaves),
     Leaf02 = hd(tl(Leaves)),
@@ -662,23 +665,24 @@ test(21, CFG) ->
     %io:fwrite({Leaf0, Leaf1}),
     %NewRoot0 = hd(ProofTree),
     %Leaves2 = [Leaf1,Leaf2|tl(Leaves)],
-    Leaves2 = [Leaf2|tl(Leaves)],
+    Leaves2 = [Leaf1|tl(Leaves)],
     %io:fwrite(Leaves2),
     {Loc3, _, _} = 
         store2:batch(Leaves2, 1, CFG),
     RootStem = stem2:get(Loc3, CFG),
+    FLeaf1 = leaf:leaf2fast(Leaf1, 0,0,CFG),
+    FLeaf2 = leaf:leaf2fast(Leaf2,0,0,CFG),
     ProofTree2 = 
         verify2:update(
-          ProofTree, [{Leaf01#leaf.key, 0}, Leaf2],
+          %ProofTree, [FLeaf01, FLeaf2],
+          ProofTree, [FLeaf1],
           CFG),
-    %io:fwrite({ProofTree, ProofTree2}),
     NewRoot2 = hd(ProofTree2),
     Loc2 = store2:verified(
                   NewLoc, ProofTree2, CFG),
     RootStem4 = stem2:get(Loc2, CFG),
     true = fq:eq(NewRoot2, RootStem#stem.root),
     true = fq:eq(RootStem#stem.root, RootStem4#stem.root),
-    true = fq:eq(RootStem4#stem.root, hd(ProofTree2)),
     if
         false ->
     io:fwrite({fq:hash_point(
@@ -735,11 +739,82 @@ test(21, CFG) ->
         true -> ok
     end,
 
+    success;
+test(22, CFG) ->
+    Loc = 1,
+    StartingElements = 10000,
+    UpdateElements = 600,
+    Leaves = 
+        lists:map(
+          fun(N) -> 
+                  Key0 = StartingElements + 1 - N,
+                  Key = 100000000000000 - (Key0 * 111),
+                  #leaf{key = Key, 
+                        value = <<N:16>>}
+          end, range(1, StartingElements+1)),
+    Many = lists:map(fun(#leaf{key = K}) -> K end,
+                     Leaves),
+    {Updating, _} = 
+        lists:split(UpdateElements, Many),
+    {Loc2, _, _} = 
+        store2:batch(Leaves, Loc, CFG),
+    UpdatedLeaves = 
+        lists:map(
+          fun(N) -> 
+                  L1=#leaf{key = N, 
+                           value = <<2,7>>},
+                  leaf:leaf2fast(L1, 0, 0, CFG)
+          end, Updating),
+    
+    %making the verkle proof
+    T1 = erlang:timestamp(),
+    {ProofTree, Commit, Opening} = 
+        get2:batch(Updating, Loc2, CFG),
+    %verifying the verkle proof
+    T2 = erlang:timestamp(),
+    {true, _} = 
+        verify2:proof(
+          hd(ProofTree), 
+          {ProofTree, Commit, Opening}, CFG),
 
-    %try updating the database in other ways, make sure the root hash is the same.
+    %updating the proof.
+    T3 = erlang:timestamp(),
+
+    %{ok, _PID} = fprof:start(),
+    %fprof:trace([start, {procs, all}]),
+
+    ProofTree2 = verify2:update(
+               ProofTree, UpdatedLeaves, CFG),
+
+    %fprof:trace([stop]),
+    %fprof:profile(),
+    %fprof:analyse(),
+    %fprof:stop(),
+
+    %storing the new data in the db
+    T4 = erlang:timestamp(),
+    Loc3 = store2:verified(
+                  Loc2, ProofTree2, CFG),
+    T5 = erlang:timestamp(),
+    
+
+    io:fwrite("measured in millionths of a second. 6 decimals. \n"),
+    io:fwrite("tree has "),
+    io:fwrite(integer_to_list(StartingElements)),
+    io:fwrite(" elements. we are updating "),
+    io:fwrite(integer_to_list(UpdateElements)),
+    io:fwrite(" of them.\n making the proof: "),
+    io:fwrite(integer_to_list(timer:now_diff(T2, T1))),
+    io:fwrite("\n verifying proof: "),
+    io:fwrite(integer_to_list(timer:now_diff(T3, T2))),
+    io:fwrite("\n root hash of the updated proof: "),
+    io:fwrite(integer_to_list(timer:now_diff(T4, T3))),
+    io:fwrite("\n storing the new data in the database: "),
+    io:fwrite(integer_to_list(timer:now_diff(T5, T4))),
+    io:fwrite("\n\n"),
+
+
     success.
-
-
     
     
     

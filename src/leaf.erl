@@ -1,9 +1,38 @@
 -module(leaf).
 -export([new/4, key/1, value/1, meta/1, path/2, path_maker/2, hash/2, put/2, get/2, serialize/2, deserialize/2,
 	 put_batch/2,
+         leaf2fast/4, fast2leaf/1,
 	is_serialized_leaf/2, test/0]).
 -include("constants.hrl").
 %-export_type([leaf/0,key/0,value/0,meta/0,leaf_p/0,path/0]).
+
+fast2leaf(#fast_leaf{key = K, value = V, meta = M}
+         ) ->
+    #leaf{key = K, value = V, meta = M}.
+
+leaf2fast(L = #leaf{key = K, value = V, meta = M},
+          P, H, CFG) ->
+    P2 = if
+             (P == 0) ->
+                 path_maker(K, CFG);
+             true -> P
+         end,
+    H2 = if
+             (H == 0) ->
+                 <<X:256>> = hash(L, CFG),
+                 fr:encode(X);
+             true -> H
+         end,
+    #fast_leaf{
+                key = K,
+                value = V,
+                meta = M,
+                path = P2,
+                hash = H2
+              }.
+        
+
+
 is_serialized_leaf(X, CFG) ->
     P = cfg:path(CFG),
     M = cfg:meta(CFG),
@@ -49,11 +78,17 @@ check_key(Key, _) when is_integer(Key) ->
 check_key(_, _) ->
     {error, key_not_integer}.
 key(L) -> L#leaf.key.
+path(L = #fast_leaf{path = P}, CFG) ->
+    P;
 path(L = #leaf{}, CFG) ->
     K = key(L),
     path_maker(K, CFG);
+path({K, 0, P}, _CFG) ->
+    1=2,
+    P;
 path({K, 0}, CFG) ->
     %this means an empty leaf.
+    1=2,
     path_maker(K, CFG).
 path_maker(K, CFG) ->
     T = cfg:path(CFG)*8,
@@ -74,12 +109,14 @@ put(Leaf, CFG) ->
 get(Pointer, CFG) ->
     L = dump:get(Pointer, ids:leaf(CFG)),
     deserialize(L, CFG).
+%hash(L = #fast_leaf{hash = H}, _CFG) ->   
+%    H;
 hash(L, CFG) ->   
     HS = cfg:hash_size(CFG)*8,
     case L#leaf.value of
 	empty -> <<0:HS>>;
 	V ->
-	    P = cfg:path(CFG) * 8,%8 times bigger than necessary. :(
+	    P = cfg:path(CFG) * 8,
 	    %HS2 = cfg:hash_size(CFG),
 	    %Data = <<(L#leaf.key):P, V/binary>>,
             %io:fwrite("\n"),

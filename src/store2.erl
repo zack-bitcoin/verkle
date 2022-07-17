@@ -134,7 +134,7 @@ verified(Loc, ProofTree, CFG) ->
     RootStem2 = verified2(tl(ProofTree), RootStem, CFG),
     RootStem3 = 
         RootStem2#stem{root = hd(ProofTree)},
-    stem2:check_root_integrity(RootStem3),
+    %stem2:check_root_integrity(RootStem3),
     Loc2 = stem2:put(RootStem3, CFG),
     Loc2.
     
@@ -157,7 +157,7 @@ verified2([[{N, B}|T1]|T2], Stem, CFG)
     1 = element(N+1, Stem#stem.types),
     ChildStem0 = verified2(T1, stem2:get(element(N+1, Stem#stem.pointers), CFG), CFG),
     ChildStem = ChildStem0#stem{root = B},
-    stem2:check_root_integrity(ChildStem),
+    %stem2:check_root_integrity(ChildStem),
     Loc = stem2:put(ChildStem, CFG),
     Hash = stem2:hash(ChildStem),
     Stem2 = verified3(N, Stem, 1, Loc, Hash),
@@ -191,26 +191,14 @@ clump_by_path(D, Leaves, CFG) ->
                        end, Paths0),
                                
     {Gs, _, _} = parameters2:read(),
-    Result0 = 
-        clump_by_path2(
-          0, length(Gs), Paths, []),
-    remove_pointers(Result0).
-remove_pointers({_, B}) -> B;
-remove_pointers([]) -> [];
-remove_pointers([H|T]) -> 
-    [remove_pointers(H)|
-     remove_pointers(T)].
+    clump_by_path2(
+      0, length(Gs), Paths, []).
 clump_by_path2(I, Limit, _, _) 
   when (I == Limit) -> [];
-%clump_by_path2(I, Limit, [], C) -> 
-%    [lists:reverse(C)|
-%     clump_by_path2(I+1, Limit, [], [])];
-%clump_by_path2(I, Limit, T, C) -> 
 clump_by_path2(I, Limit, [{I, L}|T], C) -> 
-    clump_by_path2(I, Limit, T, [{I, L}|C]);
+    clump_by_path2(I, Limit, T, [L|C]);
 clump_by_path2(I, Limit, T, C) -> 
-    [lists:reverse(C)|
-     clump_by_path2(I+1, Limit, T, [])].
+    [C|clump_by_path2(I+1, Limit, T, [])].
 
 split4ways(X) ->
     split4ways(X, [], [], [], []).

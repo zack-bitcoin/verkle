@@ -16,9 +16,16 @@
 
 
 -record(leaf, { key
-	      , value
+	      , value = empty
 	      , meta = 0 %meta is data we want to remember that doesn't get hashed into the merkle tree.
 	      }).
+-record(fast_leaf, {key
+               , value = empty
+               , meta = 0
+               , path
+               , hash
+               }).
+
 -record(stem, { root
                 , types
                 , pointers

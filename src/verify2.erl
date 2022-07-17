@@ -13,7 +13,11 @@ update([OldRoot|ProofTree], Leaves, CFG) ->
     {Diff, Tree2} = 
         update_batch2(Leaves, ProofTree,
                       0, CFG, MEP),
-    [fq:e_add(Diff, OldRoot)|Tree2].
+    NewRoot = case Diff of
+                  0 -> OldRoot;
+                  _ -> fq:e_add(Diff, OldRoot)
+              end,
+    [NewRoot|Tree2].
 
 empty_stem() ->
     [].
@@ -21,25 +25,16 @@ empty_stem() ->
 %leaves are made with leaf:new/4
 update_batch2([], Tree, _Depth, _CFG, _MEP) 
 ->
-    {fq:e_zero(), Tree};
+    {0, Tree};
 update_batch2(Leaves, Tree,
               Depth, CFG, MEP) ->
     %adding leaves to an existing stem.
     Leaves2 = store2:clump_by_path(
                 Depth, Leaves, CFG),
-%    io:fwrite({remove_empty(Leaves), 
-%               remove_empty(Leaves2),
-%               Depth}),
     {Diffs, Tree2} = 
         update_merge(Leaves2, 
                      Tree, Depth, CFG, MEP, 
                      [], [], 0),
-    256 = length(Leaves2),
-    256 = length(Diffs),
-    %io:fwrite({remove_empty(Diffs)}),
-    lists:map(fun(X) ->
-                      32 = size(X)
-              end, Diffs),
     EllDiff = store2:precomputed_multi_exponent(
                 Diffs, MEP),
     {EllDiff, Tree2}.
@@ -64,13 +59,14 @@ update_merge([[]|Leaves], [],
              _, _, _, R, Diff, _) ->
     %the proof ended, so there is nothing left to update. checking that we aren't trying to update anyting else.
     update_merge(Leaves, [], ok, ok, ok, 
-                 R, [fr:encode(0)|Diff], ok);
+                 R, [<<0:256>>|Diff], ok);
 update_merge([[]|Leaves], 
              Tree = [[{N, _}|_]|SubTree], Depth, 
              CFG, MEP, R, Diff, N) ->
     %not changing this element that is recorded in our proof. 
-    update_merge(Leaves, SubTree, Depth, CFG, MEP,
-                 [hd(Tree)|R], [fr:encode(0)|Diff], N+1);
+    update_merge(
+      Leaves, SubTree, Depth, CFG, MEP,
+      [hd(Tree)|R], [<<0:256>>|Diff], N+1);
 update_merge([LH|Leaves], 
              Subtrees = [[{M, _}|_]|_], Depth, 
              CFG, MEP, R, Diff, N) 
@@ -85,7 +81,7 @@ update_merge([LH|Leaves],
     end,
     update_merge(Leaves, 
                  Subtrees, Depth, CFG, MEP, R, 
-                 [fr:encode(0)|Diff], N+1);
+                 [<<0:256>>|Diff], N+1);
 update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees], 
              Depth, CFG, MEP, R, Diffs, N) 
   when is_binary(B) ->
@@ -93,21 +89,28 @@ update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees],
 
     {Point, Tree2} = 
         update_batch2(LH, S1, Depth+1, CFG, MEP),
-    NewPoint = fq:e_add(B, Point),
-    NewN = stem2:hash_point(NewPoint),
-    %NewN = stem2:hash_point(Point),
-    OldN = stem2:hash_point(B),
-    Diff = fr:sub(NewN, OldN),
-
-    io:fwrite("merging stems diff calculation.\n"),
+    {NewPoint, Diff} = 
+        case Point of
+            0 -> {B, <<0:256>>};
+            _ ->
+                NewPoint0 = fq:e_add(B, Point),
+                NewN = stem2:hash_point(NewPoint0),
+                OldN = stem2:hash_point(B),
+                {NewPoint0, fr:sub(NewN, OldN)}
+    %io:fwrite("merging stems diff calculation.\n"),
+        end,
     update_merge(Leaves, Subtrees, Depth, CFG, MEP,
-                 [[{N, NewPoint}|Tree2]|R], [Diff|Diffs], N+1);
+                 [[{N, NewPoint}|Tree2]|R], 
+                 [Diff|Diffs], N+1);
 update_merge([[{K, 0}]|Leaves], 
              [[{N, {OldK, OldV}}]|Subtrees],
+             %[[{N, FL = #fast_leaf{hash = H}}]
+             % |Subtrees],
              Depth, CFG, MEP, R, Diffs, N) ->
     %deleting a leaf.
     io:fwrite("deleting a leaf"),
     OldLeaf = leaf:new(OldK, OldV, 0, CFG),
+    %OldLeaf = leaf:leaf2fast(OldLeaf0, OldP, OldH
     OldN = store2:leaf_hash(OldLeaf, CFG),
     update_merge(Leaves, Subtrees, Depth, CFG, MEP,
                  [{N, 0}|R], 
@@ -115,33 +118,40 @@ update_merge([[{K, 0}]|Leaves],
 update_merge([LH|Leaves], 
              [[{N, {Key, Value}}]|Subtrees], 
              Depth, CFG, MEP, R, Diffs, N) ->
+    %io:fwrite("add a leaf to a spot with an existing leaf\n"),
     %there is already a leaf here.
-    NewLeaf = leaf:new(Key, Value, 0, CFG),
-    B = leaf_in_list(NewLeaf, LH),
+    %NewLeaf = leaf:new(Key, Value, 0, CFG),
+    FL0 = leaf:new(Key, Value, 0, CFG),
+    FL = leaf:leaf2fast(FL0, 0, 0, CFG),
+    B = leaf_in_list(FL, LH),
     B2 = (1 == length(LH)),
-%    {L2, NextHash} = 
     if
         (B and B2) -> 
-            io:fwrite(LH),
+            %io:fwrite(LH),
             Leaf2 = hd(LH),
-            OldN = store2:leaf_hash(
-                     NewLeaf, CFG),
-            NewN = store2:leaf_hash(
-                     Leaf2, CFG),
+            %OldN = store2:leaf_hash(
+            %         NewLeaf, CFG),
+            OldN = FL#fast_leaf.hash,
+            NewN = Leaf2#fast_leaf.hash,
+%            NewN = store2:leaf_hash(
+%                     Leaf2, CFG),
             LeafDiff = 
                 if
                     OldN == NewN -> 
                         %leaf unchanged.
                         io:fwrite("Leaf unchanged\n"),
+                        %<<0:256>>;
                         fr:encode(0);
                     true ->
-                        io:fwrite("updating leaf diff calculation.\n"),
+                        %io:fwrite("updating leaf diff calculation.\n"),
                         fr:sub(NewN, OldN)
                 end,
             update_merge(
               Leaves, Subtrees, Depth, CFG, 
-              MEP, [[{N, {Leaf2#leaf.key,
-                          Leaf2#leaf.value}}]|
+              MEP, [[{N, {Leaf2#fast_leaf.key,
+                          Leaf2#fast_leaf.value}}]|
+              %MEP, [[{N, {Key,
+              %            Value}}]|
                     R],
               [LeafDiff|Diffs], N+1);
         B -> 
@@ -155,16 +165,12 @@ update_merge([LH|Leaves],
             %adding leaves to this spot where there was a leaf, without updating our leaf
             io:fwrite("adding a leaves to this spot where there is a leaf, and not changing the existing leaf\n"),
             update_merge(
-              [[NewLeaf|LH]|Leaves], 
+              %[[NewLeaf|LH]|Leaves], 
+              [[FL|LH]|Leaves], 
               [[{N, 0}]
                |Subtrees],
               Depth, CFG, MEP, R, Diffs, N)
     end;
-%    update_merge(
-%      [L2|Leaves], 
-%      [[{N, NextHash}]
-%       |Subtrees],
-%      Depth, CFG, MEP, R, Diffs, N);
 update_merge([LH|Leaves],
              [[{N, 0}]|Subtrees],
              Depth, CFG, MEP, R, Diffs, N) 
@@ -175,25 +181,35 @@ update_merge([LH|Leaves],
 update_merge([LH|Leaves],
              [[{N, 0}]|Subtrees],
              Depth, CFG, MEP, R, Diffs, N) ->
-    #leaf{key = Key, value = Value} = hd(LH),
+    {Key, Value} = 
+        case hd(LH) of
+            #fast_leaf{key = Key2, value = Value2} ->
+                {Key2, Value2}
+        end,
+    %#leaf{key = Key, value = Value} = hd(LH),
     io:fwrite("new leaf diff calculation\n"),
-    Diff = store2:leaf_hash(hd(LH), CFG),
+    %Diff = store2:leaf_hash(hd(LH), CFG),
+    Diff = (hd(LH))#fast_leaf.hash,
     update_merge(Leaves, Subtrees, Depth, CFG, 
                  MEP, [[{N, {Key, Value}}]|R], 
-                 [Diff|Diffs], N+1).
+                 [Diff|Diffs], N+1);
+update_merge(Ls, [X|T], Depth, CFG, MEP, R, Diffs, 
+             N) when is_tuple(X)->
+    update_merge(Ls, [[X|T]], Depth, CFG, MEP, R,
+                 Diffs, N).
 
-    
-    %todo.
-    %new_hash. <<0:256>> is for empty. store2:leaf_hash(L, CFG) or stem2:hash(S)
-    %diff = fr:sub(new_hash, old_hash)
 
-    %EllDiff = store2:precomputed_multi_exponent(
-    %            Diffs, MEP),
-    %NewRoot = fq:e_add(EllDiff, Root),
-
-    
 leaf_in_list(_, []) ->
     false;
+leaf_in_list(#fast_leaf{key = K}, 
+             [#fast_leaf{key = K}|_]) -> 
+    true;
+leaf_in_list({K, 0}, 
+             [#fast_leaf{key = K}|_]) -> 
+    true;
+leaf_in_list(#fast_leaf{key = K}, 
+             [{K, 0}|_]) -> 
+    true;
 leaf_in_list({K, 0}, 
              [#leaf{key = K}|_]) -> 
     true;
@@ -206,99 +222,6 @@ leaf_in_list(#leaf{key = K},
 leaf_in_list(Leaf, [_|T]) -> 
     leaf_in_list(Leaf, T).
 
-    
-
-update_batch([], 0, _, _, _, _) -> 
-    %type 0 is empty
-    {0,0,empty};
-update_batch([], P, leaf, _, _, _) -> 
-    {P, leaf, leaf_not_recorded};
-update_batch([], P, stem, _, _, _) -> 
-    {P, stem, stem_not_recorded};
-update_batch([Leaf], 0, 0, _, CFG, _) ->
-    %storing a leaf in a previously empty spot.
-    {Leaf, leaf};
-update_batch(Leaves, 0, 0, Depth, CFG, MEP) ->
-    %storing multiple leaves in a previously empty spot.
-    update_batch(Leaves, empty_stem(), stem, 
-                 Depth, CFG, MEP);
-update_batch(Leaves, Tree, leaf, Depth, CFG, MEP) 
-->
-    %storing new leaves in a spot that previously had a leaf.
-    update_batch([Tree|Leaves], empty_stem(), stem,
-                 Depth, CFG, MEP);
-update_batch(Leaves, Tree, stem, Depth, CFG, MEP) 
-->
-    %storing leaves in an existing stem.
-    Leaves2 = store2:clump_by_path(
-                Depth, Leaves, CFG),
-    lists:map(fun(Clump) ->
-                      {P, Type, Tree2} = 
-                          update_batch(Clump,  ok, ok, ok, ok, ok),
-                      ok
-              end, Leaves2),
-    %todo
-    %for each thing we are changing.
-    %new_hash. <<0:256>> is for empty. store2:leaf_hash(L, CFG) or stem2:hash(S)
-    
-    %diff = fr:sub(new_hash, old_hash)
-    %EllDiff = store2:precomputed_multi_exponent(
-    %            Diffs, MEP),
-    %NewRoot = fq:e_add(EllDiff, Root),
-    io:fwrite("todo, copying from store2:batch"),
-    ok;
-update_batch([], P, _, _, _, _) -> P;
-update_batch([Leaf], 0, 0, _, CFG, _) -> 
-    ok. 
-    
-
-
-
-
-update_proof(L, Proof, CFG) ->
-    LP = leaf:path(L, CFG),
-    %take the slice of the path we will use, and reverse it.
-    N = length(Proof),
-    {LP2, _} = lists:split(N, LP),
-    LP3 = lists:reverse(LP2),
-    %LH = leaf:hash(L, CFG),
-    LH = store2:leaf_hash(L, CFG),
-    Proof2 = update_internal(LP3, LH, Proof, CFG),
-    Proof2.
-
-update_internal(_, _, [], _) -> [];
-update_internal([<<N:?nindex>> | M], LH, Proof, CFG) ->
-    P1 = hd(Proof),
-    %Hash = element(N+1, P1),
-    P2 = setelement(N+1, P1, LH),
-    io:fwrite({P2}),
-    NH = stem2:hash(P2),
-    [P2|update_internal(M, NH, tl(Proof), CFG)].
-
-update_proofs(X, CFG) ->
-    update_proofs(X, CFG, dict:new(), []).
-update_proofs([], _, D, L) ->
-    L2 = lists:reverse(L),
-    lists:map(
-      fun(X) ->%do this to every list in the list of lists.
-              lists:map(
-                fun(Y) ->%update every element of the list
-                        merge_find_helper(Y, D)
-                            
-                end, X)
-      end, L2);
-update_proofs([{Leaf, Proof}|T], CFG, D, L) ->
-    %use D to remember which stems have been updated already.
-    LP = leaf:path(Leaf, CFG),
-    N = length(Proof),
-    {LP2, _} = lists:split(N, LP),
-    LP3 = lists:reverse(LP2),
-    %LH = leaf:hash(Leaf, CFG),
-    LH = store2:leaf_hash(Leaf, CFG),
-    {D2, NewProof} = 
-        update_proofs2(LP3, LH, Proof, D, CFG, []),
-    update_proofs(T, CFG, D2, [NewProof|L]).
-    
 merge_find_helper(P, D) ->
     io:fwrite("merge find helper\n"),
     case dict:find(P, D) of
@@ -308,18 +231,6 @@ merge_find_helper(P, D) ->
 	    merge_find_helper(P2, D)
     end.
 
-update_proofs2(_, _, [], D, _, Proof) -> 
-    {D, lists:reverse(Proof)};
-update_proofs2([<<N:?nindex>>|M], LH, Proof, D, CFG, Proof2) -> 
-    P1 = hd(Proof),
-    P = merge_find_helper(P1, D),
-    P2 = setelement(N+1, P, LH),
-    %D2 = dict:store(P1, P2, D),
-    D3 = dict:store(P, P2, D),
-    NH = stem2:hash(P2),
-    update_proofs2(M, NH, tl(Proof), D3, CFG, [P2|Proof2]).
-
-%proof(Tree, Proof = {CommitG, Commits0, Open}, CFG) ->
 proof(Root0, {Tree, CommitG, Open}, CFG) ->
 
     %multiproof:verify(Proof = {CommitG, Commits, Open_G_E}, Zs, Ys, ?p)
@@ -402,20 +313,11 @@ unfold(Root, {Index, {Key, B}}, T, CFG) %leaf case
     Leaf = #leaf{key = Key, value = B},
     <<L:256>> = store2:leaf_hash(Leaf, CFG),
     lists:reverse([{Root, Index, <<L:256>>}|T]);
-%unfold(Root, {Index, X ={_, _, _}}, T, CFG) %point case
-%   ->
-%    H = secp256k1:hash_point(X),
-%    [{Root, Index, <<H:256>>}|T];
 unfold(Root, [{Index, X}|R], T, CFG) %stem case
   when (is_binary(X) and (size(X) == (32*5)))
    ->
-    %[{Root, Index, X}|T];
     <<H:256>> = fq:hash_point(X),
     unfold(X, R, [{Root, Index, <<H:256>>}|T], CFG);
-%unfold(Root, [[{Index, X = {_, _, _}}|P]|J], T) -> 
-%    T2 = [{Root, Index, X}|T],
-%    unfold(X, P, T2)
-%        ++ unfold(Root, J, T);
 unfold(Root, [H|J], T, CFG) ->
     unfold(Root, H, T, CFG)
         ++ unfold(Root, J, [], CFG);
