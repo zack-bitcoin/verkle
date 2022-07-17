@@ -140,6 +140,8 @@ verified(Loc, ProofTree, CFG) ->
     
 
 verified2([], Stem, _) -> Stem;
+%verified2([{N, 0}]T], Stem, CFG) -> 
+%    verified3(N, Stem, 0, 0, <<0:256>>),
 verified2([[{N, 0}]|T], Stem, CFG) -> 
     Stem2 = verified3(N, Stem, 0, 0, <<0:256>>),
     verified2(T, Stem2, CFG);

@@ -102,6 +102,16 @@ update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees],
     io:fwrite("merging stems diff calculation.\n"),
     update_merge(Leaves, Subtrees, Depth, CFG, MEP,
                  [[{N, NewPoint}|Tree2]|R], [Diff|Diffs], N+1);
+update_merge([[{K, 0}]|Leaves], 
+             [[{N, {OldK, OldV}}]|Subtrees],
+             Depth, CFG, MEP, R, Diffs, N) ->
+    %deleting a leaf.
+    io:fwrite("deleting a leaf"),
+    OldLeaf = leaf:new(OldK, OldV, 0, CFG),
+    OldN = store2:leaf_hash(OldLeaf, CFG),
+    update_merge(Leaves, Subtrees, Depth, CFG, MEP,
+                 [{N, 0}|R], 
+                 [fr:neg(OldN)|Diffs], N);
 update_merge([LH|Leaves], 
              [[{N, {Key, Value}}]|Subtrees], 
              Depth, CFG, MEP, R, Diffs, N) ->
@@ -112,6 +122,7 @@ update_merge([LH|Leaves],
 %    {L2, NextHash} = 
     if
         (B and B2) -> 
+            io:fwrite(LH),
             Leaf2 = hd(LH),
             OldN = store2:leaf_hash(
                      NewLeaf, CFG),
@@ -183,6 +194,12 @@ update_merge([LH|Leaves],
     
 leaf_in_list(_, []) ->
     false;
+leaf_in_list({K, 0}, 
+             [#leaf{key = K}|_]) -> 
+    true;
+leaf_in_list(#leaf{key = K}, 
+             [{K, 0}|_]) -> 
+    true;
 leaf_in_list(#leaf{key = K}, 
              [#leaf{key = K}|_]) -> 
     true;

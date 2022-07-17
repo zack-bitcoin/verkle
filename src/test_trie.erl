@@ -650,8 +650,6 @@ test(21, CFG) ->
         store2:batch(Leaves, Loc, CFG),
     {ProofTree, Commit, Opening} = 
         get2:batch([5,6|Many], NewLoc, CFG),
-        %get2:batch(Many, NewLoc, CFG),
-    %io:fwrite(ProofTree),
     {true, _} = 
         verify2:proof(hd(ProofTree), {ProofTree, Commit, Opening}, CFG),
     %io:fwrite(ProofTree),
@@ -663,14 +661,16 @@ test(21, CFG) ->
     %Leaf3 = leaf:new(5, <<0,0>>, 0, CFG),%writing to the previously empty location.
     %io:fwrite({Leaf0, Leaf1}),
     %NewRoot0 = hd(ProofTree),
-    Leaves2 = [Leaf1,Leaf2|tl(Leaves)],
+    %Leaves2 = [Leaf1,Leaf2|tl(Leaves)],
+    Leaves2 = [Leaf2|tl(Leaves)],
     %io:fwrite(Leaves2),
     {Loc3, _, _} = 
         store2:batch(Leaves2, 1, CFG),
     RootStem = stem2:get(Loc3, CFG),
     ProofTree2 = 
         verify2:update(
-          ProofTree, [Leaf1, Leaf2], CFG),
+          ProofTree, [{Leaf01#leaf.key, 0}, Leaf2],
+          CFG),
     %io:fwrite({ProofTree, ProofTree2}),
     NewRoot2 = hd(ProofTree2),
     Loc2 = store2:verified(

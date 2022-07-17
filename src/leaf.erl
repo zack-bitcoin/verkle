@@ -49,8 +49,11 @@ check_key(Key, _) when is_integer(Key) ->
 check_key(_, _) ->
     {error, key_not_integer}.
 key(L) -> L#leaf.key.
-path(L, CFG) ->
+path(L = #leaf{}, CFG) ->
     K = key(L),
+    path_maker(K, CFG);
+path({K, 0}, CFG) ->
+    %this means an empty leaf.
     path_maker(K, CFG).
 path_maker(K, CFG) ->
     T = cfg:path(CFG)*8,
