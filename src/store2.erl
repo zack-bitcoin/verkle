@@ -140,8 +140,8 @@ verified(Loc, ProofTree, CFG) ->
     
 
 verified2([], Stem, _) -> Stem;
-%verified2([{N, 0}]T], Stem, CFG) -> 
-%    verified3(N, Stem, 0, 0, <<0:256>>),
+verified2([{N, 0}], Stem, CFG) -> 
+    verified3(N, Stem, 0, 0, <<0:256>>);
 verified2([[{N, 0}]|T], Stem, CFG) -> 
     Stem2 = verified3(N, Stem, 0, 0, <<0:256>>),
     verified2(T, Stem2, CFG);
@@ -300,21 +300,27 @@ matrix_diagonal_flip(M) ->
     Col = lists:map(fun(X) -> hd(X) end, M),
     Tls = lists:map(fun(X) -> tl(X) end, M),
     [Col|matrix_diagonal_flip(Tls)].
-get_domain([], [], D, R) ->
+get_domain([], [], [], D, R, M) ->
     {lists:reverse(D),
-     lists:reverse(R)};
-get_domain([D|DT], [0|RT], Ds, Rs) ->
-    get_domain(DT, RT, Ds, Rs);
-get_domain([D|DT], [R|RT], Ds, Rs) ->
-    get_domain(DT, RT, [D|Ds], [R|Rs]).
+     lists:reverse(R),
+     lists:reverse(M)};
+get_domain([_D|DT], [0|RT], [_M|MT], Ds, Rs, Ms) ->
+    get_domain(DT, RT, MT, Ds, Rs, Ms);
+get_domain([D|DT], [<<0:256>>|RT], [_M|MT], 
+           Ds, Rs, Ms) ->
+    get_domain(DT, RT, MT, Ds, Rs, Ms);
+get_domain([D|DT], [R|RT], [M|MT], Ds, Rs, Ms) ->
+    get_domain(DT, RT, MT, [D|Ds], [R|Rs], [M|Ms]).
 
 precomputed_multi_exponent(Rs0, MEP) ->
     %we want to do part of the bucket algorithm, but since the generator points are all known ahead of time, we want to use precalculated values where possible.
     %n = 2, C = 10 -> 128*2/8 -> 32.
     Domain0 = parameters2:domain(),
-    {Domain, Rs} = get_domain(% 0.4%
-                     Domain0, Rs0, [], []),
-%    {Domain, Rs} = {Domain0, Rs0},
+    Mepl0 = tuple_to_list(MEP),
+    {Domain, Rs, Mepl} = 
+        get_domain(% 0.4%
+          Domain0, Rs0, Mepl0, [], [], []),
+    %io:fwrite(Rs),
     C = 8,
     F = det_pow(2, C),
     B = 256,
@@ -335,12 +341,11 @@ precomputed_multi_exponent(Rs0, MEP) ->
     % 14% of storage
     Ts = batch_chunkify(
            fr:decode(Rs), F, Lim),
-    Mepl = tuple_to_list(MEP),
-    32 = length(Ts),
-    256 = length(Rs0),
-    256 = length(Rs),
-    true = (length(Domain) == length(Rs)),
-    256 = length(Mepl),
+    %32 = length(Ts),
+    %256 = length(Rs0),
+    %256 = length(Rs),
+    %true = (length(Domain) == length(Rs)),
+    %256 = length(Mepl),
     lists:map(fun(X) -> 
                       if
                           (length(Rs) == 
