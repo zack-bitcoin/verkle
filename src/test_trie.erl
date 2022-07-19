@@ -658,114 +658,90 @@ test(21, CFG) ->
     %io:fwrite(ProofTree),
     Leaf01 = hd(Leaves),
     Leaf02 = hd(tl(Leaves)),
-    Leaf1 = Leaf01#leaf{value = <<0,0>>},
-    Leaf2 = Leaf02#leaf{key = 5, value = <<0,1>>},
+    DeleteKey = Leaf02#leaf.key,
+    Leaf1 = Leaf01#leaf{value = <<0,0>>},%editing existing leaf.
+    Leaf2 = leaf:new(5, <<0,1>>, 0, CFG),%creating a new leaf.
+    Leaf3 = {Leaf02#leaf.key, 0},
+    %io:fwrite({Leaf1, Leaf2}),
     %Leaf2 = {Leaf02#leaf.key, 0},
     %Leaf3 = leaf:new(5, <<0,0>>, 0, CFG),%writing to the previously empty location.
     %io:fwrite({Leaf0, Leaf1}),
     %NewRoot0 = hd(ProofTree),
     %Leaves2 = [Leaf1,Leaf2|tl(Leaves)],
-    Leaves2 = [Leaf1|tl(Leaves)],
+    Leaves2 = [Leaf1, Leaf2|tl(tl(Leaves))],
     %io:fwrite(Leaves2),
     {Loc3, _, _} = 
         store2:batch(Leaves2, 1, CFG),
     RootStem = stem2:get(Loc3, CFG),
-    FLeaf1 = leaf:leaf2fast(Leaf1, 0,0,CFG),
-    FLeaf2 = leaf:leaf2fast(Leaf2,0,0,CFG),
     ProofTree2 = 
         verify2:update(
-          %ProofTree, [FLeaf01, FLeaf2],
-          ProofTree, [FLeaf1],
+          ProofTree, [Leaf1, Leaf2, Leaf3],
           CFG),
     NewRoot2 = hd(ProofTree2),
     Loc2 = store2:verified(
                   NewLoc, ProofTree2, CFG),
     RootStem4 = stem2:get(Loc2, CFG),
-    true = fq:eq(NewRoot2, RootStem#stem.root),
-    true = fq:eq(RootStem#stem.root, RootStem4#stem.root),
+   
+    %5 is the new leaf.
+    {Proof1, _, _} = get2:batch([5], Loc3, CFG),
+    {Proof2, _, _} = get2:batch([5], Loc2, CFG),
+
+    %this is for the leaf being edited.
+    {Proof3, _, _} = get2:batch([Leaf1#leaf.key], Loc3, CFG),
+    {Proof4, _, _} = get2:batch([Leaf1#leaf.key], Loc2, CFG),
+
+    %this is for the leaf being deleted.
+    {Proof5, _, _} = get2:batch([DeleteKey], Loc3, CFG),
+    {Proof6, _, _} = get2:batch([DeleteKey], Loc2, CFG),
+    
     if
-        false ->
-    io:fwrite({fq:hash_point(
-                 element(
-                   2, hd(hd(tl(element(
-                                 1, get2:batch(
-                                      [Leaf01#leaf.key],
-                                      Loc2, CFG))))))),
-               fq:hash_point(
-                 element(
-                   2, hd(hd(tl(element(
-                                 1, get2:batch(
-                                      [Leaf01#leaf.key],
-                                      Loc3, CFG))))))),
-              ProofTree2});
+        (not(Proof1 == Proof2)) ->
+            io:fwrite("failed to create element\n"),
+            io:fwrite({Proof1, Proof2});
+        (not(Proof3 == Proof4)) ->
+            io:fwrite("failed to edit element\n"),
+            io:fwrite({Proof3, Proof4});
+        (not(Proof5 == Proof6)) ->
+            io:fwrite("failed to delete element\n"),
+            io:fwrite({Proof5, Proof6});
         true -> ok
     end,
-    if
-      not(RootStem#stem.hashes == 
-              RootStem4#stem.hashes) ->
-            CP1 = hd(tl(
-                       verify2:remove_empty(
-                         tuple_to_list(
-                           RootStem4#stem.pointers)))),
-            CP2 = hd(tl(
-                       verify2:remove_empty(
-                         tuple_to_list(
-                           RootStem#stem.pointers)))),
-            C1 = stem2:get(CP1, CFG),
-            C2 = stem2:get(CP2, CFG),
-            MEP = parameters2:multi_exp(),
-            RC1 = store2:precomputed_multi_exponent(
-                    tuple_to_list(C1#stem.hashes),
-                    MEP),%C1 has an incorrect stem
-            RC2 = store2:precomputed_multi_exponent(
-                    tuple_to_list(C2#stem.hashes),
-                    MEP),
-            io:fwrite({verify2:remove_empty(
-                         tuple_to_list(RootStem#stem.hashes)),
-                       verify2:remove_empty(
-                         tuple_to_list(RootStem4#stem.hashes)),
-                       verify2:remove_empty(
-                         tuple_to_list(
-                           C1#stem.hashes)) ==
-                       verify2:remove_empty(
-                         tuple_to_list(
-                           C2#stem.hashes)),
-                      fq:eq(C1#stem.root, C2#stem.root),
-                      fq:eq(RC1, C1#stem.root),
-                      fq:eq(RC2, C2#stem.root)
-                      }),
-            
-            ok;
-        true -> ok
-    end,
+    %true = fq:eq(NewRoot2, RootStem#stem.root),
+    %true = fq:eq(RootStem#stem.root, RootStem4#stem.root),
 
     success;
 test(22, CFG) ->
     Loc = 1,
     StartingElements = 10000,
-    UpdateElements = 600,
+    UpdateElements = 3000,
     Leaves = 
         lists:map(
           fun(N) -> 
                   Key0 = StartingElements + 1 - N,
+                  %Key = 100000000000000 - (Key0 * 111),
                   Key = 100000000000000 - (Key0 * 111),
                   #leaf{key = Key, 
                         value = <<N:16>>}
           end, range(1, StartingElements+1)),
     Many = lists:map(fun(#leaf{key = K}) -> K end,
                      Leaves),
-    {Updating, _} = 
+    {Updating, NotUpdating} = 
         lists:split(UpdateElements, Many),
-    {Loc2, _, _} = 
-        store2:batch(Leaves, Loc, CFG),
     UpdatedLeaves = 
         lists:map(
           fun(N) -> 
-                  L1=#leaf{key = N, 
-                           value = <<2,7>>},
-                  leaf:leaf2fast(L1, 0, 0, CFG)
+                  #leaf{key = N, 
+                        value = <<2,7>>}
+                  
           end, Updating),
-    
+    Leaf5 = leaf:new(5, <<0,0>>, 0, CFG),
+    LGK = hd(NotUpdating),
+    LeafGone = {LGK, 0},
+                        
+    %loading the db 
+    T0 = erlang:timestamp(),
+    {Loc2, _, _} = 
+        store2:batch(Leaves, Loc, CFG),
     %making the verkle proof
     T1 = erlang:timestamp(),
     {ProofTree, Commit, Opening} = 
@@ -782,7 +758,7 @@ test(22, CFG) ->
 
     %{ok, _PID} = fprof:start(),
     %fprof:trace([start, {procs, all}]),
-
+    
     ProofTree2 = verify2:update(
                ProofTree, UpdatedLeaves, CFG),
 
@@ -803,7 +779,9 @@ test(22, CFG) ->
     io:fwrite(integer_to_list(StartingElements)),
     io:fwrite(" elements. we are updating "),
     io:fwrite(integer_to_list(UpdateElements)),
-    io:fwrite(" of them.\n making the proof: "),
+    io:fwrite(" of them.\n loading the db: "),
+    io:fwrite(integer_to_list(timer:now_diff(T1, T0))),
+    io:fwrite("\n making the proof: "),
     io:fwrite(integer_to_list(timer:now_diff(T2, T1))),
     io:fwrite("\n verifying proof: "),
     io:fwrite(integer_to_list(timer:now_diff(T3, T2))),
@@ -812,7 +790,6 @@ test(22, CFG) ->
     io:fwrite("\n storing the new data in the database: "),
     io:fwrite(integer_to_list(timer:now_diff(T5, T4))),
     io:fwrite("\n\n"),
-
 
     success.
     

@@ -51,7 +51,8 @@ remove_empty([H|T]) ->
 remove_empty([]) -> [].
 
 
-update_merge([], Rest, _,_,_, Merged, Diffs, _) ->
+update_merge([], Rest, _,_,_, Merged, Diffs, _)
+->
     %finished updating this stem.
     Subtrees = lists:reverse(Merged) ++ Rest,
     {lists:reverse(Diffs), Subtrees};
@@ -104,13 +105,10 @@ update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees],
                  [Diff|Diffs], N+1);
 update_merge([[{K, 0}]|Leaves], 
              [[{N, {OldK, OldV}}]|Subtrees],
-             %[[{N, FL = #fast_leaf{hash = H}}]
-             % |Subtrees],
              Depth, CFG, MEP, R, Diffs, N) ->
     %deleting a leaf.
     io:fwrite("deleting a leaf"),
     OldLeaf = leaf:new(OldK, OldV, 0, CFG),
-    %OldLeaf = leaf:leaf2fast(OldLeaf0, OldP, OldH
     OldN = store2:leaf_hash(OldLeaf, CFG),
     update_merge(Leaves, Subtrees, Depth, CFG, MEP,
                  [{N, 0}|R], 
@@ -121,37 +119,33 @@ update_merge([LH|Leaves],
     %io:fwrite("add a leaf to a spot with an existing leaf\n"),
     %there is already a leaf here.
     %NewLeaf = leaf:new(Key, Value, 0, CFG),
-    FL0 = leaf:new(Key, Value, 0, CFG),
-    FL = leaf:leaf2fast(FL0, 0, 0, CFG),
+    FL = leaf:new(Key, Value, 0, CFG),
+                     
     B = leaf_in_list(FL, LH),
     B2 = (1 == length(LH)),
     if
         (B and B2) -> 
             %io:fwrite(LH),
             Leaf2 = hd(LH),
-            %OldN = store2:leaf_hash(
-            %         NewLeaf, CFG),
-            OldN = FL#fast_leaf.hash,
-            NewN = Leaf2#fast_leaf.hash,
-%            NewN = store2:leaf_hash(
-%                     Leaf2, CFG),
+            OldN = store2:leaf_hash(
+                     FL, CFG),
+            NewN = store2:leaf_hash(
+                     Leaf2, CFG),
             LeafDiff = 
                 if
                     OldN == NewN -> 
                         %leaf unchanged.
                         io:fwrite("Leaf unchanged\n"),
-                        %<<0:256>>;
-                        fr:encode(0);
+                        <<0:256>>;
+                        %fr:encode(0);
                     true ->
                         %io:fwrite("updating leaf diff calculation.\n"),
                         fr:sub(NewN, OldN)
                 end,
             update_merge(
               Leaves, Subtrees, Depth, CFG, 
-              MEP, [[{N, {Leaf2#fast_leaf.key,
-                          Leaf2#fast_leaf.value}}]|
-              %MEP, [[{N, {Key,
-              %            Value}}]|
+              MEP, [[{N, {leaf:key(Leaf2),
+                          leaf:value(Leaf2)}}]|
                     R],
               [LeafDiff|Diffs], N+1);
         B -> 
@@ -181,15 +175,12 @@ update_merge([LH|Leaves],
 update_merge([LH|Leaves],
              [[{N, 0}]|Subtrees],
              Depth, CFG, MEP, R, Diffs, N) ->
-    {Key, Value} = 
-        case hd(LH) of
-            #fast_leaf{key = Key2, value = Value2} ->
-                {Key2, Value2}
-        end,
+    Key = leaf:key(hd(LH)),
+    Value = leaf:value(hd(LH)),
     %#leaf{key = Key, value = Value} = hd(LH),
     io:fwrite("new leaf diff calculation\n"),
-    %Diff = store2:leaf_hash(hd(LH), CFG),
-    Diff = (hd(LH))#fast_leaf.hash,
+    Diff = store2:leaf_hash(hd(LH), CFG),
+    %Diff = leaf:hash(hd(LH), CFG),
     update_merge(Leaves, Subtrees, Depth, CFG, 
                  MEP, [[{N, {Key, Value}}]|R], 
                  [Diff|Diffs], N+1);
@@ -201,15 +192,6 @@ update_merge(Ls, [X|T], Depth, CFG, MEP, R, Diffs,
 
 leaf_in_list(_, []) ->
     false;
-leaf_in_list(#fast_leaf{key = K}, 
-             [#fast_leaf{key = K}|_]) -> 
-    true;
-leaf_in_list({K, 0}, 
-             [#fast_leaf{key = K}|_]) -> 
-    true;
-leaf_in_list(#fast_leaf{key = K}, 
-             [{K, 0}|_]) -> 
-    true;
 leaf_in_list({K, 0}, 
              [#leaf{key = K}|_]) -> 
     true;

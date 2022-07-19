@@ -10,17 +10,17 @@
          %verified2/3
          verified/3
         ]).
-%-include("constants.hrl").
--define(nindex, 8).
--record(stem, { root
-                , types
-                , pointers
-                , hashes
-	      }).
--record(leaf, { key
-	      , value
-	      , meta = 0 %meta is data we want to remember that doesn't get hashed into the merkle tree.
-	      }).
+-include("constants.hrl").
+%-define(nindex, 8).
+%-record(stem, { root
+%                , types
+%                , pointers
+%                , hashes
+%	      }).
+%-record(leaf, { key
+%	      , value
+%	      , meta = 0 %meta is data we want to remember that doesn't get hashed into the merkle tree.
+%	      }).
 
 store(Leaf, RP, CFG) ->
     batch([Leaf], RP, CFG).
@@ -221,9 +221,13 @@ hash_thing(_, leaf, L = #leaf{}, _, CFG) ->
     leaf_hash(L, CFG);
 hash_thing(_, stem, S = #stem{}, _, _) -> 
     stem2:hash(S).
-leaf_hash(L, CFG) ->
+leaf_hash(L = #leaf{}, CFG) ->
     <<N:256>> = leaf:hash(L, CFG),
-    fr:encode(N).
+    fr:encode(N);
+
+leaf_hash(L = #fast_leaf{}, _) -> L#fast_leaf.hash.
+
+
 sort_by_path2(L, CFG) ->
     %this time we want to sort according to the order of a depth first search.
     lists:sort(
