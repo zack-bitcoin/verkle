@@ -179,11 +179,10 @@ range(X, Y) when (X < Y) ->
 
 clump_by_path(D, Leaves, CFG) ->
     Paths0 = lists:map(
-              fun(L) -> 
-                      <<B:?nindex>> = 
-                          lists:nth(
-                            D+1, leaf:path(
-                                   L, CFG)),
+               fun(L) -> 
+                       D8 = (31 - D)*8,
+                      <<_:D8, B:8, _/binary>> =
+                           leaf:raw_key(L),
                       {B, L} end,
               Leaves),
     Paths = lists:sort(fun({A, _}, {B, _}) ->
@@ -193,8 +192,7 @@ clump_by_path(D, Leaves, CFG) ->
     {Gs, _, _} = parameters2:read(),
     clump_by_path2(
       0, length(Gs), Paths, []).
-clump_by_path2(I, Limit, _, _) 
-  when (I == Limit) -> [];
+clump_by_path2(I, I, _, _) -> [];
 clump_by_path2(I, Limit, [{I, L}|T], C) -> 
     clump_by_path2(I, Limit, T, [L|C]);
 clump_by_path2(I, Limit, T, C) -> 

@@ -1,5 +1,7 @@
 -module(leaf).
--export([new/4, key/1, value/1, meta/1, path/2, path_maker/2, hash/2, put/2, get/2, serialize/2, deserialize/2,
+-export([new/4, new2/4,
+         key/1, value/1, meta/1, path/2, path_maker/2, hash/2, put/2, get/2, serialize/2, deserialize/2,
+         raw_key/1,
 	 put_batch/2,
 	is_serialized_leaf/2, test/0]).
 -include("constants.hrl").
@@ -33,8 +35,9 @@ deserialize(A, CFG) ->
     %#leaf{key = Key, value = <<Value:L>>, meta = Meta}. 
     #leaf{key = <<Key:P>>, value = <<Value:L>>, meta = Meta}. 
 new(Key, Value, Meta, CFG) ->
+    new2(<<Key:256>>, Value, Meta, CFG).
+new2(<<Key:256>>, Value, Meta, CFG) ->
     P = cfg:path(CFG),
-    ok = check_key(Key, P),
     L = cfg:value(CFG) * 8,
     case Value of
 	empty -> ok;
@@ -42,19 +45,11 @@ new(Key, Value, Meta, CFG) ->
 	_ -> io:fwrite({value_is, size(Value), 
                         L div 8})
     end,
-    %L = cfg:value(CFG) * 8,
-    %<<_:L>> = Value,
-    %#leaf{key = Key, value = Value, meta = Meta}. 
     #leaf{key = <<Key:256>>, value = Value, meta = Meta}. 
-check_key(Key, LBytes) when is_integer(Key),
-			    Key >= 0,
-			    Key < (1 bsl (LBytes * 8)) ->
-    ok;
-check_key(Key, _) when is_integer(Key) ->
-    {error, key_out_of_range};
-check_key(_, _) ->
-    {error, key_not_integer}.
 key(#leaf{key = <<K:256>>}) -> K.
+raw_key(#leaf{key = K}) -> K;
+raw_key({I, 0}) when is_integer(I) -> <<I:256>>;
+raw_key({<<B:256>>, 0}) -> <<B:256>>.
 path(L = #leaf{}, CFG) ->
     K = key(L),
     path_maker(K, CFG);
