@@ -19,7 +19,8 @@ serialize(X, CFG) ->
     S = cfg:value(CFG),
     S = size(X#leaf.value),
     %io:fwrite({CFG, X}),
-    <<(X#leaf.key):P, 
+    %<<(X#leaf.key):P, 
+    <<(X#leaf.key)/binary,
       (X#leaf.meta):M,
       (X#leaf.value)/binary>>.
 deserialize(A, CFG) ->
@@ -29,7 +30,8 @@ deserialize(A, CFG) ->
     <<Key:P, 
       Meta:MS,
       Value:L>> = A,
-    #leaf{key = Key, value = <<Value:L>>, meta = Meta}. 
+    %#leaf{key = Key, value = <<Value:L>>, meta = Meta}. 
+    #leaf{key = <<Key:P>>, value = <<Value:L>>, meta = Meta}. 
 new(Key, Value, Meta, CFG) ->
     P = cfg:path(CFG),
     ok = check_key(Key, P),
@@ -42,7 +44,8 @@ new(Key, Value, Meta, CFG) ->
     end,
     %L = cfg:value(CFG) * 8,
     %<<_:L>> = Value,
-    #leaf{key = Key, value = Value, meta = Meta}. 
+    %#leaf{key = Key, value = Value, meta = Meta}. 
+    #leaf{key = <<Key:256>>, value = Value, meta = Meta}. 
 check_key(Key, LBytes) when is_integer(Key),
 			    Key >= 0,
 			    Key < (1 bsl (LBytes * 8)) ->
@@ -51,7 +54,7 @@ check_key(Key, _) when is_integer(Key) ->
     {error, key_out_of_range};
 check_key(_, _) ->
     {error, key_not_integer}.
-key(#leaf{key = K}) -> K.
+key(#leaf{key = <<K:256>>}) -> K.
 path(L = #leaf{}, CFG) ->
     K = key(L),
     path_maker(K, CFG);
@@ -82,7 +85,8 @@ hash(L, CFG) ->
 	empty -> <<0:HS>>;
 	V ->
 	    P = cfg:path(CFG) * 8,
-            hash:doit(<<(L#leaf.key):P, V/binary>>)
+            %hash:doit(<<(L#leaf.key):P, V/binary>>)
+            hash:doit(<<(L#leaf.key)/binary, V/binary>>)
     end.
 test() ->
     verkle_app:start(normal, []),
