@@ -1,13 +1,5 @@
-the fast_leaf idea didn't work. we should remove it.
 
-we need a test of creating a new leaf. working on it in 21.
-
-
-when we are calculating the new merkle proof, we need to keep sorting a list of leaves, depending on which path of the tree each leaf is following.
-To calculate the nth step to walk down the tree to get to your leaf, we are currently storing the key as an integer, and converting it into a list of bytes, and selecting the nth byte.
-It would be way better to store it as a binary, and select the nth element.
-We also need this so that the benchmark will be accurate. Because real keys aren't small integers, they are 32 bytes of randomness.
-
+stop using leaf:key, and leaf:path.
 
 now we can use the updated proof to update the database. but we need more tests to be sure that this works.
 

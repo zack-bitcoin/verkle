@@ -6,7 +6,7 @@
          precomputed_multi_exponent/2,
          leaf_hash/2,
          clump_by_path/3,
-         sort_by_path2/2,
+         %sort_by_path2/2,
          %verified2/3
          verified/3
         ]).
@@ -223,9 +223,26 @@ leaf_hash(L = #leaf{}, CFG) ->
     <<N:256>> = leaf:hash(L, CFG),
     fr:encode(N).
 
-
+path_n(_, 0, R) -> R;
+path_n(B, N, R) -> 
+    N8 = N*8,
+    <<_:N8, C, _/binary>> = B,
+    path_n(B, N-1, C + (R*256)).
+    
+    
 sort_by_path2(L, CFG) ->
     %this time we want to sort according to the order of a depth first search.
+    L2 = lists:map(
+           fun(X) ->
+                   N = path_n(
+                         leaf:raw_key(X), 31, 0),
+                   {N, X}
+           end, L),
+    L3 = lists:sort(fun({N1, _}, {N2, _}) ->
+                       N1 < N2
+               end, L2),
+    lists:map(fun({_, X}) -> X end, L3).
+unused(L, CFG) ->
     lists:sort(
       fun(A, B) ->
               K1 = leaf:path(A, CFG),
