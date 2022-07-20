@@ -720,8 +720,8 @@ test(21, CFG) ->
     success;
 test(22, CFG) ->
     Loc = 1,
-    StartingElements = 10000,
-    UpdateElements = 600,
+    StartingElements = 50000,
+    UpdateElements = 6000,
     Leaves = 
         lists:map(
           fun(N) -> 
