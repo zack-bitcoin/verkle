@@ -223,9 +223,7 @@ hash_thing(_, stem, S = #stem{}, _, _) ->
     stem2:hash(S).
 leaf_hash(L = #leaf{}, CFG) ->
     <<N:256>> = leaf:hash(L, CFG),
-    fr:encode(N);
-
-leaf_hash(L = #fast_leaf{}, _) -> L#fast_leaf.hash.
+    fr:encode(N).
 
 
 sort_by_path2(L, CFG) ->
@@ -443,9 +441,12 @@ test(3) ->
           fun(N) -> 
                   <<Key0:256>> = 
                       crypto:strong_rand_bytes(32),
-                  #leaf{key = Key0, value = <<N:16>>}%random version
+                  leaf:new(Key0, <<N:16>>, CFG)
+                      %#leaf{key = Key0, value = <<N:16>>}%random version
           end, range(1, Times+1)),
-    Many = lists:map(fun(#leaf{key = K}) -> K end,
+    %Many = lists:map(fun(#leaf{key = K}) -> K end,
+    Many = lists:map(fun(Leaf) -> 
+                             leaf:key(Leaf) end,
                      Leaves),
     fprof:trace(start),
     store2:batch(Leaves, Loc, CFG),

@@ -292,7 +292,8 @@ unfold(Root, {Index, 0}, T, CFG) ->%empty case
     lists:reverse([{Root, Index, <<0:256>>}|T]);
 unfold(Root, {Index, {Key, B}}, T, CFG) %leaf case
   when is_binary(B) ->
-    Leaf = #leaf{key = Key, value = B},
+    %Leaf = #leaf{key = Key, value = B},
+    Leaf = leaf:new(Key, B, 0, CFG),
     <<L:256>> = store2:leaf_hash(Leaf, CFG),
     lists:reverse([{Root, Index, <<L:256>>}|T]);
 unfold(Root, [{Index, X}|R], T, CFG) %stem case

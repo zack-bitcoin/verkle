@@ -141,9 +141,9 @@ remove_hashes({-1, X = #stem{}}) -> X#stem.root;
 remove_hashes({Index, X = #stem{}}) -> 
     {Index, X#stem.root};
 remove_hashes({Index, X = #leaf{}}) -> 
-    {Index, {X#leaf.key, X#leaf.value}};
+    {Index, {leaf:key(X), leaf:value(X)}};
 remove_hashes(X = #leaf{}) -> 
-    {X#leaf.key, X#leaf.value};
+    {leaf:key(X), leaf:value(X)};
 remove_hashes([H|T]) -> 
     [remove_hashes(H)|
      remove_hashes(T)];

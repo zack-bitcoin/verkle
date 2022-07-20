@@ -507,10 +507,12 @@ test(18, CFG) ->
                   Key0 = Times + 1 - N,
                   %<<Key:256>> = <<(-Key0):256>>,
                   Key = 1000000000 - Key0,
-                  #leaf{key = Key, value = <<N:16>>}
+                  leaf:new(Key, <<N:16>>, 0, CFG)
           %end, Many),
           end, range(1, Times+1)),
-    Many = lists:map(fun(#leaf{key = K}) -> K end,
+    %Many = lists:map(fun(#leaf{key = K}) -> K end,
+    Many = lists:map(fun(Leaf) -> 
+                             leaf:key(Leaf) end,
                      Leaves),
     %Leaves = lists:reverse(Leaves0),
     io:fwrite("load up the batch database\n"),
@@ -566,7 +568,8 @@ test(19, CFG) ->
     Leaves = 
         lists:map(
           fun(N) -> 
-                  #leaf{key = Times + 1 - N, value = <<N:16>>}
+                  leaf:new(Times + 1 - N, <<N:16>>, 0, CFG)
+                      %#leaf{key = Times + 1 - N, value = <<N:16>>}
           %end, Many),
           end, range(1, Times+1)),
     ok;
@@ -579,10 +582,12 @@ test(20, CFG) ->
                   Key0 = Times + 1 - N,
                   %<<Key:256>> = <<(-Key0):256>>,
                   Key = 1000000000 - Key0,
-                  #leaf{key = Key, value = <<N:16>>}
+                  leaf:new(Key, <<N:16>>, 0, CFG)
           %end, Many),
           end, range(1, Times+1)),
-    Many = lists:map(fun(#leaf{key = K}) -> K end,
+    %Many = lists:map(fun(#leaf{key = K}) -> K end,
+    Many = lists:map(fun(Leaf) -> 
+                             leaf:key(Leaf) end,
                      Leaves),
     io:fwrite("load up the batch database\n"),
     T1 = erlang:timestamp(),
@@ -643,9 +648,12 @@ test(21, CFG) ->
                   %Key0 = Times + 1 - N,
                   %<<Key:256>> = <<(-Key0):256>>,
                   Key = 1000000000 - (128 * N),
-                  #leaf{key = Key, value = <<N:16>>}
+                  %#leaf{key = Key, value = <<N:16>>}
+                  leaf:new(Key, <<N:16>>, 0, CFG)
           end, range(1, Times+1)),
-    Many = lists:map(fun(#leaf{key = K}) -> K end,
+    %Many = lists:map(fun(#leaf{key = K}) -> K end,
+    Many = lists:map(fun(Leaf) -> 
+                     leaf:key(Leaf) end,
                      Leaves),
     {NewLoc, stem, _} = 
         store2:batch(Leaves, Loc, CFG),
@@ -658,10 +666,10 @@ test(21, CFG) ->
     %io:fwrite(ProofTree),
     Leaf01 = hd(Leaves),
     Leaf02 = hd(tl(Leaves)),
-    DeleteKey = Leaf02#leaf.key,
+    DeleteKey = leaf:key(Leaf02),
     Leaf1 = Leaf01#leaf{value = <<0,0>>},%editing existing leaf.
     Leaf2 = leaf:new(5, <<0,1>>, 0, CFG),%creating a new leaf.
-    Leaf3 = {Leaf02#leaf.key, 0},
+    Leaf3 = {leaf:key(Leaf02), 0},
     %io:fwrite({Leaf1, Leaf2}),
     %Leaf2 = {Leaf02#leaf.key, 0},
     %Leaf3 = leaf:new(5, <<0,0>>, 0, CFG),%writing to the previously empty location.
@@ -687,8 +695,8 @@ test(21, CFG) ->
     {Proof2, _, _} = get2:batch([5], Loc2, CFG),
 
     %this is for the leaf being edited.
-    {Proof3, _, _} = get2:batch([Leaf1#leaf.key], Loc3, CFG),
-    {Proof4, _, _} = get2:batch([Leaf1#leaf.key], Loc2, CFG),
+    {Proof3, _, _} = get2:batch([leaf:key(Leaf1)], Loc3, CFG),
+    {Proof4, _, _} = get2:batch([leaf:key(Leaf1)], Loc2, CFG),
 
     %this is for the leaf being deleted.
     {Proof5, _, _} = get2:batch([DeleteKey], Loc3, CFG),
@@ -713,25 +721,29 @@ test(21, CFG) ->
 test(22, CFG) ->
     Loc = 1,
     StartingElements = 10000,
-    UpdateElements = 3000,
+    UpdateElements = 600,
     Leaves = 
         lists:map(
           fun(N) -> 
                   Key0 = StartingElements + 1 - N,
                   %Key = 100000000000000 - (Key0 * 111),
-                  Key = 100000000000000 - (Key0 * 111),
-                  #leaf{key = Key, 
-                        value = <<N:16>>}
+                  Key = 100000000000000000000000000000000000000000000000000000000000000000000000000000 - (Key0 * 111),
+                  %#leaf{key = Key, 
+                  %      value = <<N:16>>}
+                  leaf:new(Key, <<N:16>>, 0, CFG)
           end, range(1, StartingElements+1)),
-    Many = lists:map(fun(#leaf{key = K}) -> K end,
+    %Many = lists:map(fun(#leaf{key = K}) -> K end,
+    Many = lists:map(fun(Leaf) -> 
+                     leaf:key(Leaf) end,
                      Leaves),
     {Updating, NotUpdating} = 
         lists:split(UpdateElements, Many),
     UpdatedLeaves = 
         lists:map(
           fun(N) -> 
-                  #leaf{key = N, 
-                        value = <<2,7>>}
+                  leaf:new(N, <<2, 7>>, 0, CFG)
+%                  #leaf{key = N, 
+%                        value = <<2,7>>}
                   
           end, Updating),
     Leaf5 = leaf:new(5, <<0,0>>, 0, CFG),

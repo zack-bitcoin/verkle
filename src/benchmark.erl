@@ -39,12 +39,14 @@ doit(1) ->
                   %Key0 = 1234567*N,
                   <<Key0:256>> = 
                       crypto:strong_rand_bytes(32),
-                  #leaf{key = Key0, value = <<N:16>>}%random version
+                  leaf:new(Key0, <<N:16>>, 0, CFG)
+                      %#leaf{key = Key0, value = <<N:16>>}%random version
                   %#leaf{key = N, value = <<N:16>>}%sequential version
           %end, Many),
           end, range(1, Times+1)),
     io:fwrite("made leaves \n"),
-    Many = lists:map(fun(#leaf{key = K}) -> K end,
+    Many = lists:map(fun(Leaf) -> 
+                             leaf:key(Leaf) end,
                      Leaves),
     io:fwrite("benchmark for "),
     io:fwrite(integer_to_list(Times)),
@@ -96,11 +98,14 @@ doit(2) ->
                   <<Key0:256>> = 
                       crypto:strong_rand_bytes(32),
                   %#leaf{key = Key0, value = <<N:16>>}%random version
-                  #leaf{key = N, value = <<N:16>>}%sequential version
+                  leaf:new(N, <<N:16>>, 0, CFG)
+                      %#leaf{key = N, value = <<N:16>>}%sequential version
           %end, Many),
           end, range(1, Times+1)),
     io:fwrite("made leaves \n"),
-    Many = lists:map(fun(#leaf{key = K}) -> K end,
+    %Many = lists:map(fun(#leaf{key = K}) -> K end,
+    Many = lists:map(fun(Leaf) -> 
+                             leaf:key(Leaf) end,
                      Leaves),
     io:fwrite("benchmark for "),
     io:fwrite(integer_to_list(Times)),
