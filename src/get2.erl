@@ -187,9 +187,12 @@ remove_hashes({-1, X = #stem{}}) -> X#stem.root;
 remove_hashes({Index, X = #stem{}}) -> 
     {Index, X#stem.root};
 remove_hashes({Index, X = #leaf{}}) -> 
-    {Index, {leaf:key(X), leaf:value(X)}};
+    %{Index, {leaf:key(X), leaf:value(X)}};
+    {Index, {leaf:raw_key(X), leaf:value(X)}};
 remove_hashes(X = #leaf{}) -> 
-    {leaf:key(X), leaf:value(X)};
+    %{leaf:key(X), leaf:value(X)};
+    1=2,
+    {leaf:raw_key(X), leaf:value(X)};
 remove_hashes([H|T]) -> 
     [remove_hashes(H)|
      remove_hashes(T)];

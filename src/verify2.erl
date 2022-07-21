@@ -280,6 +280,10 @@ leaves({Y, X = 0}) -> [{Y, X}];
 leaves(X = {_, B}) when is_binary(B) -> [];
 leaves({_, X = {I, B}}) 
   when is_binary(B) and is_integer(I) -> [X];
+leaves({_, X = {I, B}}) 
+  when is_binary(B) and 
+       is_binary(I) and 
+       (size(I) == 32) -> [X];
 leaves([H|T]) ->
     leaves(H) ++ leaves(T);
 leaves([]) ->  [];

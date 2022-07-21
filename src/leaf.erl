@@ -1,5 +1,5 @@
 -module(leaf).
--export([new/4, new2/4,
+-export([new/4,
          key/1, value/1, meta/1, path/2, path_maker/2, hash/2, put/2, get/2, serialize/2, deserialize/2,
          raw_key/1,
 	 put_batch/2,
@@ -34,9 +34,9 @@ deserialize(A, CFG) ->
       Value:L>> = A,
     %#leaf{key = Key, value = <<Value:L>>, meta = Meta}. 
     #leaf{key = <<Key:P>>, value = <<Value:L>>, meta = Meta}. 
-new(Key, Value, Meta, CFG) ->
-    new2(<<Key:256>>, Value, Meta, CFG).
-new2(<<Key:256>>, Value, Meta, CFG) ->
+new(Key, Value, Meta, CFG) when is_integer(Key) ->
+    new(<<Key:256>>, Value, Meta, CFG);
+new(<<Key:256>>, Value, Meta, CFG) ->
     P = cfg:path(CFG),
     L = cfg:value(CFG) * 8,
     case Value of
