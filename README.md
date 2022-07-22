@@ -59,46 +59,6 @@ elliptic multiplication is estimated in fq2:test(22). speedup in context of ipa 
 Benchmark.
 ===========
 
-I loaded 5000 elements into the database. I made a proof of all 5000 of them, and then verified that proof.
-
-Loading the data took 1.8 seconds.
-
-Making the proof with 1 cpu took 2.2 seconds.
-
-Verifying took 0.48 seconds.
-
-to run the secp256k1 benchmark `benchmark:doit(1).`
-to run the jubjub benchmark `benchmark:doit(2).`
-This page is recording results from the jubjub benchmark.
-time is measured in millionths of a second. 6 decimals.
-
-[you can see the code of the benchmark.](src/benchmark.erl)
-
-benchmark of 20k elements. (it takes 5.5 seconds to load a normal merkle tree with this many elements)
-
-loading: 10.5
-
-making proof: 8.4
-
-verifying: 1.8
-
-40k
-
-loading: 35
-
-proving: 20
-
-verifying: 4.2
-
-80k
-
-loading: 88
-
-proving: 47
-
-verifying: 12.1
-
-It is also possible to run the database in RAM instead of the hard drive, but it doesn't seem to make it any faster. The bottleneck is on CPU computation of the cryptography, not on accessing memory.
 
 
 benchmark hard drive usage.

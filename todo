@@ -1,6 +1,20 @@
+get2:keys2paths
+currently we are converting a key to the path in the old way. could be faster to use the new version of keys.
 
-in store2:verified, we are taking the hash of stems. This involves changing an extended point into an affine point, which is slow, and should be done in batches if possible.
+12% (or 24%?) speedup.
+in verify2:update, we are taking the hash of stems. This involves changing an extended point into an affine point, which is slow, and should be done in batches if possible.
 We can do it in batches here.
+update_batch2 and update_merge are currently doing a depth first update of the proof tree. We need to switch to breadth first to fully take advantage of batching.
+Before we start verifying the proof, we should update all the points to include their hashes.
+
+(batch chunkify is taking up like 20% for comparison, and clump by path is 15%)
+
+update the readme to explain how to do tests.
+
+update readme to explain the results of benchmarks
+
+
+get2:batch. we should convert the points in a proof to affine format, because that speeds up the process of verification, and it makes the proofs much shorter.
 
 now we can use the updated proof to update the database. but we need more tests to be sure that this works.
 

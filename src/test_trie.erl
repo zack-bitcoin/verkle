@@ -852,14 +852,19 @@ load_db(Elements) ->
                   %Key = 100000000000000000000000000000000000000000000000000000000000000000000000000000 - (Key0 * 111),
                   %#leaf{key = Key, 
                   %      value = <<N:16>>}
-                  leaf:new(N, <<N:16>>, 0, CFG)
+                  N2 = hash:doit(<<N:256>>),
+                  leaf:new(N2, <<N:16>>, 0, CFG)
           end, range(1, Elements+1)),
     {Loc2, _, _} = 
         store2:batch(Leaves, 1, CFG),
     Loc2.
 proof_test(Loc2, UpdateMany) ->
     CFG = trie:cfg(?ID),
-    Updating = range(1, UpdateMany),
+    Updating0 = range(1, UpdateMany),
+    Updating = lists:map(
+                 fun(N) ->
+                         hash:doit(<<N:256>>)
+                 end, Updating0),
     UpdatedLeaves = 
         lists:map(
           fun(N) ->
@@ -867,13 +872,10 @@ proof_test(Loc2, UpdateMany) ->
           end, Updating),
     Leaf5 = leaf:new(5000000000000000000000, 
                      <<0,0>>, 0, CFG),
-    LGK = UpdateMany + 1,
+    <<LGK:256>> = 
+        hash:doit(<<(UpdateMany + 1):256>>),
     LeafGone = {LGK, 0},
     
-    %loading the db 
-    %T0 = erlang:timestamp(),
-    %{Loc2, _, _} = 
-    %    store2:batch(Leaves, Loc, CFG),
     %making the verkle proof
     T1 = erlang:timestamp(),
     {ProofTree, Commit, Opening} = 

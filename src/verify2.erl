@@ -76,7 +76,7 @@ update_merge([LH|Leaves],
     %verify that we are not trying to change it.
     if
         not(LH == []) ->
-            io:fwrite("verkls2 error. tried to edit inaccessible state."),
+            io:fwrite("verkle2 error. tried to edit inaccessible state."),
             io:fwrite({LH, N, M, Subtrees});
         true -> ok
     end,
