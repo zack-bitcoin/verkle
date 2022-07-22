@@ -52,7 +52,7 @@ batch(Keys, Root, CFG) ->
 
 
     Tree = paths2tree(Paths),
-    %io:fwrite(Tree),
+    %io:fwrite({Tree}),
     %Tree example [[1|[[4,3,2], [1,1|[[1], [2]]]]], [2,1,1,1]],
     %list of lists means or. list of integers means and.
     io:fwrite("get lookup stems and leaves\n"),% 25%
@@ -243,10 +243,14 @@ paths2tree([Path]) -> [Path];
 paths2tree(Paths) ->
     {Same, Others} = starts_same_split(Paths),
     H = hd(hd(Same)),
-    Same2 = lists:map(fun(S) -> tl(S) end,
+    Same2_0 = lists:map(fun(S) -> tl(S) end,
                       Same),
-    Path1 = [H|paths2tree(Same2)],
-    %Path1 = [H] ++ paths2tree(Same2),
+    Same2_1 = paths2tree(Same2_0),
+    Same2 = case Same2_1 of
+                [X] -> X;
+                Y -> Y
+            end,
+    Path1 = [H|Same2],
     Recurse = paths2tree(Others),
     if
         (Others == []) -> Path1;
@@ -254,11 +258,6 @@ paths2tree(Paths) ->
             [Path1|Recurse];
         true -> [Path1, Recurse]
     end.
-    %case Others of
-    %    [] -> Path1;
-        %_ -> [Path1|paths2tree(Others)]
-    %    _ -> [Path1, paths2tree(Others)]
-    %end.
 starts_same_split([[X|B]|T]) ->
     starts_same_split2(X, T, [[X|B]]).
 starts_same_split2(X, [[X|B]|T], Sames) ->

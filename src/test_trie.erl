@@ -870,7 +870,7 @@ load_db(Elements) ->
     Loc2.
 proof_test(Loc2, UpdateMany) ->
     CFG = trie:cfg(?ID),
-    Updating0 = range(1, UpdateMany),
+    Updating0 = range(0, UpdateMany),
     Updating = lists:map(
                  fun(N) ->
                          hash:doit(<<N:256>>)
