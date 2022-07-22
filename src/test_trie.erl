@@ -587,16 +587,17 @@ test(20, CFG) ->
           end, range(1, Times+1)),
     %Many = lists:map(fun(#leaf{key = K}) -> K end,
     Many = lists:map(fun(Leaf) -> 
-                             leaf:key(Leaf) end,
-                     Leaves),
+                             leaf:raw_key(Leaf) 
+                     end, Leaves),
     io:fwrite("load up the batch database\n"),
     T1 = erlang:timestamp(),
     {NewLoc, stem, _} = 
         store2:batch(Leaves, Loc, CFG),
     T2 = erlang:timestamp(),
     io:fwrite("make proof\n"),
-    Keys = [5|Many],
+    Keys = [<<5:256>>|Many],
     %Keys = [5],
+    %io:fwrite(Keys),
     Proof = 
         get2:batch(Keys, NewLoc, CFG),
     %{K1, _} = element(2, hd(hd(tl(hd(tl(element(1, Proof))))))),
@@ -653,12 +654,13 @@ test(21, CFG) ->
           end, range(1, Times+1)),
     %Many = lists:map(fun(#leaf{key = K}) -> K end,
     Many = lists:map(fun(Leaf) -> 
-                     leaf:key(Leaf) end,
+                     leaf:raw_key(Leaf) end,
                      Leaves),
     {NewLoc, stem, _} = 
         store2:batch(Leaves, Loc, CFG),
     {ProofTree, Commit, Opening} = 
-        get2:batch([5,6|Many], NewLoc, CFG),
+        get2:batch([<<5:256>>,<<6:256>>|Many], 
+                   NewLoc, CFG),
     {true, _} = 
         verify2:proof(
           hd(ProofTree), 
@@ -666,7 +668,7 @@ test(21, CFG) ->
     %io:fwrite(ProofTree),
     Leaf01 = hd(Leaves),
     Leaf02 = hd(tl(Leaves)),
-    DeleteKey = leaf:key(Leaf02),
+    DeleteKey = leaf:raw_key(Leaf02),
     Leaf1 = Leaf01#leaf{value = <<0,0>>},%editing existing leaf.
     Leaf2 = leaf:new(5, <<0,1>>, 0, CFG),%creating a new leaf.
     Leaf3 = {leaf:key(Leaf02), 0},
@@ -691,16 +693,24 @@ test(21, CFG) ->
     RootStem4 = stem2:get(Loc2, CFG),
    
     %5 is the new leaf.
-    {Proof1, _, _} = get2:batch([5], Loc3, CFG),
-    {Proof2, _, _} = get2:batch([5], Loc2, CFG),
+    {Proof1, _, _} = 
+        get2:batch([<<5:256>>], Loc3, CFG),
+    {Proof2, _, _} = 
+        get2:batch([<<5:256>>], Loc2, CFG),
 
     %this is for the leaf being edited.
-    {Proof3, _, _} = get2:batch([leaf:key(Leaf1)], Loc3, CFG),
-    {Proof4, _, _} = get2:batch([leaf:key(Leaf1)], Loc2, CFG),
+    {Proof3, _, _} = 
+        get2:batch([leaf:raw_key(Leaf1)], 
+                   Loc3, CFG),
+    {Proof4, _, _} = 
+        get2:batch([leaf:raw_key(Leaf1)], 
+                   Loc2, CFG),
 
     %this is for the leaf being deleted.
-    {Proof5, _, _} = get2:batch([DeleteKey], Loc3, CFG),
-    {Proof6, _, _} = get2:batch([DeleteKey], Loc2, CFG),
+    {Proof5, _, _} = 
+        get2:batch([DeleteKey], Loc3, CFG),
+    {Proof6, _, _} = 
+        get2:batch([DeleteKey], Loc2, CFG),
     
     if
         (not(Proof1 == Proof2)) ->
@@ -734,7 +744,7 @@ test(22, CFG) ->
           end, range(1, StartingElements+1)),
     %Many = lists:map(fun(#leaf{key = K}) -> K end,
     Many = lists:map(fun(Leaf) -> 
-                     leaf:key(Leaf) end,
+                     leaf:raw_key(Leaf) end,
                      Leaves),
     {Updating, NotUpdating} = 
         lists:split(UpdateElements, Many),
@@ -880,6 +890,7 @@ proof_test(Loc2, UpdateMany) ->
     T1 = erlang:timestamp(),
     {ProofTree, Commit, Opening} = 
         get2:batch(Updating, Loc2, CFG),
+    %io:fwrite({ProofTree, Commit, Opening}),
     %verifying the verkle proof
     T2 = erlang:timestamp(),
     {true, _} = 

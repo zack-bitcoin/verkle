@@ -42,7 +42,17 @@ batch(Keys, Root, CFG) ->
     %Paths example: [[1,4,3,2],[1,1,1,2],[1,1,1,1],[2,1,1,1]]
     io:fwrite("get paths2tree\n"),
     benchmark:now(),
+
+    %todo.
+    %tree is broken. is:
+    %[197, [139, ...]], [210, ...]]
+    %but the 197 branch only has one sub-path. no need to make a new list there.
+    %[197, 139, ...], [210, ...]]
+
+
+
     Tree = paths2tree(Paths),
+    %io:fwrite(Tree),
     %Tree example [[1|[[4,3,2], [1,1|[[1], [2]]]]], [2,1,1,1]],
     %list of lists means or. list of integers means and.
     io:fwrite("get lookup stems and leaves\n"),% 25%
@@ -50,7 +60,7 @@ batch(Keys, Root, CFG) ->
     %slow. todo
     %[[1,0,0,0],[2,0,0,0]...
     Tree2 = points_values(Tree, RootStem, CFG),
-    %io:fwrite({Tree}),
+    %io:fwrite({Tree2}),
     %obtains the stems and leaves by reading from the database.
     %[stem, {I, stem}, [{I, leaf}], [{I, stem}, {I, leaf}], [{I, stem}, [{I, leaf}], [{I, leaf}]]]
     %list of things is AND, list of lists is OR.
