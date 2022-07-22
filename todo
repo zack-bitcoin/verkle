@@ -1,5 +1,6 @@
 
-stop using leaf:key, and leaf:path.
+in store2:verified, we are taking the hash of stems. This involves changing an extended point into an affine point, which is slow, and should be done in batches if possible.
+We can do it in batches here.
 
 now we can use the updated proof to update the database. but we need more tests to be sure that this works.
 

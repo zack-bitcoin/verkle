@@ -1,5 +1,5 @@
 -module(test_trie).
--export([test/0, test/2]).
+-export([test/0, test/2, load_db/1, proof_test/2]).
 
 -define(ID, trie01).
 -include("constants.hrl").
@@ -720,8 +720,8 @@ test(21, CFG) ->
     success;
 test(22, CFG) ->
     Loc = 1,
-    StartingElements = 50000,
-    UpdateElements = 6000,
+    StartingElements = 1000,
+    UpdateElements = 600,
     Leaves = 
         lists:map(
           fun(N) -> 
@@ -840,3 +840,91 @@ test3b(N, Loc, CFG) ->  %check that everything is in the trie
 range(A, B) when (A < B) ->
     [A|range(A+1, B)];
 range(A, A) -> [].
+
+
+load_db(Elements) ->
+    CFG = trie:cfg(?ID),
+    Leaves = 
+        lists:map(
+          fun(N) -> 
+                  %Key0 = Elements + 1 - N,
+                  %Key = 100000000000000 - (Key0 * 111),
+                  %Key = 100000000000000000000000000000000000000000000000000000000000000000000000000000 - (Key0 * 111),
+                  %#leaf{key = Key, 
+                  %      value = <<N:16>>}
+                  leaf:new(N, <<N:16>>, 0, CFG)
+          end, range(1, Elements+1)),
+    {Loc2, _, _} = 
+        store2:batch(Leaves, 1, CFG),
+    Loc2.
+proof_test(Loc2, UpdateMany) ->
+    CFG = trie:cfg(?ID),
+    Updating = range(1, UpdateMany),
+    UpdatedLeaves = 
+        lists:map(
+          fun(N) ->
+                  leaf:new(N, <<2, 7>>, 0, CFG)
+          end, Updating),
+    Leaf5 = leaf:new(5000000000000000000000, 
+                     <<0,0>>, 0, CFG),
+    LGK = UpdateMany + 1,
+    LeafGone = {LGK, 0},
+    
+    %loading the db 
+    %T0 = erlang:timestamp(),
+    %{Loc2, _, _} = 
+    %    store2:batch(Leaves, Loc, CFG),
+    %making the verkle proof
+    T1 = erlang:timestamp(),
+    {ProofTree, Commit, Opening} = 
+        get2:batch(Updating, Loc2, CFG),
+    %verifying the verkle proof
+    T2 = erlang:timestamp(),
+    {true, _} = 
+        verify2:proof(
+          hd(ProofTree), 
+          {ProofTree, Commit, Opening}, CFG),
+    %updating the proof.
+    T3 = erlang:timestamp(),
+
+    %{ok, _PID} = fprof:start(),
+    %fprof:trace([start, {procs, all}]),
+    
+    ProofTree2 = verify2:update(
+               ProofTree, UpdatedLeaves, CFG),
+
+    %fprof:trace([stop]),
+    %fprof:profile(),
+    %fprof:analyse(),
+    %fprof:stop(),
+
+    %storing the new data in the db
+    T4 = erlang:timestamp(),
+    Loc3 = store2:verified(
+                  Loc2, ProofTree2, CFG),
+    T5 = erlang:timestamp(),
+    
+    io:fwrite("measured in millionths of a second. 6 decimals. \n"),
+    %io:fwrite("tree has "),
+    %io:fwrite(integer_to_list(StartingElements)),
+    io:fwrite(" we are updating "),
+    io:fwrite(integer_to_list(UpdateMany)),
+    io:fwrite(" of them."),% loading the db: "),
+    %io:fwrite(integer_to_list(timer:now_diff(T1, T0))),
+    io:fwrite("\n making the proof: "),
+    io:fwrite(integer_to_list(timer:now_diff(T2, T1))),
+    io:fwrite("\n verifying proof: "),
+    io:fwrite(integer_to_list(timer:now_diff(T3, T2))),
+    io:fwrite("\n root hash of the updated proof: "),
+    io:fwrite(integer_to_list(timer:now_diff(T4, T3))),
+    io:fwrite("\n storing the new data in the database: "),
+    io:fwrite(integer_to_list(timer:now_diff(T5, T4))),
+    io:fwrite("\n\n"),
+
+    success.
+    
+
+
+
+    
+    

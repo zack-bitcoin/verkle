@@ -152,14 +152,13 @@ verified2([[{N, {Key, Value}}]|T], Stem, CFG) ->
               N, Stem, 2, Loc, 
               leaf_hash(Leaf, CFG)),
     verified2(T, Stem2, CFG);
-verified2([[{N, B}|T1]|T2], Stem, CFG) 
+verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG) 
   when is_binary(B) -> 
     1 = element(N+1, Stem#stem.types),
     ChildStem0 = verified2(T1, stem2:get(element(N+1, Stem#stem.pointers), CFG), CFG),
     ChildStem = ChildStem0#stem{root = B},
     %stem2:check_root_integrity(ChildStem),
     Loc = stem2:put(ChildStem, CFG),
-    Hash = stem2:hash(ChildStem),
     Stem2 = verified3(N, Stem, 1, Loc, Hash),
     verified2(T2, Stem2, CFG).
 verified3(N, Stem, Type, Loc, Hash) ->
@@ -460,9 +459,9 @@ test(3) ->
                       %#leaf{key = Key0, value = <<N:16>>}%random version
           end, range(1, Times+1)),
     %Many = lists:map(fun(#leaf{key = K}) -> K end,
-    Many = lists:map(fun(Leaf) -> 
-                             leaf:key(Leaf) end,
-                     Leaves),
+    %Many = lists:map(fun(Leaf) -> 
+    %                         leaf:raw_key(Leaf) end,
+    %                 Leaves),
     fprof:trace(start),
     store2:batch(Leaves, Loc, CFG),
     fprof:trace(stop),

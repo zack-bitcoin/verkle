@@ -90,18 +90,22 @@ update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees],
 
     {Point, Tree2} = 
         update_batch2(LH, S1, Depth+1, CFG, MEP),
-    {NewPoint, Diff} = 
+    OldN = stem2:hash_point(B),
+    {NewPoint, Diff, Hash} = 
         case Point of
-            0 -> {B, <<0:256>>};
+            0 -> {B, <<0:256>>, OldN};
             _ ->
                 NewPoint0 = fq:e_add(B, Point),
+
+                %todo. these are both extended points. we should simplify them in a batch before calculating their hash.
+                %todo. the new hash should be kept in the proof tree, as we could need it at a later step.
                 NewN = stem2:hash_point(NewPoint0),
-                OldN = stem2:hash_point(B),
-                {NewPoint0, fr:sub(NewN, OldN)}
+                %{NewPoint0, fr:sub(NewN, OldN)}
+                {NewPoint0, fr:sub(NewN, OldN), NewN}
     %io:fwrite("merging stems diff calculation.\n"),
         end,
     update_merge(Leaves, Subtrees, Depth, CFG, MEP,
-                 [[{N, NewPoint}|Tree2]|R], 
+                 [[{N, {mstem, Hash, NewPoint}}|Tree2]|R], 
                  [Diff|Diffs], N+1);
 update_merge([[{K, 0}]|Leaves], 
              [[{N, {OldK, OldV}}]|Subtrees],
@@ -144,7 +148,8 @@ update_merge([LH|Leaves],
                 end,
             update_merge(
               Leaves, Subtrees, Depth, CFG, 
-              MEP, [[{N, {leaf:key(Leaf2),
+              %MEP, [[{N, {leaf:key(Leaf2),
+              MEP, [[{N, {leaf:raw_key(Leaf2),
                           leaf:value(Leaf2)}}]|
                     R],
               [LeafDiff|Diffs], N+1);
@@ -175,7 +180,8 @@ update_merge([LH|Leaves],
 update_merge([LH|Leaves],
              [[{N, 0}]|Subtrees],
              Depth, CFG, MEP, R, Diffs, N) ->
-    Key = leaf:key(hd(LH)),
+    %Key = leaf:key(hd(LH)),
+    Key = leaf:raw_key(hd(LH)),
     Value = leaf:value(hd(LH)),
     %#leaf{key = Key, value = Value} = hd(LH),
     io:fwrite("new leaf diff calculation\n"),
