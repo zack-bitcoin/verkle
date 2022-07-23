@@ -853,6 +853,7 @@ range(A, A) -> [].
 
 
 load_db(Elements) ->
+    % Loc = 30015.
     CFG = trie:cfg(?ID),
     Leaves = 
         lists:map(
@@ -890,7 +891,9 @@ proof_test(Loc2, UpdateMany) ->
     T1 = erlang:timestamp(),
     {ProofTree, Commit, Opening} = 
         get2:batch(Updating, Loc2, CFG),
-    %io:fwrite({ProofTree, Commit, Opening}),
+%    io:fwrite({%ProofTree, 
+%               size(Commit), 
+%               size(element(1, Opening))}),
     %verifying the verkle proof
     T2 = erlang:timestamp(),
     {true, _} = 

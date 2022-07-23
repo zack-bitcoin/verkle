@@ -43,22 +43,11 @@ batch(Keys, Root, CFG) ->
     io:fwrite("get paths2tree\n"),
     benchmark:now(),
 
-    %todo.
-    %tree is broken. is:
-    %[197, [139, ...]], [210, ...]]
-    %but the 197 branch only has one sub-path. no need to make a new list there.
-    %[197, 139, ...], [210, ...]]
-
-
-
     Tree = paths2tree(Paths),
-    %io:fwrite({Tree}),
     %Tree example [[1|[[4,3,2], [1,1|[[1], [2]]]]], [2,1,1,1]],
     %list of lists means or. list of integers means and.
     io:fwrite("get lookup stems and leaves\n"),% 25%
     benchmark:now(),
-    %slow. todo
-    %[[1,0,0,0],[2,0,0,0]...
     Tree2 = points_values(Tree, RootStem, CFG),
     %io:fwrite({Tree2}),
     %obtains the stems and leaves by reading from the database.
@@ -131,7 +120,31 @@ batch(Keys, Root, CFG) ->
     %       end, As, Zs),
     %true = multiproof:verify({CommitG, Opening}, Commits, Zs, Ys, P), 
 
+    %io:fwrite(
+    %{Tree4, CommitG, Opening}),
+    %{Tree, E, {E, E, [E...]}}
+    Listed = [Tree4, CommitG, 
+              tuple_to_list(Opening)],
+    PointsList = 
+        points_list(Listed),
+    %io:fwrite(PointsList),
+    Spoints = fq:compress(PointsList),
+    %io:fwrite(Spoints),
+%    [Tree5, CommitG2, Opening2] =
+%        fill_points(Spoints, Listed),
+
+    %{Tree5, CommitG2, list_to_tuple(Opening2)}.
     {Tree4, CommitG, Opening}.
+points_list([<<E:1280>>|T]) ->%1280 bits in an extended bit.
+    [<<E:1280>>|points_list(T)];
+points_list([H|T]) when is_list(H) ->
+    points_list(H) ++ points_list(T);
+points_list([_|T]) ->
+    points_list(T);
+points_list(_) -> [].
+
+fill_points(Points, Lists) ->
+    ok.
    
 %binary2int([]) -> [];
 %binary2int([H|T]) ->

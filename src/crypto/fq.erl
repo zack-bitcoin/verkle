@@ -38,7 +38,9 @@
          extended2affine/1,
          affine2extended/1,
          to_affine_batch/1,
-         hash_point/1
+         hash_point/1,
+         compress/1,
+         decompress/1
         ]).
 -on_load(init/0).
 -record(extended_point, {u, v, z, t1, t2}).
@@ -451,6 +453,17 @@ gen_point(X) ->
     fq:encode_extended(
       jubjub:affine2extended(
         jubjub:gen_point(X))).
+
+compress(L) when is_list(L) ->
+    L2 = to_affine_batch(L),
+    lists:map(fun(<<A:256, _:256>>)->
+                      <<A:256>> end, L2).
+%compress(E) ->
+%    <<A:256, _:256>> = extended2affine(E),
+%    <<A:256>>.
+decompress(<<A:256>>) ->
+    gen_point(decode(<<A:256>>)).
+    
     
 
 points_list(Many) ->
@@ -921,5 +934,16 @@ test(29) ->
         extended_niels2extended(
           extended2extended_niels(Bad))),
       decode_extended(e_add(G, extended2extended_niels(Bad)))
-    }.
+    };
+test(30) ->
+    io:fwrite("testing compressing a point to 32 bytes"),
+    X = gen_point(),
+    X2 = e_add(X, X),
+    [<<A:256>>] = compress([X2]),
+    X3 = decompress(<<A:256>>),
+    Aff = extended2affine(X2),
+    Aff = extended2affine(X3),
+    ok.
+    
+
 
