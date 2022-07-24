@@ -123,18 +123,33 @@ batch(Keys, Root, CFG) ->
     %io:fwrite(
     %{Tree4, CommitG, Opening}),
     %{Tree, E, {E, E, [E...]}}
-    Listed = [Tree4, CommitG, 
-              tuple_to_list(Opening)],
+    TLO = tuple_to_list(Opening),
+    Listed = [Tree4, CommitG, TLO],
     PointsList = 
         points_list(Listed),
     %io:fwrite(PointsList),
     Spoints = fq:compress(PointsList),
-    %io:fwrite(Spoints),
-%    [Tree5, CommitG2, Opening2] =
-%        fill_points(Spoints, Listed),
-
-    %{Tree5, CommitG2, list_to_tuple(Opening2)}.
-    {Tree4, CommitG, Opening}.
+    %io:fwrite(size(hd(Spoints))),
+    {[Tree5, CommitG2, Opening2], []} =
+        fill_points(Spoints, Listed, []),
+    {Opening2b, []} = 
+        fill_points(fq:compress(points_list(TLO)), 
+                    TLO, []),
+    true = Opening2b == Opening2,
+    [CommitG2] = fq:compress([CommitG]),
+    Opening3 = tuple_to_list(verify2:decompress_opening(list_to_tuple(Opening2))),
+    Spoints2 = points_list(Opening3),
+    Spoints3 = points_list(TLO),
+    Spoints2 = Spoints3,
+%    io:fwrite({length(Opening3), length(TLO),
+%               length(hd(tl(tl(Opening3)))), 
+%               length(hd(tl(tl(TLO)))),
+%               length(Spoints2),
+%              length(Spoints3)}),
+    %io:fwrite({Spoints2, Spoints3}),
+    %io:fwrite({Tree5, Tree4}),
+    {Tree4, CommitG2, list_to_tuple(Opening2)}.
+    %{Tree4, CommitG, Opening}.
 points_list([<<E:1280>>|T]) ->%1280 bits in an extended bit.
     [<<E:1280>>|points_list(T)];
 points_list([H|T]) when is_list(H) ->
@@ -143,8 +158,19 @@ points_list([_|T]) ->
     points_list(T);
 points_list(_) -> [].
 
-fill_points(Points, Lists) ->
-    ok.
+fill_points(Points, [], Result) -> 
+    {lists:reverse(Result), Points};
+fill_points(Ps, [T|R], Result) when is_list(T) ->
+    {T2, Ps2} = fill_points(Ps, T, []),
+    fill_points(Ps2, R, [T2|Result]);
+fill_points([P|PT], [<<_:1280>>|R], Result) ->
+    fill_points(PT, R, [P|Result]);
+fill_points(Ps, [T|R], Result) ->
+    fill_points(Ps, R, [T|Result]).
+
+
+    
+
    
 %binary2int([]) -> [];
 %binary2int([H|T]) ->

@@ -458,9 +458,6 @@ compress(L) when is_list(L) ->
     L2 = to_affine_batch(L),
     lists:map(fun(<<A:256, _:256>>)->
                       <<A:256>> end, L2).
-%compress(E) ->
-%    <<A:256, _:256>> = extended2affine(E),
-%    <<A:256>>.
 decompress(<<A:256>>) ->
     gen_point(decode(<<A:256>>)).
     

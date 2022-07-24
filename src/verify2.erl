@@ -1,5 +1,6 @@
 -module(verify2).
 -export([proof/3, update/3, remove_empty/1,
+         decompress_tree/1, decompress_opening/1,
          test/0
          %update_proof/3 %update_proofs/2, unfold/4
         ]).
@@ -219,7 +220,39 @@ merge_find_helper(P, D) ->
 	    merge_find_helper(P2, D)
     end.
 
-proof(Root0, {Tree, CommitG, Open}, CFG) ->
+decompress_tree(T) when is_tuple(T) ->
+    T2 = tuple_to_list(T),
+    T3 = decompress_tree(T2),
+    list_to_tuple(T3);
+decompress_tree([H|T]) ->
+    [decompress_tree(H)|decompress_tree(T)];
+decompress_tree(<<X:256>>) ->
+    fq:decompress(<<X:256>>);
+
+decompress_tree(X) when is_binary(X)-> 
+    X;
+decompress_tree([]) -> [].
+
+decompress_opening({A, B, L, C, D}) ->
+    A2 = fq:decompress(A),
+    L2 = decompress_tree(L),
+    {A2, B, L2, C, D}.
+
+
+proof(Root0, {Tree, CommitG0, Open0}, CFG) ->
+    {CommitG, Open}
+        = case size(CommitG0) of
+              32 -> 
+                  %{fq:decompress(CommitG0),
+                  %   decompress_tree(Open0)};
+                  %io:fwrite({size(element(2, decompress_tree(Open0)))}),
+                  %io:fwrite({CommitG0, Open0}),
+                  %decompress_tree(
+                    %{CommitG0, Open0});
+              {fq:decompress(CommitG0),
+               decompress_opening(Open0)};
+              160 -> {CommitG0, Open0}
+          end,
 
     %multiproof:verify(Proof = {CommitG, Commits, Open_G_E}, Zs, Ys, ?p)
     %Zs are elements of the domain where we look up stuff.
