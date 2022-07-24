@@ -141,14 +141,7 @@ batch(Keys, Root, CFG) ->
     Spoints2 = points_list(Opening3),
     Spoints3 = points_list(TLO),
     Spoints2 = Spoints3,
-%    io:fwrite({length(Opening3), length(TLO),
-%               length(hd(tl(tl(Opening3)))), 
-%               length(hd(tl(tl(TLO)))),
-%               length(Spoints2),
-%              length(Spoints3)}),
-    %io:fwrite({Spoints2, Spoints3}),
-    %io:fwrite({Tree5, Tree4}),
-    {Tree4, CommitG2, list_to_tuple(Opening2)}.
+    {Tree5, CommitG2, list_to_tuple(Opening2)}.
     %{Tree4, CommitG, Opening}.
 points_list([<<E:1280>>|T]) ->%1280 bits in an extended bit.
     [<<E:1280>>|points_list(T)];

@@ -1,5 +1,3 @@
-use fq:e_simplify_batch/1 to simplify the results from get2:batch. so that the proof is shorter.
-
 
 12% (or 24%?) speedup.
 in verify2:update, we are taking the hash of stems. This involves changing an extended point into an affine point, which is slow, and should be done in batches if possible.

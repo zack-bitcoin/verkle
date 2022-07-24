@@ -158,6 +158,7 @@ verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG)
     ChildStem0 = verified2(T1, stem2:get(element(N+1, Stem#stem.pointers), CFG), CFG),
     ChildStem = ChildStem0#stem{root = B},
     %stem2:check_root_integrity(ChildStem),
+    %io:fwrite(size(ChildStem#stem.root)),
     Loc = stem2:put(ChildStem, CFG),
     Stem2 = verified3(N, Stem, 1, Loc, Hash),
     verified2(T2, Stem2, CFG).

@@ -575,13 +575,13 @@ test(19, CFG) ->
     ok;
 test(20, CFG) ->
     Loc = 1,
-    Times = 2000,
+    Times = 200,
     Leaves = 
         lists:map(
           fun(N) -> 
                   Key0 = Times + 1 - N,
                   %<<Key:256>> = <<(-Key0):256>>,
-                  Key = 1000000000 - Key0,
+                  Key = 1000000000 - (Key0*256),
                   leaf:new(Key, <<N:16>>, 0, CFG)
           %end, Many),
           end, range(1, Times+1)),
@@ -687,6 +687,7 @@ test(21, CFG) ->
         verify2:update(
           ProofTree, [Leaf1, Leaf2, Leaf3],
           CFG),
+    false = error == hd(ProofTree2),
     NewRoot2 = hd(ProofTree2),
     Loc2 = store2:verified(
                   NewLoc, ProofTree2, CFG),

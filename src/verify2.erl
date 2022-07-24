@@ -7,9 +7,13 @@
 -include("constants.hrl").
 
 
-update([OldRoot|ProofTree], Leaves, CFG) ->
+update([OldRoot0|ProofTree], Leaves, CFG) ->
     %walk down the tree, then update everything in reverse in the callback stack.
     %Leaves2 = store2:sort_by_path2(Leaves, CFG),
+    OldRoot = case size(OldRoot0) of
+                  160 -> OldRoot0;
+                  32 -> fq:decompress(OldRoot0)
+              end,
     MEP = parameters2:multi_exp(),
     {Diff, Tree2} = 
         update_batch2(Leaves, ProofTree,
@@ -220,6 +224,8 @@ merge_find_helper(P, D) ->
 	    merge_find_helper(P2, D)
     end.
 
+decompress_tree(X = {I, {<<_:256>>, B}}) when
+      is_integer(I) and is_binary(B) -> X;
 decompress_tree(T) when is_tuple(T) ->
     T2 = tuple_to_list(T),
     T3 = decompress_tree(T2),
@@ -228,10 +234,12 @@ decompress_tree([H|T]) ->
     [decompress_tree(H)|decompress_tree(T)];
 decompress_tree(<<X:256>>) ->
     fq:decompress(<<X:256>>);
-
 decompress_tree(X) when is_binary(X)-> 
     X;
-decompress_tree([]) -> [].
+decompress_tree(X) when is_integer(X)-> 
+    X;
+decompress_tree([]) -> 
+    [].
 
 decompress_opening({A, B, L, C, D}) ->
     A2 = fq:decompress(A),
@@ -239,20 +247,10 @@ decompress_opening({A, B, L, C, D}) ->
     {A2, B, L2, C, D}.
 
 
-proof(Root0, {Tree, CommitG0, Open0}, CFG) ->
-    {CommitG, Open}
-        = case size(CommitG0) of
-              32 -> 
-                  %{fq:decompress(CommitG0),
-                  %   decompress_tree(Open0)};
-                  %io:fwrite({size(element(2, decompress_tree(Open0)))}),
-                  %io:fwrite({CommitG0, Open0}),
-                  %decompress_tree(
-                    %{CommitG0, Open0});
-              {fq:decompress(CommitG0),
-               decompress_opening(Open0)};
-              160 -> {CommitG0, Open0}
-          end,
+proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
+    Tree = decompress_tree(Tree0),
+    CommitG = fq:decompress(CommitG0),
+    Open = decompress_opening(Open0),
 
     %multiproof:verify(Proof = {CommitG, Commits, Open_G_E}, Zs, Ys, ?p)
     %Zs are elements of the domain where we look up stuff.
@@ -265,7 +263,12 @@ proof(Root0, {Tree, CommitG0, Open0}, CFG) ->
     %P = parameters:read(),
     Domain = parameters2:domain(),
     %B = secp256k1:jacob_equal(Root0, Root, ?p#p.e),
-    B = fq:eq(Root0, Root),
+    %io:fwrite({Root0, Root, size(Root0), size(Root), Root0 == Root}),
+    Root1 = case size(Root0) of
+                32 -> fq:decompress(Root0);
+                160 -> Root0
+            end,
+    B = fq:eq(Root1, Root),
     if
         not(B) -> false;
         true ->
