@@ -182,8 +182,10 @@ decode_extended_niels(
          t2d = decode(<<T2D:256>>),
          z = decode(<<Z:256>>)}.
 
+hash_point(<<U:256>>) ->
+    fr:encode(U);
 hash_point(<<U:256, _:256>>) ->
-    fr:encode(U rem fr:prime());
+    fr:encode(U);
 hash_point(X = <<U:(256*5)>>) ->
     hash_point(extended2affine(X)).
 

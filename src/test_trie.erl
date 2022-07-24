@@ -575,7 +575,7 @@ test(19, CFG) ->
     ok;
 test(20, CFG) ->
     Loc = 1,
-    Times = 200,
+    Times = 2,
     Leaves = 
         lists:map(
           fun(N) -> 
@@ -687,7 +687,6 @@ test(21, CFG) ->
         verify2:update(
           ProofTree, [Leaf1, Leaf2, Leaf3],
           CFG),
-    false = error == hd(ProofTree2),
     NewRoot2 = hd(ProofTree2),
     Loc2 = store2:verified(
                   NewLoc, ProofTree2, CFG),

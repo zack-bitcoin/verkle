@@ -28,11 +28,9 @@ empty_stem() ->
     [].
 
 %leaves are made with leaf:new/4
-update_batch2([], Tree, _Depth, _CFG, _MEP) 
-->
+update_batch2([], Tree, _Depth, _CFG, _MEP) ->
     {0, Tree};
-update_batch2(Leaves, Tree,
-              Depth, CFG, MEP) ->
+update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
     %adding leaves to an existing stem.
     Leaves2 = store2:clump_by_path(
                 Depth, Leaves, CFG),
@@ -44,20 +42,7 @@ update_batch2(Leaves, Tree,
                 Diffs, MEP),
     {EllDiff, Tree2}.
 
-%for testing only.
-remove_empty([[]|T]) ->
-    remove_empty(T);
-remove_empty([0|T]) ->
-    remove_empty(T);
-remove_empty([<<0:256>>|T]) ->
-    remove_empty(T);
-remove_empty([H|T]) ->
-    [H|remove_empty(T)];
-remove_empty([]) -> [].
-
-
-update_merge([], Rest, _,_,_, Merged, Diffs, _)
-->
+update_merge([], Rest, _,_,_, Merged, Diffs, _) ->
     %finished updating this stem.
     Subtrees = lists:reverse(Merged) ++ Rest,
     {lists:reverse(Diffs), Subtrees};
@@ -100,8 +85,13 @@ update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees],
         case Point of
             0 -> {B, <<0:256>>, OldN};
             _ ->
-                NewPoint0 = fq:e_add(B, Point),
-
+                NewPoint0 = fq:e_add(fq:decompress(B), Point),
+                case NewPoint0 of
+                    error -> 
+                        io:fwrite({B, Point,
+                                  size(B), size(Point)});
+                    _ -> ok
+                end,
                 %todo. these are both extended points. we should simplify them in a batch before calculating their hash.
                 %todo. the new hash should be kept in the proof tree, as we could need it at a later step.
                 NewN = stem2:hash_point(NewPoint0),
@@ -199,6 +189,18 @@ update_merge(Ls, [X|T], Depth, CFG, MEP, R, Diffs,
              N) when is_tuple(X)->
     update_merge(Ls, [[X|T]], Depth, CFG, MEP, R,
                  Diffs, N).
+
+
+%for testing only.
+remove_empty([[]|T]) ->
+    remove_empty(T);
+remove_empty([0|T]) ->
+    remove_empty(T);
+remove_empty([<<0:256>>|T]) ->
+    remove_empty(T);
+remove_empty([H|T]) ->
+    [H|remove_empty(T)];
+remove_empty([]) -> [].
 
 
 leaf_in_list(_, []) ->
