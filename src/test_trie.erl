@@ -12,6 +12,7 @@ test() ->
     %V = [5, 6, 12, 13],
     %V = [101, 17],
     V = [%18%, 
+         23,
          20,
          21,
          22
@@ -671,7 +672,7 @@ test(21, CFG) ->
     DeleteKey = leaf:raw_key(Leaf02),
     Leaf1 = Leaf01#leaf{value = <<0,0>>},%editing existing leaf.
     Leaf2 = leaf:new(5, <<0,1>>, 0, CFG),%creating a new leaf.
-    Leaf3 = {leaf:key(Leaf02), 0},
+    Leaf3 = {DeleteKey, 0},
     %io:fwrite({Leaf1, Leaf2}),
     %Leaf2 = {Leaf02#leaf.key, 0},
     %Leaf3 = leaf:new(5, <<0,0>>, 0, CFG),%writing to the previously empty location.
@@ -711,6 +712,8 @@ test(21, CFG) ->
         get2:batch([DeleteKey], Loc3, CFG),
     {Proof6, _, _} = 
         get2:batch([DeleteKey], Loc2, CFG),
+
+    %io:fwrite(Proof5),
     
     if
         (not(Proof1 == Proof2)) ->
@@ -756,9 +759,9 @@ test(22, CFG) ->
 %                        value = <<2,7>>}
                   
           end, Updating),
-    Leaf5 = leaf:new(5, <<0,0>>, 0, CFG),
-    LGK = hd(NotUpdating),
-    LeafGone = {LGK, 0},
+    %Leaf5 = leaf:new(5, <<0,0>>, 0, CFG),
+    %LGK = hd(NotUpdating),
+    %LeafGone = {LGK, 0},
                         
     %loading the db 
     T0 = erlang:timestamp(),
@@ -813,7 +816,47 @@ test(22, CFG) ->
     io:fwrite(integer_to_list(timer:now_diff(T5, T4))),
     io:fwrite("\n\n"),
 
+    success;
+test(23, CFG) ->
+    Loc = 1,
+    StartingElements = 2000,
+    Leaves = 
+        lists:map(
+          fun(N) -> 
+                  Key0 = StartingElements + 1 - N,
+                  %Key = 100000000000000 - (Key0 * 111),
+                  Key = 100000000000000000000000000000000000000000000000000000000000000000000000000000 - (Key0 * 128),
+                  %#leaf{key = Key, 
+                  %      value = <<N:16>>}
+                  N2 = hash:doit(<<N:256>>),
+                  %leaf:new(Key, <<N:16>>, 0, CFG)
+                  leaf:new(N2, <<N:16>>, 0, CFG)
+          end, range(1, StartingElements+1)),
+    Keys = lists:map(fun(Leaf) -> 
+                     leaf:raw_key(Leaf) end,
+                     Leaves),
+    LeafDeletes = lists:map(fun(Key) ->
+                                    {Key, 0}
+                            end, Keys),
+    
+    {Loc2, _, _} = 
+        store2:batch(Leaves, Loc, CFG),
+    {ProofTree, Commit, Opening} = 
+        get2:batch(Keys, Loc2, CFG),
+    {true, Leaves2} = 
+        verify2:proof(
+          hd(ProofTree), 
+          {ProofTree, Commit, Opening}, CFG),
+    %io:fwrite({Leaves2, LeafDeletes}),
+    ProofTree2 = verify2:update(
+               ProofTree, LeafDeletes, CFG),
+    Loc3 = store2:verified(Loc2, ProofTree2, CFG),
+    
+    %io:fwrite(get2:batch(Keys, Loc3, CFG)),
+    
     success.
+
+
     
     
     

@@ -59,7 +59,7 @@ update_merge([[]|Leaves],
       Leaves, SubTree, Depth, CFG, MEP,
       [hd(Tree)|R], [<<0:256>>|Diff], N+1);
 update_merge([LH|Leaves], 
-             Subtrees = [[{M, _}|_]|_], Depth, 
+             Subtrees = [[{M, ML}|_]|_], Depth, 
              CFG, MEP, R, Diff, N) 
   when (not(M == N)) ->
     %this part is not recorded in our proof, it cannot be changed.
@@ -67,7 +67,11 @@ update_merge([LH|Leaves],
     if
         not(LH == []) ->
             io:fwrite("verkle2 error. tried to edit inaccessible state."),
-            io:fwrite({LH, N, M, Subtrees});
+            io:fwrite({{updates, LH}, 
+                       {at_slot, N}, 
+                       {next_slot_in_proof, M}, 
+                       {next_value_in_proof, ML}, 
+                       {proof_tree, Subtrees}});
         true -> ok
     end,
     update_merge(Leaves, 
@@ -83,20 +87,16 @@ update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees],
     OldN = stem2:hash_point(B),
     {NewPoint, Diff, Hash} = 
         case Point of
-            0 -> {B, <<0:256>>, OldN};
+            0 -> 
+                1=2,
+                {fq:decompress(B), <<0:256>>, OldN};
             _ ->
+                false = (fq:eq(Point, fq:e_zero())),
                 NewPoint0 = fq:e_add(fq:decompress(B), Point),
-                case NewPoint0 of
-                    error -> 
-                        io:fwrite({B, Point,
-                                  size(B), size(Point)});
-                    _ -> ok
-                end,
-                %todo. these are both extended points. we should simplify them in a batch before calculating their hash.
-                %todo. the new hash should be kept in the proof tree, as we could need it at a later step.
+                %todo. we should batch this before calculating the hash.
                 NewN = stem2:hash_point(NewPoint0),
-                %{NewPoint0, fr:sub(NewN, OldN)}
                 {NewPoint0, fr:sub(NewN, OldN), NewN}
+                %{NewPoint0, {sub, NewPoint0, OldN}, NewN}
     %io:fwrite("merging stems diff calculation.\n"),
         end,
     update_merge(Leaves, Subtrees, Depth, CFG, MEP,
@@ -106,12 +106,12 @@ update_merge([[{K, 0}]|Leaves],
              [[{N, {OldK, OldV}}]|Subtrees],
              Depth, CFG, MEP, R, Diffs, N) ->
     %deleting a leaf.
-    io:fwrite("deleting a leaf"),
+    %io:fwrite("deleting a leaf"),
     OldLeaf = leaf:new(OldK, OldV, 0, CFG),
     OldN = store2:leaf_hash(OldLeaf, CFG),
     update_merge(Leaves, Subtrees, Depth, CFG, MEP,
                  [{N, 0}|R], 
-                 [fr:neg(OldN)|Diffs], N);
+                 [fr:neg(OldN)|Diffs], N+1);
 update_merge([LH|Leaves], 
              [[{N, {Key, Value}}]|Subtrees], 
              Depth, CFG, MEP, R, Diffs, N) ->

@@ -1,11 +1,14 @@
+use random values for keys in the tests.
+
 
 12% (or 24%?) speedup.
 in verify2:update, we are taking the hash of stems. This involves changing an extended point into an affine point, which is slow, and should be done in batches if possible.
 We can do it in batches here.
 update_batch2 and update_merge are currently doing a depth first update of the proof tree. We need to switch to breadth first to fully take advantage of batching.
-Before we start verifying the proof, we should update all the points to include their hashes.
-
 (batch chunkify is taking up like 20% for comparison, and clump by path is 15%)
+* in verify2:update_merge, we are only calculating the stem2:hash_point of an extended point in one place. instead of immediately calculating it, we should pass the variables back to the calling function instead of the diff. the calling function can calculate the diff later when it is convenient. 
+
+
 
 update the readme to explain how to do tests.
 
