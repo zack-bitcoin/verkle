@@ -34,13 +34,89 @@ update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
     %adding leaves to an existing stem.
     Leaves2 = store2:clump_by_path(
                 Depth, Leaves, CFG),
-    {Diffs, Tree2} = 
+    {Diffs0, Tree2} = 
         update_merge(Leaves2, 
                      Tree, Depth, CFG, MEP, 
                      [], [], 0),
+    %Diffs0 [<<fr:256>>, <<fr:256>>, {sub, <<El:1280>>, <<fr:32>>}, <<fr:256>>, ...]
+    %Diffs is length 256 [<<fr:256>>, ...]
+    %tree is like [{45, 0},{62, 0},{234,0}], if we have a bunch of empty slots.
+    SubPoints = sub_points(Diffs0),
+    Es = lists:map(fun({sub, X, _}) -> X end, 
+                   SubPoints),
+    Cs = fq:compress(Es),
+    ECs = lists:zipwith(fun(A, B) -> {A, B} end,
+                        Es, Cs),
+                
+    {[], Tree3} = insert_stem_hashes2(ECs, Tree2, []),
+    %todo. in the tree, we are storing a bunch of "uncalculated" in place of hashes. With Es, and Cs, we can know what values to store in those places.
+    Diffs = calc_subs(Diffs0, Cs),
     EllDiff = store2:precomputed_multi_exponent(
                 Diffs, MEP),
-    {EllDiff, Tree2}.
+    {EllDiff, Tree3}.
+
+insert_stem_hashes2([], Tree, Result) ->
+    %{[], [lists:reverse(Result)|Tree]};
+    {[], lists:reverse(Result) ++ Tree};
+insert_stem_hashes2(ECs, [], Result) ->
+    {ECs, lists:reverse(Result)};
+insert_stem_hashes2(
+  ECs, [{I, {mstem, uncalculated, E}}|T], 
+  Result) ->
+    {C, ECs2} = get_remove(E, ECs, []),
+    insert_stem_hashes2(ECs2, T, [{I, {mstem, C, E}}|Result]);
+insert_stem_hashes2(ECs, [H|T], Result) ->
+    {ECs2, H2} = insert_stem_hashes2(ECs, H, []),
+    insert_stem_hashes2(ECs2, T, [H2|Result]);
+    %insert_stem_hashes2(ECs2, T, H2 ++ Result);
+insert_stem_hashes2(ECs, Tree = {I, {K, V}}, 
+                    []) ->
+    {ECs, Tree};
+insert_stem_hashes2(ECs, Tree = {I, {mstem, _, _}}, 
+                    []) ->
+    {ECs, Tree};
+insert_stem_hashes2(ECs, Tree = {I, 0}, 
+                    []) ->
+    {ECs, Tree};
+insert_stem_hashes2(_, Tree, _) ->
+    io:fwrite("verify2 corrupted tree\n"),
+    io:fwrite(Tree).
+    
+
+
+insert_stem_hashes([], T) -> T;
+insert_stem_hashes(_, []) -> [];
+insert_stem_hashes(ECs, [{I, {mstem, uncalculated, E}}|T]) ->
+    {C, ECs2} = get_remove(E, ECs, []),
+    [{I, {mstem, C, E}}|
+     insert_stem_hashes(ECs2, T)];
+insert_stem_hashes(ECs, [H|T]) ->
+    [insert_stem_hashes(ECs, H)|
+     insert_stem_hashes(ECs, T)];
+insert_stem_hashes(_, X) -> X.
+
+get_remove(Key, [{Key, Value}|L], Rest) ->
+    {Value, L ++ Rest};
+get_remove(Key, [H|L], Rest) ->
+    get_remove(Key, L, [H|Rest]).
+
+
+    
+
+calc_subs(Diffs, []) ->
+    Diffs;
+calc_subs([{sub, _, Fr}|T], [Compressed|CT]) ->
+    [fr:sub(stem2:hash_point(Compressed), Fr)|
+     calc_subs(T, CT)];
+calc_subs([H|T], Cs) ->
+    [H|calc_subs(T, Cs)].
+
+
+sub_points([]) -> [];
+sub_points([X = {sub, E, Fr}|T]) -> 
+    [X|sub_points(T)];
+sub_points([X|T]) -> 
+    sub_points(T).
 
 update_merge([], Rest, _,_,_, Merged, Diffs, _) ->
     %finished updating this stem.
@@ -93,11 +169,14 @@ update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees],
             _ ->
                 false = (fq:eq(Point, fq:e_zero())),
                 NewPoint0 = fq:e_add(fq:decompress(B), Point),
+                case (fq:eq(NewPoint0, fq:e_zero())) of
+                    true -> {NewPoint0, <<0:256>>, <<0:256>>};
+                    false ->
                 %todo. we should batch this before calculating the hash.
-                NewN = stem2:hash_point(NewPoint0),
-                {NewPoint0, fr:sub(NewN, OldN), NewN}
-                %{NewPoint0, {sub, NewPoint0, OldN}, NewN}
-    %io:fwrite("merging stems diff calculation.\n"),
+                        %NewN = stem2:hash_point(NewPoint0),
+                        %{NewPoint0, fr:sub(NewN, OldN), NewN}
+                        {NewPoint0, {sub, NewPoint0, OldN}, uncalculated}
+                end
         end,
     update_merge(Leaves, Subtrees, Depth, CFG, MEP,
                  [[{N, {mstem, Hash, NewPoint}}|Tree2]|R], 

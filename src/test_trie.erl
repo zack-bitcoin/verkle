@@ -11,7 +11,7 @@ test() ->
     %V = [1,2,3,5,7,8,9,10,11,12,13,14,16,17,18],
     %V = [5, 6, 12, 13],
     %V = [101, 17],
-    V = [%18%, 
+    V = [
          23,
          20,
          21,
@@ -733,8 +733,8 @@ test(21, CFG) ->
     success;
 test(22, CFG) ->
     Loc = 1,
-    StartingElements = 1000,
-    UpdateElements = 600,
+    StartingElements = 10000,
+    UpdateElements = 6000,
     Leaves = 
         lists:map(
           fun(N) -> 
@@ -786,6 +786,7 @@ test(22, CFG) ->
     
     ProofTree2 = verify2:update(
                ProofTree, UpdatedLeaves, CFG),
+    %io:fwrite({ProofTree, ProofTree2}),
 
     %fprof:trace([stop]),
     %fprof:profile(),

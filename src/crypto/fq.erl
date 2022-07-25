@@ -353,6 +353,7 @@ batch_inverse(Vs) ->
                           mul(A, B)
                   end, V4, VI2).
 
+e_simplify_batch([]) -> [];
 e_simplify_batch(Es) ->
     Zs = lists:map(fun(<<_:512, Z:256, _:512>>) ->
                            <<Z:256>> end, Es),
