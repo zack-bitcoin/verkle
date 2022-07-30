@@ -1,22 +1,42 @@
 -module(verify2).
 -export([proof/3, update/3, remove_empty/1,
-         decompress_tree/1, decompress_opening/1,
          test/0
-         %update_proof/3 %update_proofs/2, unfold/4
         ]).
 -include("constants.hrl").
 
+fill_points(Points, [], Result) -> 
+    {lists:reverse(Result), Points};
+fill_points(Ps, [T|R], Result) when is_list(T) ->
+    {T2, Ps2} = fill_points(Ps, T, []),
+    fill_points(Ps2, R, [T2|Result]);
+fill_points([P|PT], [{I, <<_:256>>}|R], Result) 
+  when is_integer(I) ->
+    fill_points(PT, R, [{I, P}|Result]);
+fill_points([P|PT], [<<_:256>>|R], Result) ->
+    fill_points(PT, R, [P|Result]);
+fill_points(Ps, [T|R], Result) ->
+    fill_points(Ps, R, [T|Result]).
 
-update([OldRoot0|ProofTree], Leaves, CFG) ->
+update(PL = [OldRoot0|ProofTree], Leaves, CFG) ->
     %walk down the tree, then update everything in reverse in the callback stack.
     %Leaves2 = store2:sort_by_path2(Leaves, CFG),
-    OldRoot = case size(OldRoot0) of
-                  160 -> OldRoot0;
-                  32 -> fq:decompress(OldRoot0)
-              end,
+    %lets decompress all the points in this tree to start off.
+    %CPL = get2:compressed_points_list(PL),
+    %Decompressed = fq:decompress(CPL),
+    %io:fwrite(PL),
+    %{PL2, _} = fill_points(Decompressed, PL, []),
+
+    PL2 = PL,
+    OldRoot = hd(PL2),
+    %io:fwrite({PL, PL2}),
+%    OldRoot = case size(OldRoot0) of
+%                  160 -> OldRoot0;
+%                  32 -> fq:decompress(OldRoot0)
+%              end,
     MEP = parameters2:multi_exp(),
     {Diff, Tree2} = 
-        update_batch2(Leaves, ProofTree,
+        %update_batch2(Leaves, ProofTree,
+        update_batch2(Leaves, tl(PL2),
                       0, CFG, MEP),
     NewRoot = case Diff of
                   0 -> OldRoot;
@@ -47,9 +67,13 @@ update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
     Cs = fq:compress(Es),
     ECs = lists:zipwith(fun(A, B) -> {A, B} end,
                         Es, Cs),
+    ECdict = 
+        lists:foldl(fun({Key, Value}, A) -> 
+                            dict:store(
+                              Key, Value, A) 
+                    end, dict:new(), ECs),
                 
-    {[], Tree3} = insert_stem_hashes2(ECs, Tree2, []),
-    %todo. in the tree, we are storing a bunch of "uncalculated" in place of hashes. With Es, and Cs, we can know what values to store in those places.
+    {_, Tree3} = insert_stem_hashes2(ECdict, Tree2, []),
     Diffs = calc_subs(Diffs0, Cs),
     EllDiff = store2:precomputed_multi_exponent(
                 Diffs, MEP),
@@ -63,8 +87,10 @@ insert_stem_hashes2(ECs, [], Result) ->
 insert_stem_hashes2(
   ECs, [{I, {mstem, uncalculated, E}}|T], 
   Result) ->
-    {C, ECs2} = get_remove(E, ECs, []),
-    insert_stem_hashes2(ECs2, T, [{I, {mstem, C, E}}|Result]);
+    %{C, ECs2} = get_remove(E, ECs, []),
+    {ok, C} = dict:find(E, ECs),
+    insert_stem_hashes2(
+      ECs, T, [{I, {mstem, C, E}}|Result]);
 insert_stem_hashes2(ECs, [H|T], Result) ->
     {ECs2, H2} = insert_stem_hashes2(ECs, H, []),
     insert_stem_hashes2(ECs2, T, [H2|Result]);
@@ -72,11 +98,10 @@ insert_stem_hashes2(ECs, [H|T], Result) ->
 insert_stem_hashes2(ECs, Tree = {I, {K, V}}, 
                     []) ->
     {ECs, Tree};
-insert_stem_hashes2(ECs, Tree = {I, {mstem, _, _}}, 
-                    []) ->
+insert_stem_hashes2(
+  ECs, Tree = {I, {mstem, _, _}}, []) ->
     {ECs, Tree};
-insert_stem_hashes2(ECs, Tree = {I, 0}, 
-                    []) ->
+insert_stem_hashes2(ECs, Tree = {I, 0}, []) ->
     {ECs, Tree};
 insert_stem_hashes2(_, Tree, _) ->
     io:fwrite("verify2 corrupted tree\n"),
@@ -99,6 +124,9 @@ get_remove(Key, [{Key, Value}|L], Rest) ->
     {Value, L ++ Rest};
 get_remove(Key, [H|L], Rest) ->
     get_remove(Key, L, [H|Rest]).
+
+    
+            
 
 
     
@@ -161,22 +189,14 @@ update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees],
     {Point, Tree2} = 
         update_batch2(LH, S1, Depth+1, CFG, MEP),
     OldN = stem2:hash_point(B),
+    NewPoint0 = fq:e_add(B, Point),
     {NewPoint, Diff, Hash} = 
-        case Point of
-            0 -> 
-                1=2,
-                {fq:decompress(B), <<0:256>>, OldN};
-            _ ->
-                false = (fq:eq(Point, fq:e_zero())),
-                NewPoint0 = fq:e_add(fq:decompress(B), Point),
-                case (fq:eq(NewPoint0, fq:e_zero())) of
-                    true -> {NewPoint0, <<0:256>>, <<0:256>>};
-                    false ->
-                %todo. we should batch this before calculating the hash.
-                        %NewN = stem2:hash_point(NewPoint0),
-                        %{NewPoint0, fr:sub(NewN, OldN), NewN}
-                        {NewPoint0, {sub, NewPoint0, OldN}, uncalculated}
-                end
+        case (fq:eq(NewPoint0, fq:e_zero())) of
+            true -> {NewPoint0, <<0:256>>, <<0:256>>};
+            false ->
+                {NewPoint0, 
+                 {sub, NewPoint0, OldN}, 
+                 uncalculated}
         end,
     update_merge(Leaves, Subtrees, Depth, CFG, MEP,
                  [[{N, {mstem, Hash, NewPoint}}|Tree2]|R], 
@@ -305,33 +325,18 @@ merge_find_helper(P, D) ->
 	    merge_find_helper(P2, D)
     end.
 
-decompress_tree(X = {I, {<<_:256>>, B}}) when
-      is_integer(I) and is_binary(B) -> X;
-decompress_tree(T) when is_tuple(T) ->
-    T2 = tuple_to_list(T),
-    T3 = decompress_tree(T2),
-    list_to_tuple(T3);
-decompress_tree([H|T]) ->
-    [decompress_tree(H)|decompress_tree(T)];
-decompress_tree(<<X:256>>) ->
-    fq:decompress(<<X:256>>);
-decompress_tree(X) when is_binary(X)-> 
-    X;
-decompress_tree(X) when is_integer(X)-> 
-    X;
-decompress_tree([]) -> 
-    [].
-
-decompress_opening({A, B, L, C, D}) ->
-    A2 = fq:decompress(A),
-    L2 = decompress_tree(L),
-    {A2, B, L2, C, D}.
-
-
 proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
-    Tree = decompress_tree(Tree0),
-    CommitG = fq:decompress(CommitG0),
-    Open = decompress_opening(Open0),
+    {Open1, Open2, OpenL, Open4, Open5} = Open0,
+    [CommitG, Open1b |Decompressed2] = 
+        fq:decompress(
+          [CommitG0, Open1] ++ 
+              OpenL ++
+              get2:compressed_points_list(Tree0)),
+    {OpenLb, Decompressed} = 
+        lists:split(length(OpenL), Decompressed2),
+    {Tree, _} = fill_points(
+                  Decompressed, Tree0, []),
+    Open = {Open1b, Open2, OpenLb, Open4, Open5},
 
     %multiproof:verify(Proof = {CommitG, Commits, Open_G_E}, Zs, Ys, ?p)
     %Zs are elements of the domain where we look up stuff.
@@ -341,14 +346,8 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
     %[root, [{1, p1}, [{0, L1},{1, L2}], [{3, p2},{0,L3}]]]
     io:fwrite("verify get parameters \n"),
     [Root|Rest] = Tree,
-    %P = parameters:read(),
     Domain = parameters2:domain(),
-    %B = secp256k1:jacob_equal(Root0, Root, ?p#p.e),
-    %io:fwrite({Root0, Root, size(Root0), size(Root), Root0 == Root}),
-    Root1 = case size(Root0) of
-                32 -> fq:decompress(Root0);
-                160 -> Root0
-            end,
+    Root1 = hd(Decompressed),
     B = fq:eq(Root1, Root),
     if
         not(B) -> false;
@@ -388,7 +387,7 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
                 not(B2) -> false;
                 true ->
                     %io:fwrite({Rest}),
-                    {true, leaves(Rest)}
+                    {true, leaves(Rest), Tree}
                     %get all the leaves
                         %ok
             end

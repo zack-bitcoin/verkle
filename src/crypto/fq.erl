@@ -462,7 +462,17 @@ compress(L) when is_list(L) ->
     lists:map(fun(<<A:256, _:256>>)->
                       <<A:256>> end, L2).
 decompress(<<A:256>>) ->
-    gen_point(decode(<<A:256>>)).
+    gen_point(decode(<<A:256>>));
+decompress(L) when is_list(L) ->
+    L2 = lists:map(fun(<<X:256>>) -> 
+                           decode(<<X:256>>) end, 
+                   L),
+    L3 = jubjub:decompress_points(L2),
+    lists:map(fun(X) ->
+                      fq:encode_extended(
+                        jubjub:affine2extended(X))
+              end, L3).
+    
     
     
 

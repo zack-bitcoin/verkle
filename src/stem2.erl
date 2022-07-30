@@ -111,12 +111,7 @@ serialize(S, CFG) ->
            types = T,
            root = Root
          } = S,
-    <<R1:512>> = 
-        case size(Root) of
-            160 -> fq:extended2affine(Root);% 2%
-            32 -> fq:extended2affine(
-                    fq:decompress(Root))
-        end,
+    <<R1:512>> = fq:extended2affine(Root),% 2%
     %<<R1:(256*5)>> = Root,
     %X = serialize(P, H, T, 1),
     X = serialize2(tuple_to_list(P), 

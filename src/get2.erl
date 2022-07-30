@@ -5,6 +5,7 @@ batch/3, index2domain/2, paths2tree/1,
 split3parts/4, 
 keys2paths/2, 
 withdraw_points/1, withdraw_points2/1,
+compressed_points_list/1,
 test/0]).
 -include("constants.hrl").
 
@@ -127,25 +128,22 @@ batch(Keys, Root, CFG) ->
     Listed = [Tree4, CommitG, TLO],
     PointsList = 
         points_list(Listed),
-    %io:fwrite({Tree4, PointsList}),
     Spoints = fq:compress(PointsList),
-    %io:fwrite(size(hd(Spoints))),
     {[Tree5, CommitG2, Opening2], []} =
         fill_points(Spoints, Listed, []),
-    %io:fwrite({size(hd(Tree5)), Tree5}),
-    %{Opening2b, []} = 
-    %    fill_points(fq:compress(points_list(TLO)), 
-    %                TLO, []),
-    %true = Opening2b == Opening2,
-    %[CommitG2] = fq:compress([CommitG]),
-    %Opening3 = tuple_to_list(verify2:decompress_opening(list_to_tuple(Opening2))),
-    %Spoints2 = points_list(Opening3),
-    %Spoints3 = points_list(TLO),
-    %Spoints2 = Spoints3,
     {Tree5, CommitG2, list_to_tuple(Opening2)}.
     %{Tree4, CommitG, Opening}.
 %points_list([<<E:1280>>|T]) ->%1280 bits in an extended bit.
 %    [<<E:1280>>|points_list(T)];
+tree_leaves(X = {<<_:256>>, Value}) 
+  when is_binary(Value) -> [X];
+tree_leaves([]) -> [];
+tree_leaves([H|T]) -> 
+    tree_leaves(H) ++ tree_leaves(T);
+tree_leaves(T) when is_tuple(T) -> 
+    tree_leaves(tuple_to_list(T));
+tree_leaves(_) ->  [].
+
 points_list(<<E:1280>>) -> [<<E:1280>>];
 points_list({I, <<E:1280>>}) when is_integer(I) ->
     [<<E:1280>>];
@@ -156,6 +154,16 @@ points_list([_|T]) ->
 points_list([]) -> [];
 points_list(_) -> [].
 
+compressed_points_list(X = <<_:256>>) -> [X];
+compressed_points_list({I, X = <<E:256>>}) 
+  when is_integer(I) -> 
+    [<<E:256>>];
+compressed_points_list([H|T]) -> 
+    compressed_points_list(H) ++
+        compressed_points_list(T);
+compressed_points_list([]) -> [];
+compressed_points_list(_) -> [].
+
 fill_points(Points, [], Result) -> 
     {lists:reverse(Result), Points};
 fill_points(Ps, [T|R], Result) when is_list(T) ->
@@ -165,6 +173,7 @@ fill_points([P|PT], [{I, <<_:1280>>}|R], Result)
   when is_integer(I) ->
     fill_points(PT, R, [{I, P}|Result]);
 fill_points([P|PT], [<<_:1280>>|R], Result) ->
+    %1=2,
     fill_points(PT, R, [P|Result]);
 fill_points(Ps, [T|R], Result) ->
     fill_points(Ps, R, [T|Result]).
@@ -307,6 +316,7 @@ starts_same_split2(_, Rest, Sames) ->
 
 
 points_values([<<Loc:?nindex>>|R], Root, CFG) ->
+    % Root is a #stem{}
     Type = stem2:type(Loc+1, Root),
     P = stem2:pointer(Loc+1, Root),
     %EllipticPoint = stem:root(Root),

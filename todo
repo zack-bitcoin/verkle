@@ -1,3 +1,8 @@
+
+fq can now decompress points in batches.
+we should use this to make decompression faster in verify2.
+
+
 use random values for keys in the tests.
 
 

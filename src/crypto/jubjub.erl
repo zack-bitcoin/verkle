@@ -13,6 +13,7 @@
          extended2affine/1,
          extended2extended_niels/1,
          extended_niels2extended/1,
+         decompress_points/1,
          is_on_curve/1
         ]).
 
@@ -389,16 +390,37 @@ gen_point() ->
     G = gen_point(X, 2, 2),
     true = is_on_curve(G),
     G.
+decompress_points(L) when is_list(L) ->
+    gen_point(L, ?tries, ?tries).
+
 gen_point(X) ->
     gen_point(X, ?tries, ?tries).
 gen_point(U, 0, StartTries) ->
     gen_point(U+1, StartTries, StartTries);
+gen_point(Us, Tries, StartTries) 
+  when is_list(Us) ->
+    UUs = lists:map(fun(X) -> ?mul(X, X) end, Us),
+    DUUs = lists:map(fun(X) -> ?sub(1, ?mul(?D, X))
+                     end, UUs),
+    Bs = finverse_batch(DUUs),
+    VVs = lists:zipwith(
+            fun(B, UU) -> 
+                    ?mul(fadd(?one, UU), B)
+            end, Bs, UUs),
+    lists:zipwith(
+      fun(U, VV) ->
+              gen_point(U, 20, 20, VV)
+      end, Us, VVs);
 gen_point(U, Tries, StartTries) ->
     UU = ?mul(U, U),
     DUU = ?mul(?D, UU),
     B = finverse(?sub(1, DUU)),
     T = fadd(?one, UU),
     VV = ?mul(T, B),
+    gen_point(U, Tries, StartTries, VV).
+                             
+                            
+gen_point(U, Tries, StartTries, VV) ->
     V = sqrt(VV, ?q),
     case V of
         no_sqrt -> 
@@ -407,12 +429,12 @@ gen_point(U, Tries, StartTries) ->
         _ ->
             A = #affine_point{u = U, v = V},
             G = affine2extended(A),
+            %when decompressing, there are 2 possible values of V. only one of them passes the prime order test.
             Prime = is_prime_order(G),
             if
                 Prime -> A;
-                true -> 
-                    gen_point(U, Tries-1, 
-                              StartTries)
+                true -> gen_point(U, Tries-1, 
+                                  StartTries, VV)
             end
     end.
     

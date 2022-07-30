@@ -12,7 +12,7 @@ test() ->
     %V = [5, 6, 12, 13],
     %V = [101, 17],
     V = [
-         23,
+         %23,
          20,
          21,
          22
@@ -622,7 +622,7 @@ test(20, CFG) ->
     T3 = erlang:timestamp(),
     io:fwrite("verify proof\n"),
     Root = stem2:root(stem2:get(NewLoc, CFG)),
-    {true, Leaves2} = 
+    {true, Leaves2, _} = 
         verify2:proof(Root, Proof, CFG),
     T4 = erlang:timestamp(),
     %io:fwrite({lists:reverse(Leaves2)}),
@@ -662,7 +662,7 @@ test(21, CFG) ->
     {ProofTree, Commit, Opening} = 
         get2:batch([<<5:256>>,<<6:256>>|Many], 
                    NewLoc, CFG),
-    {true, _} = 
+    {true, _, DecompressedTree} = 
         verify2:proof(
           hd(ProofTree), 
           {ProofTree, Commit, Opening}, CFG),
@@ -686,7 +686,7 @@ test(21, CFG) ->
     RootStem = stem2:get(Loc3, CFG),
     ProofTree2 = 
         verify2:update(
-          ProofTree, [Leaf1, Leaf2, Leaf3],
+          DecompressedTree, [Leaf1, Leaf2, Leaf3],
           CFG),
     NewRoot2 = hd(ProofTree2),
     Loc2 = store2:verified(
@@ -738,12 +738,12 @@ test(22, CFG) ->
     Leaves = 
         lists:map(
           fun(N) -> 
-                  Key0 = StartingElements + 1 - N,
-                  %Key = 100000000000000 - (Key0 * 111),
-                  Key = 100000000000000000000000000000000000000000000000000000000000000000000000000000 - (Key0 * 111),
-                  %#leaf{key = Key, 
-                  %      value = <<N:16>>}
+                  Key = crypto:strong_rand_bytes(32),
+                  %Key = hash:doit(<<N:256>>),
                   leaf:new(Key, <<N:16>>, 0, CFG)
+                  %Key0 = StartingElements + 1 - N,
+                  %Key = 100000000000000000000000000000000000000000000000000000000000000000000000000000 - (Key0 * 111),
+                  %leaf:new(Key, <<N:16>>, 0, CFG)
           end, range(1, StartingElements+1)),
     %Many = lists:map(fun(#leaf{key = K}) -> K end,
     Many = lists:map(fun(Leaf) -> 
@@ -773,7 +773,7 @@ test(22, CFG) ->
         get2:batch(Updating, Loc2, CFG),
     %verifying the verkle proof
     T2 = erlang:timestamp(),
-    {true, _} = 
+    {true, _, DecompressedTree} = 
         verify2:proof(
           hd(ProofTree), 
           {ProofTree, Commit, Opening}, CFG),
@@ -785,7 +785,8 @@ test(22, CFG) ->
     %fprof:trace([start, {procs, all}]),
     
     ProofTree2 = verify2:update(
-               ProofTree, UpdatedLeaves, CFG),
+               DecompressedTree, 
+                   UpdatedLeaves, CFG),
     %io:fwrite({ProofTree, ProofTree2}),
 
     %fprof:trace([stop]),
@@ -897,7 +898,7 @@ range(A, A) -> [].
 
 
 load_db(Elements) ->
-    % Loc = 30015.
+    % Loc = 39389. %130 000
     CFG = trie:cfg(?ID),
     Leaves = 
         lists:map(
@@ -908,6 +909,7 @@ load_db(Elements) ->
                   %#leaf{key = Key, 
                   %      value = <<N:16>>}
                   N2 = hash:doit(<<N:256>>),
+                  %N2 = crypto:strong_rand_bytes(32),
                   leaf:new(N2, <<N:16>>, 0, CFG)
           end, range(1, Elements+1)),
     {Loc2, _, _} = 
@@ -940,7 +942,7 @@ proof_test(Loc2, UpdateMany) ->
 %               size(element(1, Opening))}),
     %verifying the verkle proof
     T2 = erlang:timestamp(),
-    {true, _} = 
+    {true, _, DecompressedTree} = 
         verify2:proof(
           hd(ProofTree), 
           {ProofTree, Commit, Opening}, CFG),
@@ -951,7 +953,8 @@ proof_test(Loc2, UpdateMany) ->
     %fprof:trace([start, {procs, all}]),
     
     ProofTree2 = verify2:update(
-               ProofTree, UpdatedLeaves, CFG),
+               %ProofTree, UpdatedLeaves, CFG),
+               DecompressedTree, UpdatedLeaves, CFG),
 
     %fprof:trace([stop]),
     %fprof:profile(),
