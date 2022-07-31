@@ -1,6 +1,7 @@
 -module(jubjub).
 -export([test/1,
-         sqrt/2,
+         sqrt/1,
+         wiki_sqrt/1,
          gen_point/0,
          gen_point/1,
          multiply/2,
@@ -111,96 +112,114 @@ finverse_batch(L) ->
     ff:batch_inverse(L, ?q).
 fpow(A, B) ->
     basics:rlpow(A, B, ?q).
-sqrt_C(S, P) ->
-    <<X0:256>> = crypto:strong_rand_bytes(32),
-    C = X0 rem P,
+sqrt_C() ->
+    io:fwrite("sqrt_C \n"),
+    <<C0:32>> = crypto:strong_rand_bytes(4),
+    C = C0 + 2,
+    %S = 32
+    %S2 = fpow(2, S-1),
+    S2 = 2147483648,
+    C2 = fpow(C, S2),
     if
-        (C < 2) -> sqrt_C(S, P);
-        true ->
-        
-            C0 = basics:rlpow(C, basics:rlpow(2, S-1, P), P),
-            case C0 of
-                0 -> sqrt_C(S, P);
-                1 -> sqrt_C(S, P);
-                _ -> C
-            end
+        (C2 == 1) -> sqrt_C();
+        true -> C
     end.
 factors_of_two(0) -> 1=2;
 factors_of_two(X) when ((X rem 2) == 0) ->
     1 + factors_of_two(X div 2);
 factors_of_two(_) -> 0.
+
+wiki_sqrt(N) ->
+    %https://en.wikipedia.org/wiki/Tonelli%E2%80%93Shanks_algorithm
+    S = 32,
+    Q = 12208678567578594777604504606729831043093128246378069236549469339647,
+    Z = 5,
+    %true = (?q - 1) == ?mul(Q, fpow(2, S)),
+    %true = (?q - 1) == fpow(Z, (?q-1) div 2),
+    %Z = 5,
+    R1 = wiki_sqrt2(S, fpow(Z, Q), fpow(N, Q), 
+                    fpow(N, (Q+1) div 2)),
+    {?sub(0, R1), R1}.
+wiki_sqrt2(_M, _C, 0, R) -> 0;
+wiki_sqrt2(_M, _C, 1, R) -> R;
+wiki_sqrt2(M, C, T, R) ->
+    %find smallest I such that 0<i<M and t^(2^i) == 1
+    case get_I(0, M, T) of
+        error -> error;
+        I ->
+            B = fpow(C, fpow(2, M - I - 1)),
+            BB = ?mul(B, B),
+            wiki_sqrt2(
+              I, BB, ?mul(BB, T), ?mul(R, B))
+    end.
+get_I(X, X, _) -> error; 
+get_I(N, M, 1) -> N;
+get_I(N, M, T) -> 
+    get_I(N+1, M, fpow(T, 2)).
+
     
-sqrt(A, P) ->    
+
+    
+sqrt(A) ->    
     %sqrt(a) mod P
     %fpow(A, (?q + 1) div 4).%this strategy doesn't work, because ?q+1 is not divisible by 4.
     %using tonelli-shanks. page 12 algorithm 5. https://eprint.iacr.org/2012/685.pdf
     %?q - 1 has 2^32 as a factor.
     %?q - 1 = t*2^S.
-    %S = 32,
-    %T = 12208678567578594777604504606729831043093128246378069236549469339647,
-    S = factors_of_two(P - 1),
-    T = (P - 1) div basics:rlpow(2, S, P),
-    true = (T rem 2) == 1,
-    %S = 1, 
-    %T = 9,
-    P = (T * basics:rlpow(2, S, P)) + 1,
-    %<<X0:256>> = crypto:strong_rand_bytes(32),
-    C = sqrt_C(S, P),
-    %Z = fpow(C, T),
-    Z = basics:rlpow(C, T, P),
-    %W = fpow(A, (T-1) div 2),
-    W = basics:rlpow(A, (T-1) div 2, P),
-    WW = (W*W) rem P,
-    %WW = ?mul(W, W),
-    WWA = (WW*A) rem P,
-    %WWA = ?mul(WW, A),
-    %A0 = fpow(WWA, fpow(2, S-1)),
-    A0 = basics:rlpow(WWA, basics:rlpow(2, S-1, P), P),
-    Bool = (A0 == (P - 1)),
+    S = 32,
+    T = 12208678567578594777604504606729831043093128246378069236549469339647,
+    %S = factors_of_two(?q - 1),
+    %T = (?q - 1) div basics:rlpow(2, S, ?q),
+    true = (?q-1) == T * fpow(2, S),
+    W = fpow(A, (T-1) div 2),
+    WW = ?mul(W, W),
+    WWA = ?mul(WW, A),
+    Bool = (fpow(WWA, fpow(2, S-1)) == (?q - 1)),
     if
         Bool ->
             %io:fwrite("that number has no square root.\n"),
             no_sqrt;
         true ->
-    V = S,
-            %X = ?mul(A, W),
-    X = (A * W) rem P,
-            %B = ?mul(X, W),
-    B = (X * W) rem P,
-            sqrt2(A, V, X, B, W, Z, P)
+            C = sqrt_C(),
+            Z = fpow(C, T),
+            %true = (?q - 1) == fpow(5, (?q-1) div 2), %checks that Z is a quadratic non-residue.
+            true = (?q - 1) == fpow(Z, (?q-1) div 2), %checks that Z is a quadratic non-residue.
+            X = ?mul(A, W),
+            B = ?mul(X, W),
+            sqrt2(A, S, X, B, W, Z)
     end.
-sqrt2(A, V, X, B, W, Z, P) ->
-    %io:fwrite("sqrt2\n"),
+sqrt2(A, V, X, B, W, Z) ->
+    io:fwrite("sqrt2 "),
+    io:fwrite(integer_to_list(V)),
+    io:fwrite("\n"),
     %find smallest positive K where b^(2^k) == 1.
-    K = sqrt_k(B, 0, P),
+    K = sqrt_k(B, 0),
     %VK = ?sub(V, K),
     %VK1 = ?sub(VK, 1),
     %VK1 = (((V - K - 1) rem P) + P) rem P,
     VK1 = V - K - 1,
     if
-        (VK1 < 0) -> sqrt(A, P);
+        (VK1 < 0) -> 
+            io:fwrite({V, K, Z}),
+            sqrt(A);
         true ->
             %true = (VK1 > -1),
-    %W2 = fpow(Z, fpow(2, VK1)),
-    W2 = basics:rlpow(Z, basics:rlpow(2, VK1, P), P),
-    %Z2 = ?mul(W2, W2),
-    Z2 = (W2 * W2) rem P,
-    %B2 = ?mul(B, Z2),
-    B2 = (B * Z2) rem P,
-    %X2 = ?mul(X, W2),
-    X2 = (X * W2) rem P,
-    V2 = K,
-    case B2 of
-        1 -> X2;
-        _ -> sqrt2(A, V2, X2, B2, W2, Z2, P)
-    end
+            W2 = fpow(Z, fpow(2, VK1)),
+            Z2 = ?mul(W2, W2),
+            B2 = ?mul(B, Z2),
+            X2 = ?mul(X, W2),
+            V2 = K,
+            case B2 of
+                1 -> X2;
+                _ -> sqrt2(A, V2, X2, B2, W2, Z2)
+            end
     end.
             
-sqrt_k(B, K, P) ->
-    C = basics:rlpow(B, basics:rlpow(2, K, P), P),
+sqrt_k(B, K) ->
+    C = fpow(B, fpow(2, K)),
     case C of
         1 -> K;
-        _ -> sqrt_k(B, K+1, P)
+        _ -> sqrt_k(B, K+1)
     end.
             
     
@@ -418,10 +437,23 @@ gen_point(U, Tries, StartTries) ->
     T = fadd(?one, UU),
     VV = ?mul(T, B),
     gen_point(U, Tries, StartTries, VV).
-                             
+           
+gen_point(U, _, StartTries, VV) ->
+    case wiki_sqrt(VV) of
+        error ->
+            gen_point(U+1, StartTries, StartTries);
+        {V1, V2} ->
+            A = #affine_point{u = U, v = V1},
+            G = affine2extended(A),
+            Prime = is_prime_order(G),
+            if
+                Prime -> A;
+                true -> #affine_point{u = U, v = V2}
+            end
+    end.
                             
-gen_point(U, Tries, StartTries, VV) ->
-    V = sqrt(VV, ?q),
+old_gen_point(U, Tries, StartTries, VV) ->
+    V = sqrt(VV),
     case V of
         no_sqrt -> 
             %io:fwrite("no sqrt\n"),
@@ -606,7 +638,7 @@ test(2) ->
       is_on_curve(extended2affine(multiply(2000000, E)))
     };
 test(3) ->
-    %speed test.
+    %multiply speed test.
     M = 100,
     Many = many(0, M),
     <<P:256>> = crypto:strong_rand_bytes(32),
@@ -632,6 +664,27 @@ test(5) ->
     Times = 100,
     X = 500000,
     G = gen_point(X),
-    test_gen_point(G, X, Times).
+    test_gen_point(G, X, Times);
+test(6) ->
+    io:fwrite("decompress point speed test\n"),
+    ok;
+test(7) ->
+    io:fwrite("square root test\n"),
+    R = wiki_sqrt(?R2),
+    R = ?R,
+    %R = sqrt(?R2),
+    S = factors_of_two(?q - 1),
+    S = 32,
+    T = (?q - 1) div basics:rlpow(2, S, ?q),
+    T = 12208678567578594777604504606729831043093128246378069236549469339647,
+    C = sqrt_C(),
+    Z = basics:rlpow(C, T, ?q),
+    {
+      {c, C},
+      {z, Z}
+    }.
+
+    
+
 
 

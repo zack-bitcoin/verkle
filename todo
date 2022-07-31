@@ -1,7 +1,7 @@
+we need an off switch that protects the database. it is for testing as well.
 
-fq can now decompress points in batches.
-we should use this to make decompression faster in verify2.
-
+rewrite the square root function from jubjub to fq.erl
+now we want montgomery format.
 
 use random values for keys in the tests.
 

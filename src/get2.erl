@@ -173,7 +173,6 @@ fill_points([P|PT], [{I, <<_:1280>>}|R], Result)
   when is_integer(I) ->
     fill_points(PT, R, [{I, P}|Result]);
 fill_points([P|PT], [<<_:1280>>|R], Result) ->
-    %1=2,
     fill_points(PT, R, [P|Result]);
 fill_points(Ps, [T|R], Result) ->
     fill_points(Ps, R, [T|Result]).

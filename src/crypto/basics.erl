@@ -3,13 +3,13 @@
          %to_bits_list/1,
          %eea/2, 
          lrpow/3, rlpow/3,
-         inverse/2 %inverse_fermat/2,
+         inverse/2, %inverse_fermat/2,
          %inverse_euler/2,
          %is_prime/1,
          %prime_factors/1,
          %carmichael/1,
          %carmichael_number/1,
-         %test/0
+         test/0
         ]).
 
 %Algorithms from the book "Partially Homomorphic Encryption", by Cetin Kaya Koc, Funda Ozdemir, and Zeynep Odemis Ozger.
@@ -258,6 +258,10 @@ legendre_symbol(A, P) ->
 
 
 test() ->
+    V = 3,
+    Exp = 100,
+    P = 101,
+    true = (rlpow(V, Exp, P) == lrpow(V, Exp, P)),
     12 = inverse(23, 25),
     12 = inverse_euler(23, 25),
     4 = inverse_fermat(3, 11),

@@ -939,27 +939,33 @@ proof_test(Loc2, UpdateMany) ->
         get2:batch(Updating, Loc2, CFG),
 %    io:fwrite({%ProofTree, 
 %               size(Commit), 
+    
 %               size(element(1, Opening))}),
+
+    io:fwrite("veirfying the proof\n"),
+    %{ok, _PID} = fprof:start(),
+    %fprof:trace([start, {procs, all}]),
+
     %verifying the verkle proof
     T2 = erlang:timestamp(),
     {true, _, DecompressedTree} = 
         verify2:proof(
           hd(ProofTree), 
           {ProofTree, Commit, Opening}, CFG),
-    %updating the proof.
-    T3 = erlang:timestamp(),
 
-    %{ok, _PID} = fprof:start(),
-    %fprof:trace([start, {procs, all}]),
-    
-    ProofTree2 = verify2:update(
-               %ProofTree, UpdatedLeaves, CFG),
-               DecompressedTree, UpdatedLeaves, CFG),
 
     %fprof:trace([stop]),
     %fprof:profile(),
     %fprof:analyse(),
     %fprof:stop(),
+
+    %updating the proof.
+    T3 = erlang:timestamp(),
+
+    
+    ProofTree2 = verify2:update(
+               %ProofTree, UpdatedLeaves, CFG),
+               DecompressedTree, UpdatedLeaves, CFG),
 
     %storing the new data in the db
     T4 = erlang:timestamp(),
