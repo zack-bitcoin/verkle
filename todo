@@ -1,3 +1,6 @@
+do some profiling. check if decoding is the bottleneck, and if we need to switch to a different elliptic curve.
+
+
 fq:decompress.
 super weird. JL and FL compress to something identical. but if we return FL, the tests crash.
 

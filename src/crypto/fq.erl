@@ -230,7 +230,7 @@ get_I(N, M, T) ->
     B = (T == encode(1)),
     if
         B -> N;
-        true -> get_I(N+1, M, pow_(T, 2))
+        true -> get_I(N+1, M, mul(T, T))
     end.
             
 pow_(X, Y) when is_integer(Y) ->

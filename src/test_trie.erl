@@ -13,8 +13,8 @@ test() ->
     %V = [101, 17],
     V = [
          %23,
-         20,
-         21,
+         %20,
+         %21,
          22
         ],
     test_helper(V, CFG).
@@ -773,26 +773,30 @@ test(22, CFG) ->
         get2:batch(Updating, Loc2, CFG),
     %verifying the verkle proof
     T2 = erlang:timestamp(),
+
+    %{ok, _PID} = fprof:start(),
+    %fprof:trace([start, {procs, all}]),
+
+
     {true, _, DecompressedTree} = 
         verify2:proof(
           hd(ProofTree), 
           {ProofTree, Commit, Opening}, CFG),
 
+    %fprof:trace([stop]),
+    %fprof:profile(),
+    %fprof:analyse(),
+    %fprof:stop(),
+
     %updating the proof.
     T3 = erlang:timestamp(),
 
-    %{ok, _PID} = fprof:start(),
-    %fprof:trace([start, {procs, all}]),
     
     ProofTree2 = verify2:update(
                DecompressedTree, 
                    UpdatedLeaves, CFG),
     %io:fwrite({ProofTree, ProofTree2}),
 
-    %fprof:trace([stop]),
-    %fprof:profile(),
-    %fprof:analyse(),
-    %fprof:stop(),
 
     %storing the new data in the db
     T4 = erlang:timestamp(),
