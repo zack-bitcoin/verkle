@@ -1,7 +1,10 @@
+fq:decompress.
+super weird. JL and FL compress to something identical. but if we return FL, the tests crash.
+
+
+
 we need an off switch that protects the database. it is for testing as well.
 
-rewrite the square root function from jubjub to fq.erl
-now we want montgomery format.
 
 use random values for keys in the tests.
 

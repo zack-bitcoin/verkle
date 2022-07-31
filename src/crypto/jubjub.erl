@@ -137,9 +137,12 @@ wiki_sqrt(N) ->
     %true = (?q - 1) == ?mul(Q, fpow(2, S)),
     %true = (?q - 1) == fpow(Z, (?q-1) div 2),
     %Z = 5,
-    R1 = wiki_sqrt2(S, fpow(Z, Q), fpow(N, Q), 
-                    fpow(N, (Q+1) div 2)),
-    {?sub(0, R1), R1}.
+    case wiki_sqrt2(S, fpow(Z, Q), fpow(N, Q), 
+                    fpow(N, (Q+1) div 2)) of
+        error -> error;
+        R1 ->
+            {?sub(0, R1), R1}
+    end.
 wiki_sqrt2(_M, _C, 0, R) -> 0;
 wiki_sqrt2(_M, _C, 1, R) -> R;
 wiki_sqrt2(M, C, T, R) ->
@@ -372,10 +375,8 @@ small_order(E = #extended_point{}) ->
     E2#extended_point.u == ?zero.
 
 is_torsion_free(E = #extended_point{}) ->
-    %S = ?FR_MODULUS,
     S = ?r,
     E2 = multiply(S, E),
-    %io:fwrite({extended2affine(E2), E2}),
     identity(E2).
 
 %prime order means that ?r is the smallest scalar that you can multiply by this point to produce the identity.
