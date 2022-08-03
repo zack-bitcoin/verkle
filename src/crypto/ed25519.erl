@@ -78,6 +78,7 @@ setup(_) ->
 
 %montgomery encoded 1
 -define(m_one, 38).
+-define(m_two, 76).
 
 %sqrt -1
 -define(sqrt_neg1, 19681161376707505956807079304988542015446066515923890162744021073123829784752).
@@ -204,15 +205,16 @@ fextended_sub(P1, P2) ->
 fextended_mul(P = #extended{}, N) ->
     [P2] = fnormalize([P]),
     fextended_mul2(?fzero_point, P2, N, 256).
-fextended_mul2(A, _, _, 0) -> A;
+fextended_mul2(A, _, _, 0) -> 
+    A;
 fextended_mul2(A, B, N, C) 
-  when ((N band ?max255) == 0) ->
-    fextended_mul2(fextended_double(A), 
-                   B, N * 2, C-1);
+  when ((N band 1) == 0) ->
+    fextended_mul2(A, fextended_double(B), 
+                   N div 2, C-1);
 fextended_mul2(A, B, N, C) ->
     A2 = fextended_add(A, B),
-    fextended_mul2(fextended_double(A2), 
-                   B, N * 2, C-1).
+    fextended_mul2(A2, fextended_double(B), 
+                   N div 2, C-1).
 
 fsqrt(A) ->
     V = ff:pow((2*A), (?q - 5) div 8, ?q),
@@ -243,7 +245,7 @@ fdecode_point(<<S:1, P:255>>) ->
     case fsqrt(VV) of
         error ->
             %invalid point.
-            io:fwrite("invalid, no square root\n"),
+            %io:fwrite("invalid, no square root\n"),
             error;
         {V1, V2} ->
             V = case S of
@@ -256,11 +258,17 @@ fdecode_point(<<S:1, P:255>>) ->
                 Bool -> Point;
                 true -> 
                     %invalid point
-                    io:fwrite("invalid, not on curve\n"),
+                    %io:fwrite("invalid, not on curve\n"),
                     error
             end
     end.
 fencode_point(#affine{x = X, y = Y}) ->
+    S = case not((Y band ?max255) == 0) of
+            true -> 1;
+            false -> 0
+        end,
+    <<S:1, X:255>>.
+mencode_point(#affine{x = X, y = Y}) ->
     S = case not((Y band ?max255) == 0) of
             true -> 1;
             false -> 0
@@ -350,7 +358,7 @@ maffine2extended(P = #affine{x = X, y = Y}) ->
     if
         B -> ?mzero_point;
         true ->
-            #extended{x = X, y = Y, z = 1,
+            #extended{x = X, y = Y, z = ?m_one,
                       t = mmul(X, Y)}
     end;
 maffine2extended(L) when is_list(L) ->
@@ -376,7 +384,7 @@ mextended_double(
     %http://hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#doubling-dbl-2008-hwcd 
     A = mmul(X1, X1),
     B = mmul(Y1, Y1),
-    C = mmul(2, mmul(Z1, Z1)),
+    C = mmul(?m_two, mmul(Z1, Z1)),
     D = mneg(A),%a = -1 for this curve.
     XY = madd(X1, Y1),
     E = msub(mmul(XY, XY), madd(A, B)),
@@ -396,8 +404,8 @@ mextended_add(
         (F == 0) ->
             mextended_double(P1); %same point.
         true ->
-            C = mmul(Z1, mmul(2, T2)),
-            D = mmul(T1, mmul(2, Z2)),
+            C = mmul(Z1, mmul(?m_two, T2)),
+            D = mmul(T1, mmul(?m_two, Z2)),
             E = madd(D, C),
             G = madd(B, A),
             H = msub(D, C),
@@ -420,13 +428,13 @@ mextended_mul(P = #extended{}, N) ->
     mextended_mul2(?mzero_point, P2, N, 256).
 mextended_mul2(A, _, _, 0) -> A;
 mextended_mul2(A, B, N, C) 
-  when ((N band ?max255) == 0) ->
-    mextended_mul2(mextended_double(A), 
-                   B, N * 2, C-1);
+  when ((N band 1) == 0) ->
+    mextended_mul2(A, mextended_double(B), 
+                   N div 2, C-1);
 mextended_mul2(A, B, N, C) ->
     A2 = mextended_add(A, B),
-    mextended_mul2(mextended_double(A2), 
-                   B, N * 2, C-1).
+    mextended_mul2(A2, mextended_double(B), 
+                   N div 2, C-1).
 
 mis_on_curve(#affine{x = X, y = Y}) ->
     XX = mmul(X, X),
@@ -489,7 +497,28 @@ mdecode_point(<<S:1, P:255>>) ->
   14,67,33,32,13,49,120,15,36,39,203,77,138,63,
   229,180,86,4,89>>).
 
-
+m2f(#affine{x = X, y = Y}) ->
+    X2 = decode(X),
+    Y2 = decode(Y),
+    #affine{x = X2, y = Y2};
+m2f(#extended{x = X, y = Y, z = Z, t = T}) ->
+    X2 = decode(X),
+    Y2 = decode(Y),
+    Z2 = decode(Z),
+    T2 = decode(T),
+    #extended{x = X2, y = Y2, z = Z2, t = T2}.
+f2m(#affine{x = X, y = Y}) ->
+    X2 = encode(X),
+    Y2 = encode(Y),
+    #affine{x = X2, y = Y2};
+f2m(#extended{x = X, y = Y, z = Z, t = T}) ->
+    X2 = encode(X),
+    Y2 = encode(Y),
+    Z2 = encode(Z),
+    T2 = encode(T),
+    #extended{x = X2, y = Y2, z = Z2, t = T2}.
+    
+    
 
 
 test(1) ->
@@ -497,4 +526,90 @@ test(1) ->
     L = [5, 7, 9, 33],
     L2 = mbatch_inverse(L),
     L = mbatch_inverse(L2),
-    success.
+    success;
+test(2) ->
+    %point encoding
+    
+    Pf = fgen_point(),
+
+    %to montgomery and back
+    Pm = f2m(Pf),
+    Pf = m2f(Pm),
+
+    % to extended and back
+    Pme = maffine2extended(Pm),
+    Pfe = faffine2extended(Pf),
+
+    Pf = hd(fextended2affine_batch([Pfe])),
+    Pm = hd(mextended2affine_batch(
+              [Pme])),
+
+    %zero point is same
+
+    true = hd(mextended2affine_batch(
+                [?mzero_point])) ==
+        f2m(hd(fextended2affine_batch(
+                 [?fzero_point]))),
+
+    %mul neg add sub
+
+    N = 27,
+    M = 16,
+    Nm = encode(N),
+    Mm = encode(M),
+    
+    NM = fmul(N, M),
+    NM = decode(mmul(Nm, Mm)),
+
+    N2 = fneg(N),
+    N2b = decode(mneg(Nm)),
+
+    NM2 = fadd(N, M),
+    NM2 = decode(madd(Nm, Mm)),
+
+    NM3 = fsub(N, M),
+    NM3 = decode(fsub(Nm, Mm)),
+
+    %double zero is zero
+
+    true = feq(fextended_double(?fzero_point),
+               ?fzero_point),
+    %io:fwrite({mextended2affine_batch([mextended_double(?mzero_point), ?mzero_point]), [mextended_double(?mzero_point), ?mzero_point]}),
+    true = meq(mextended_double(?mzero_point),
+               ?mzero_point),
+
+    %doubling
+
+    Pfd = fextended_double(Pfe),
+    Pmd = mextended_double(Pme),
+    Pfd2 = m2f(Pmd),
+    true = feq(Pfd2, Pfd),
+
+    %adding
+
+    Pft = fextended_add(Pfe, Pfd),
+    Pmt = mextended_add(Pme, Pmd),
+    Pft2 = m2f(Pmt),
+    true = feq(Pft2, Pft),
+
+    %adding zero should change nothing.
+
+    Pfe2 = fextended_add(Pfe, ?fzero_point),
+    true = feq(Pfe, Pfe2),
+    Pme2 = mextended_add(Pme, ?mzero_point),
+    true = feq(Pme, Pme2),
+
+    %multiplication
+
+    F = 1,
+    
+    Pf2 = hd(fextended2affine_batch(
+               [fextended_mul(Pfe, F)])),
+    Pm2 = hd(mextended2affine_batch(
+               [mextended_mul(Pme, F)])),
+    Pf2b = m2f(Pm2),
+    {Pf, Pf2, Pf2b}.
+%success.
+    
+    
+
