@@ -1,12 +1,19 @@
-do some profiling. check if decoding is the bottleneck, and if we need to switch to a different elliptic curve.
+c_ed: need to support the new format of elliptic points, with only 4 numbers each.
+* double, add, mul, mul_long.
+
+ed:
+batch decompress_point (has an inverse)
 
 
-fq:decompress.
-super weird. JL and FL compress to something identical. but if we return FL, the tests crash.
 
+switch to ed25519.
 
 
 we need an off switch that protects the database. it is for testing as well.
+
+we need code that is more deterministic for generating the pre-computes. set up so that it is clear I didn't choose malicious pre-computes.
+
+javascript version of the code.
 
 
 use random values for keys in the tests.

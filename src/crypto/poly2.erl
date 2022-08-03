@@ -20,7 +20,6 @@
 %-define(neg(A), ((?order - A) rem ?order)).%assumes A less than ?order
 %-define(add(A, B), ((A + B) rem ?order)).
 %-define(mul(A, B), ((A * B) rem ?order)).
-%-include("../constants.hrl").
 
 -record(p, {b, 
             g, 
@@ -65,8 +64,6 @@ mul_scalar(S, [A|T]) ->
      mul_scalar(S, T)].
 add_all([P]) -> P;
 add_all([A, B|T]) -> 
-    %add_all([?add(A, B)|T]).
-    %C = A+B,
     add_all([fr:add(A, B)|T]).
 
 poly_add_all([P]) -> P;
@@ -101,10 +98,6 @@ add_c(B, []) -> B;
 add_c([A|AT], [B|BT]) ->
     [fr:add(A, B)|
      add_c(AT, BT)].
-    %[?add(A, B)|
-%    C = A+B,
-%    [?add_mod(C)|
-%      add_c(AT, BT, Base)].
 
 
 range(N, N) -> [N];

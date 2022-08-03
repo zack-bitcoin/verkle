@@ -10,7 +10,6 @@
 
 %uses secp256k1 the library.
 
-%-include("../constants.hrl").
 %-define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
 
 %-define(mul(A, B), ((A * B) rem ?order)).
@@ -35,7 +34,6 @@ fv_add(As, Bs) ->
       As, Bs).
 fv_mul(S, Bs) ->
     %multiplying a scalar vector by a scalar.
-    %lists:map(fun(X) -> ?mul(X, S) end,
     lists:map(fun(X) -> fr:mul(X, S) end,
               Bs).
 
@@ -238,15 +236,6 @@ fold_cs(X, Xi, Cs) ->
 %-define(comp(X), secp256k1:compress(X)).
 %-define(deco(X), secp256k1:decompress(X)).
 
-%compress({AG, AB, Cs, AN, BN}) ->    
-%    [AG2|Cs2] = 
-%        secp256k1:compress(
-%          [AG|Cs]),
-%    {AG2, AB, Cs2, AN, BN}.
-%decompress({AG, AB, Cs, AN, BN}) ->
-%    Cs2 = lists:map(fun(X) -> ?deco(X) end, Cs),
-%    {?deco(AG), AB, Cs2, AN, BN}.
-
 verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
            B, G, H, Q) ->
     %we may need to decompress the proof at this point.
@@ -284,8 +273,6 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
 gen_point(_E) ->
     fq:extended2extended_niels(
       fq:gen_point()).
-%    secp256k1:to_jacob(
-%      secp256k1:gen_point(E)).
 basis(S, E) ->
     G = lists:map(fun(_) ->
                            gen_point(E)
@@ -407,9 +394,13 @@ test(4) ->
                       ok
               end, range(0, Many)),
     T4 = erlang:timestamp(),
-    {timer:now_diff(T2, T1)/Many,%0.115
-     timer:now_diff(T3, T2)/Many,%0.066
-     timer:now_diff(T4, T3)/Many};%0.69
+    D1 = timer:now_diff(T2, T1)/Many,
+    D2 = timer:now_diff(T3, T2)/Many,
+    %{speedup, D1/D2};
+    {{normal, timer:now_diff(T2, T1)/Many},%0.115
+     {with_precompute, timer:now_diff(T3, T2)/Many}%,%0.066
+     %timer:now_diff(T4, T3)/Many
+    };%0.69
 test(5) ->
     io:fwrite("testing the palindrone bug\n"),
     A0 = range(100, 108),

@@ -16,7 +16,7 @@ stop(ID) ->
     dump_sup:stop(ids:leaf(CFG)),
     supervisor:terminate_child({global, ID}, ids:leaf(CFG)),
     supervisor:terminate_child({global, ID}, ids:bits(CFG)),
-    ok.
+    halt().
 
 %verkle01_main).
     %halt().

@@ -1,5 +1,6 @@
 -module(fq).
 -export([
+         det_pow/2,
          mul/2, 
          add/2, 
          neg/1,
@@ -47,18 +48,22 @@
 -record(extended_niels_point, 
         {v_plus_u, v_minus_u, t2d, z}).
 
-% -(10240/10241)
--define(D, <<176,246,116,185,85,36,82,42,179,202,154,13,239,
-             201,108,252,209,40,118,194,148,251,8,122,46,38,
-             14,254,168,246,248,87>>).
+% -(121665/121666)
+%37095705934669439343138083508754565189542113879843219016388785533085940283555
+-define(D, 
+<<250,233,71,223,254,139,237,128,115,41,198,175,
+  119,135,161,16,144,134,24,188,7,146,147,229,38,
+  197,159,114,90,43,130,44>>).
 
 % 2 * D
--define(D2, <<95,237,233,114,172,72,164,84,103,57,55,27,219,
-              239,27,165,158,121,74,123,33,31,216,192,20,207,
-              126,210,254,69,4,60>>).
+%16295367250680780974490674513165176452449235426866156013048779062215315747161
+-define(D2, 
+<<244,211,143,190,253,23,219,1,231,82,140,95,239,
+  14,67,33,32,13,49,120,15,36,39,203,77,138,63,
+  229,180,86,4,89>>).
 
 init() ->
-    ok = erlang:load_nif("./ebin/fq2", 0),
+    ok = erlang:load_nif("./ebin/fq", 0),
     setup(0),
     ok.
 
@@ -74,50 +79,41 @@ setup(_) ->
 
 %binaries store bytes in reverse order in comparison to normal erlang binaries. This way when we pass the binaries to C, the bytes are already in order to fit into bigger registers.
 
-%q = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
--define(q, 52435875175126190479447740508185965837690552500527637822603658699938581184513).
+-define(q, 
+        57896044618658097711785492504343953926634992332820282019728792003956564819949
+       ).
 
-%-define(i2, 26217937587563095239723870254092982918845276250263818911301829349969290592257).
--define(i2, 
-<<255,255,255,255,0,0,0,0,1,164,1,0,253,91,66,172,
-  250,39,94,246,247,39,198,204,183,130,98,214,172,
-  88,18,12>>).
 
--define(iq, 27711634432943687283656245953990505159342029877880134060146103271536583507967).
+
+%-define(i2, 28948022309329048855892746252171976963317496166410141009864396001978282409975).
+-define(i2, <<19:256/little>>).
+%<<255,255,255,255,0,0,0,0,1,164,1,0,253,91,66,172,
+%  250,39,94,246,247,39,198,204,183,130,98,214,172,
+%  88,18,12>>).
 
 %2^256
 -define(r, 115792089237316195423570985008687907853269984665640564039457584007913129639936).
 
 %2^256 rem q
--define(r1, 10920338887063814464675503992315976177888879664585288394250266608035967270910).
+-define(r1, 38).
 
 %r*r rem q
--define(r2, 3294906474794265442129797520630710739278575682199800681788903916070560242797).
+-define(r2, 1444).
 
-%r*r*r rem n
--define(r3, 49829253988540319354550742249276084460127446355315915089527227471280320770991).
+%r*r*r rem q
+-define(r3, 54872).
 
-%1/r rem n
--define(ir, 12549076656233958353659347336803947287922716146853412054870763148006372261952).
+%1/r rem q
+-define(ir, 10665060850805439052171011777115991512801182798151104582581619579676209308938).
+
+-define(encode_one, <<38:256/little>>).
+%<<254,255,255,255,1,0,0,0,2,72,3,0,250,183,132,88,
+%  245,79,188,236,239,79,140,153,111,5,197,172,89,
+%  177,36,24>>).
+
+-define(encode_zero, <<0:256>>).
 
 prime() -> ?q.
-
-check_constants() -> 
-    ?iq = prime_reverse(?q),
-    true = ?r > ?q,
-    1 = (?q rem 2),
-    true = power_of_2(?r),
-    ?r1 = (?r rem ?q),
-    ?r2 = ((?r * ?r) rem ?q),
-    ?ir = ff:inverse(?r, ?q),
-    ok.
-prime_reverse(N) ->
-    %Used to calculate the IN input for redc.
-    (?r - 1)*ff:inverse(N, ?r) rem ?r.
-power_of_2(1) -> true;
-power_of_2(N) when ((N rem 2) == 0) -> 
-    power_of_2(N div 2);
-power_of_2(_) -> false.
 
 %todo. binary:encode_unsigned(X, little) is probably faster.
 reverse_bytes(<<X:256>>) -> <<X:256/little>>.
@@ -128,10 +124,7 @@ reverse_bytes(<<X:256>>) -> <<X:256/little>>.
 %reverse_bytes(<<>>, R) -> R.
 
 encode(0) -> <<0:256>>;
-encode(1) ->
-<<254,255,255,255,1,0,0,0,2,72,3,0,250,183,132,88,
-  245,79,188,236,239,79,140,153,111,5,197,172,89,
-  177,36,24>>;
+encode(1) -> <<38:256/little>>;
 encode(A) when ((A < ?q) and (A > -1)) ->
     mul(<<A:256/little>>,
         <<?r2:256/little>>).
@@ -189,49 +182,24 @@ hash_point(<<U:256, _:256>>) ->
 hash_point(X = <<U:(256*5)>>) ->
     hash_point(extended2affine(X)).
 
-sqrt(N) ->
-    %https://en.wikipedia.org/wiki/Tonelli%E2%80%93Shanks_algorithm
-    S = 32,
-    Q = (12208678567578594777604504606729831043093128246378069236549469339647),
-    QHalf = (6104339283789297388802252303364915521546564123189034618274734669824),%(Q+1) div 2
-    Z = encode(5),
-    %true = (?q - 1) == ?mul(Q, fpow(2, S)),
-    %true = (?q - 1) == fpow(Z, (?q-1) div 2),
-    R1 = sqrt2(S, pow_(Z, Q), pow_(N, Q), 
-               pow_(N, QHalf)),
-    {neg(R1), R1}.
+sqrt(A) ->
+    %when prime mod 8 = 5
+%https://www.rieselprime.de/ziki/Modular_square_root
+    %v = (2*a) ^ ((p-5)/8)
+    %i = 2*a*v*v
+    %r = +-av(i-1)
+    T = encode(2),
+    V = pow_(mul(T, A), (?q - 5) div 8),
+    AV = mul(A, V),
+    I = mul(mul(T, AV), V),
+    R = mul(AV, sub(I, ?encode_one)),
+    %{neg(R), R, T, V, AV, I}.
+    {neg(R), R}.
 det_pow(_, 0) -> 1;
 det_pow(X, 1) -> X;
 det_pow(X, N) when ((N rem 2) == 0) and (N>0) -> 
     det_pow(X*X, N div 2);
 det_pow(X, N) when (N > 0) -> X * det_pow(X, N-1).
-sqrt2(M, C, T, R) -> 
-    B0 = (T == encode(0)),
-    B1 = (T == encode(1)),
-    if
-        B0 -> encode(0);
-        B1 -> R;
-        true ->
-            case get_I(0, M, T) of
-                error -> 
-                    io:fwrite("get i error\n"),
-                    error;
-                I ->
-                    B = pow_(C, det_pow(
-                                  2, M - 1 - I)),
-                  %C ^ (2 ^ (M - I - 1))
-                    BB = mul(B, B),
-                    sqrt2(
-                      I, BB, mul(BB, T), mul(R, B))
-            end
-    end.
-get_I(X, X, _) -> error;
-get_I(N, M, T) ->
-    B = (T == encode(1)),
-    if
-        B -> N;
-        true -> get_I(N+1, M, mul(T, T))
-    end.
             
 pow_(X, Y) when is_integer(Y) ->
     pow(X, reverse_bytes(<<Y:256>>)).
@@ -273,14 +241,14 @@ pis([H|T], A) ->
     X = mul(H, A),
     [X|pis(T, X)].
 batch_inverse(Vs) ->
-    [All|V2] = lists:reverse(pis(Vs, encode(1))),%[v16, v15, v14, v13, v12, v1]
+    [All|V2] = lists:reverse(pis(Vs, ?encode_one)),%[v16, v15, v14, v13, v12, v1]
     %AllI = encode(ff:inverse(decode(All), ?q)),%i16
     AllI = inv(All),
     VI = lists:map(
            fun(V) -> mul(AllI, V) end,
            V2), %[i6, i56, i46, i36, i26]
-    V3 = lists:reverse(pis(lists:reverse(Vs), encode(1))),%[v16, v26, v36, v46, v56, v6]
-    V4 = tl(V3)++[encode(1)],%[v26, v36, v46, v56, v6, 1]
+    V3 = lists:reverse(pis(lists:reverse(Vs), ?encode_one)),%[v16, v26, v36, v46, v56, v6]
+    V4 = tl(V3)++[?encode_one],%[v26, v36, v46, v56, v6, 1]
     VI2 = [AllI|lists:reverse(VI)],%[i16, i26, i36, i46, i56, i6]
     lists:zipwith(fun(A, B) ->
                           mul(A, B)
@@ -299,7 +267,7 @@ e_simplify_batch(Es) ->
 simplify(<<U:256, V:256, _/binary>>, IZ) ->
     U2 = mul(<<U:256>>, IZ),
     V2 = mul(<<V:256>>, IZ),
-    <<U2/binary, V2/binary, (encode(1))/binary, 
+    <<U2/binary, V2/binary, (?encode_one)/binary, 
       U2/binary, V2/binary>>.
 extended2affine(E) ->
     [E2] = e_simplify_batch([E]),
@@ -366,7 +334,7 @@ extended_niels2extended(
     e_add(e_zero(), N).
 affine2extended(
   <<U:256, V:256>>) ->
-    Z = encode(1),
+    Z = ?encode_one,
     <<U:256, V:256, Z/binary, U:256, V:256>>.
     
 
@@ -380,49 +348,118 @@ ctest(_) ->
     ok.
 
 gen_point() ->
-    G = jubjub:affine2extended(
-          jubjub:gen_point()),
-    encode_extended(G).
+    <<X0:256>> = crypto:strong_rand_bytes(32),
+    X = X0 rem ?q,
+    G = gen_point(encode(X), 2, 2),
+    true = is_on_curve(G),
+    G.
+gen_point(U, 0, S) ->
+    io:fwrite("next U\n"),
+    gen_point(add(U, 1), S, S);
+gen_point(Us, _, _) when is_list(Us) ->
+    UUs = lists:map(fun(X) -> mul(X, X) end, Us),
+    DUUs = lists:map(fun(X) -> sub(encode(1), 
+                                   mul(?D, X))
+                     end, UUs),
+    Bs = batch_inverse(DUUs),
+    VVs = lists:zipwith(
+            fun(B, UU) ->
+                    mul(add(encode(1), UU), B)
+            end, Bs, UUs),
+    lists:zipwith(
+      fun(U, VV) ->
+              gen_point(U, 20, 20, VV)
+      end, Us, VVs);
+gen_point(U, Tries, S) ->
+    UU = mul(U, U),
+    DUU = mul(?D, UU),
+    B = inv(sub(encode(1), DUU)),
+    T = add(encode(1), UU),
+    VV = mul(T, B),
+    gen_point(U, Tries, S, VV).
+gen_point(U, _, S, VV) ->
+    case sqrt(VV) of
+        error ->
+            gen_point(add(U, 1), S, S);
+        {V1, V2} ->
+            A = <<U/binary, V1/binary>>,
+            A2 = <<U/binary, V2/binary>>,
+            G = affine2extended(A),
+            Prime = is_prime_order(G),
+            %Prime = is_on_curve(A),
+            io:fwrite(is_on_curve(A)),
+            io:fwrite(is_on_curve(A2)),
+            R = if
+                not(Prime) -> A;
+                true -> <<U/binary, V2/binary>>
+            end,
+            R
+    end.
+            
+
+%    G = jubjub:affine2extended(
+%          jubjub:gen_point()),
+%    encode_extended(G).
 gen_point(X) ->
-    fq:encode_extended(
-      jubjub:affine2extended(
-        jubjub:gen_point(X))).
+    gen_point(X, 20, 20).
+%    fq:encode_extended(
+%      jubjub:affine2extended(
+%        jubjub:gen_point(X))).
 
 decompress_points(Us) 
   when is_list(Us) ->
+    %UU = U*U,
+    %DUU = 1 - (D * UU)
+    %B = inverse(DUU)
+    %VV = (UU+1) * B 
+    %V = sqrt(VV)
+    %V = sqrt((UU+1) / (1 - (D * UU)))
     UUs = lists:map(fun(X) -> mul(X, X) end, Us),
     DUUs = lists:map(
              fun(X) -> 
-                     sub(encode(1), mul(?D, X))
+                     sub(?encode_one, mul(?D, X))
              end, UUs),
     Bs = batch_inverse(DUUs),
     VVs = lists:zipwith(
             fun(B, UU) -> 
-                    mul(add(encode(1), UU), B)
+                    mul(add(?encode_one, UU), B)
             end, Bs, UUs),
     lists:zipwith(
       fun(U, VV) ->
               decompress_point2(U, VV)
       end, Us, VVs).
 decompress_point2(U, VV) ->
-    case sqrt(VV) of
+    %without prime_order 372. 
+    %prime order 200.
+    case sqrt(VV) of%0.000350
         error ->
             error;
         {V1, V2} ->
             A = <<U/binary, V1/binary>>,%affine
             A2 = <<U/binary, V2/binary>>,%affine
             G = affine2extended(A),
-            B = is_prime_order(G),
+            B = is_on_curve(A),%this is the slow line. Is there no faster way to know? TODO.
+            %B = is_prime_order(G),%this is the slow line. Is there no faster way to know? TODO.
+            %OnCurve = is_on_curve(A), TODO
             if
                 B -> A;
                 true -> A2
             end
     end.
+is_on_curve(<<U:256, V:256>>) ->
+    U2 = mul(<<U:256>>, <<U:256>>),
+    V2 = mul(<<V:256>>, <<V:256>>),
+    UV2 = mul(U2, V2),
+    (sub(V2, U2) == 
+         add(?encode_one, mul(?D, UV2))).
 is_prime_order(E) ->
     is_torsion_free(E) and not(identity(E)).
 is_torsion_free(E) ->
-    S = 6554484396890773809930967563523245729705921265872317281365359162392183254199,
-    E2 = e_mul1(E, <<S:256/little>>),
+    %S = 6554484396890773809930967563523245729705921265872317281365359162392183254199,
+    %fr modulus.
+    R = 7237005577332262213973186563042994240857116359379907606001950938285454250989,
+    E2 = e_mul1(E, <<R:256/little>>),
+    %eq(encode(0), E2).
     identity(E2).
 identity(<<U:256, V:256, Z:256, Ts:512>>) ->
     (U == 0) and (V == Z).
@@ -439,21 +476,6 @@ decompress(L) when is_list(L) ->
     L2 = decompress_points(L),
     lists:map(fun(X) -> affine2extended(X) end,
               L2).
-%old_decompress(L) ->
-%    L2 = lists:map(fun(<<X:256>>) -> 
-%                           decode(<<X:256>>) end, 
-%                   L),
-%    L3 = jubjub:decompress_points(L2),
-%    JL = lists:map(fun(X) ->
-%                      fq:encode_extended(
-%                        jubjub:affine2extended(X))
-%                   end, L3),
-    
-%    FL = lists:map(fun(X) -> affine2extended(X) end,
-%                   decompress_points(L)),
-%    JL.
-    
-    
 
 points_list(Many) ->
     G = jubjub:affine2extended(
@@ -470,8 +492,6 @@ points_list2(N, G) ->
 range(N, N) -> [N];
 range(A, B) when (A < B) -> 
     [A|range(A+1, B)].
-test(1) ->
-    check_constants();
 test(2) ->
     io:fwrite("subtract test\n"),
     <<A0:256>> = crypto:strong_rand_bytes(32),
@@ -832,6 +852,7 @@ test(23) ->
     true = jubjub:eq(M, M2),
     success;
 test(24) ->
+    %TODO
     G = gen_point(),
     GN = extended2extended_niels(G),
     G2 = extended_niels2extended(GN),
@@ -945,7 +966,36 @@ test(31) ->
                            affine2extended(X) end,
                    D2),
     C = compress(D3),
-    {D3, D}.
+    {D3, D};
+test(32) ->
+    %compression/decompression speed test.
+    Many = 300,
+    Range = range(0, Many),
+    Points = lists:map(
+               fun(X) -> 
+                       e_double(e_double(gen_point())) end,
+               Range),
+    
+    T1 = erlang:timestamp(),
+    C = compress(Points),
+    T2 = erlang:timestamp(),
+
+    %{ok, _PID} = fprof:start(),
+    %fprof:trace([start, {procs, all}]),
+
+    decompress(C),
+
+    %fprof:trace([stop]),
+    %fprof:profile(),
+    %fprof:analyse(),
+    %fprof:stop(),
+
+    T3 = erlang:timestamp(),
+    {{compress, (timer:now_diff(T2, T1)/Many)},
+     {decompress, (timer:now_diff(T3, T2)/Many)}}.
+   
+                               
+
     
     
 

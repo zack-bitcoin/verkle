@@ -3,41 +3,55 @@
 #include <stdint.h>
 #include <string.h>
 
-//scalar field on top of bls12-381. used to implement jubjub.
+//finite field for prime 2^255 - 19. Used to implement Ed25519 elliptic curve.
 //uses montgomery notation for fast multiplication.
 
-//prime used for the scalar field on top of jubjub.
+//2^255 - 19
+//least significant part is first.
 const uint64_t q[4] =
-  {18446744069414584321U,
-   6034159408538082302U,
-   3691218898639771653U,
-   8353516859464449352U};
+  {
+   18446744073709551597U,
+   18446744073709551615U,
+   18446744073709551615U,
+   9223372036854775807U,
+  };
 
 // inverse(2)
 const uint64_t i2[4] =
-  {4294967295U,
+  {
+   18446744073709551607U,
+   18446744073709551615U,
+   18446744073709551615U,
+   4611686018427387903U
+  };
+  /*  {4294967295U,
    12412584665171469313U,
    14755525175069779962U,
-   869855177390326455U};
+   869855177390326455U}; */
 
 
 //<<A:64, B:64, C:64, D:64>> = fq:reverse_bytes(fq:encode(1)).
+//encode(1) = mul(<<1:256/little>>, <<?r2:256/little>>).
+// mul(A, B) = redc(A*B)
 //{D, C, B, A}.
 const uint64_t one[4] =
-{8589934590U,
- 6378425256633387010U,
- 11064306276430008309U,
- 1739710354780652911U};
+{38U,
+0U,
+0U,
+ 0U};
 
 const uint64_t zero[4] =
   {0U,0U,0U,0U};
 
+//16295367250680780974490674513165176452449235426866156013048779062215315747161
 const uint64_t D2[4] =
-{6099079700866002271U,
- 11897366564962777447U,
- 13895890878914525598U,
- 4324658502938054420U};
-  
+{
+ 16993941304535871833U,
+ 63073048630374742U,
+ 1841551078520508720U,
+ 2596001775599221991U
+};
+
 //{8000017657123382296U,
 // 17676554788265757849U,
 // 164384689140237400U,
@@ -46,7 +60,8 @@ const uint64_t D2[4] =
 //-(q^-1 mod 2^64) mod 2^64
 //ffff_fffe_ffff_ffff
 //FFFFFFFEFFFFFFFF
-const uint64_t INV = 18446744069414584319U;
+const uint64_t INV = 9708812670373448219U;
+//18446744069414584319U;
 //18446744073441116159 other endian?
 
 //uint64_t C[4];
@@ -1053,12 +1068,12 @@ static ErlNifFunc nif_funcs[] =
    {"short_pow", 2, short_power},
    //{"inv", 1, inv},
 
-   {"e_double", 1, e_double},
-   {"e_add", 2, e_add},
-   {"e_mul", 2, e_mul},
-   {"e_mul1", 2, e_mul_long},
+   {"double", 1, e_double},
+   {"padd", 2, e_add},
+   {"pmul", 2, e_mul},
+   {"pmul_long", 2, e_mul_long},
 
    {"ctest", 1, ctest}
   };
 
-ERL_NIF_INIT(fq,nif_funcs,NULL,NULL,NULL,NULL)
+ERL_NIF_INIT(c_ed,nif_funcs,NULL,NULL,NULL,NULL)

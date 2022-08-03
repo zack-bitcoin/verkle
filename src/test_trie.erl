@@ -733,8 +733,8 @@ test(21, CFG) ->
     success;
 test(22, CFG) ->
     Loc = 1,
-    StartingElements = 10000,
-    UpdateElements = 6000,
+    StartingElements = 1000,
+    UpdateElements = 100,
     Leaves = 
         lists:map(
           fun(N) -> 
@@ -902,6 +902,7 @@ range(A, A) -> [].
 
 
 load_db(Elements) ->
+    % Loc = 42422. %130 000
     % Loc = 39389. %130 000
     CFG = trie:cfg(?ID),
     Leaves = 
@@ -946,7 +947,7 @@ proof_test(Loc2, UpdateMany) ->
     
 %               size(element(1, Opening))}),
 
-    io:fwrite("veirfying the proof\n"),
+    io:fwrite("verifying the proof\n"),
     %{ok, _PID} = fprof:start(),
     %fprof:trace([start, {procs, all}]),
 
