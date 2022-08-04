@@ -261,7 +261,7 @@ static inline void redc(uint64_t * r, uint64_t * c)
 };
 
 static inline void square2
-(uint64_t * a, uint64_t * b)
+(const uint64_t * a, uint64_t * b)
 {
   uint64_t r[8];
   uint64_t carry;
@@ -342,8 +342,8 @@ static void pow2
 }
 
 static inline void e_double2
-(uint64_t * x, uint64_t * y, uint64_t * z,
- uint64_t * t,
+(const uint64_t * x, const uint64_t * y,
+ const uint64_t * z, const uint64_t * t,
  uint64_t * xb, uint64_t * yb, uint64_t * zb,
  uint64_t * tb)
 {
@@ -401,14 +401,56 @@ static inline void e_double2
   */
 };
 static inline void e_add2
-(const uint64_t * u, const uint64_t * v,
+(const uint64_t * x1, const uint64_t * y1,
  const uint64_t * z1,const uint64_t * t1,
- const uint64_t * t2,
- const uint64_t * vpu2, const uint64_t * vmu2,
- const uint64_t * td2, const uint64_t * z2,
- uint64_t * ub, uint64_t * vb, uint64_t * z1b,
- uint64_t * t1b, uint64_t * t2b)
+ const uint64_t * x2, const uint64_t * y2,
+ const uint64_t * z2, const uint64_t * t2,
+ uint64_t * x3, uint64_t * y3, uint64_t * z3,
+ uint64_t * t3)
 {
+  uint64_t k[4];
+  uint64_t m[4];
+
+  uint64_t a[4];
+  uint64_t b[4];
+  uint64_t f[4];
+  uint64_t c[4];
+  uint64_t d[4];
+  uint64_t e[4];
+  uint64_t g[4];
+  uint64_t h[4];
+  uint64_t tb[4];
+  uint64_t zb[4];
+
+  sub2(y1, x1, k);
+  add2(y2, x2, m);
+  mul2(k, m, a);
+
+  add2(y1, x1, k);
+  sub2(y2, x2, m);
+  mul2(k, m, b);
+
+  sub2(b, a, f);
+  
+  if(f == 0){
+    e_double2(x1, y1, z1, t1,
+              x3, y3, z3, t3);
+  } else {
+    add2(t2, t2, tb);
+    //mul2(two, t2, tb);
+    mul2(z1, tb, c);
+    add2(z2, z2, zb);
+    //mul2(two, z2, zb);
+    mul2(t1, zb, d);
+    add2(d, c, e);
+    add2(b, a, g);
+    sub2(d, c, h);
+    mul2(e, f, x3);
+    mul2(g, h, y3);
+    mul2(e, h, t3);
+    mul2(f, g, z3);
+  }
+  /*
   uint64_t a[4];
   uint64_t b[4];
   uint64_t c[4];
@@ -431,6 +473,7 @@ static inline void e_add2
   mul2(t1b, a, ub);
   mul2(t2b, z1b, vb);
   mul2(z1b, a, z1b);
+  */
 };
 static inline void extended2extended_niels
 (
@@ -455,9 +498,9 @@ static inline void extended_niels2extended
  uint64_t * t1, uint64_t * t2)
 {
   //{u = 0, v = 1, z = 1, t1 = 0, t2 = 0},
-  e_add2(zero, one, one, zero, zero,//zero point
+  /*  e_add2(zero, one, one, zero, zero,//zero point
          vpu, vmu, td, z2,
-         u, v, z1, t1, t2);
+         u, v, z1, t1, t2);*/
 };
 static inline void e_mul2
 (uint64_t * vpu, uint64_t * vmu,//niels points
@@ -490,9 +533,10 @@ static inline void e_mul2
     e_mul2(vpu, vmu, td, z2,
            b - 1,
            u, v, z1, t1, t2);
-    e_add2(u, v, z1, t1, t2,
+    /*    e_add2(u, v, z1, t1, t2,
            vpu, vmu, td, z2,
            u, v, z1, t1, t2);
+    */
   };
 };
 
@@ -515,9 +559,11 @@ static inline void e_mul_long2
         e_double2(u, v, z1, t1,
                   u, v, z1, t1);
         if(bool){
+          /*
           e_add2(u, v, z1, t1, t2,
                  vpu, vmu, td, z2,
                  u, v, z1, t1, t2);
+          */
         }
       }
       all_zero = (all_zero && (!(bool)));
@@ -1018,67 +1064,39 @@ static ERL_NIF_TERM e_add
     enif_inspect_binary(env, argv[0], &Extended);
   int checkb =
     enif_inspect_binary(env, argv[1], &ENiels);
-  if((!checka) || (!(Extended.size == 160))){
+  if((!checka) || (!(Extended.size == 128))){
     return(error_atom(env));
   };
-  //if((!checkb) || (!(ENiels.size == 128))){
-  if((!checkb)){
+  if((!checkb) || (!(ENiels.size == 128))){
     return(error_atom(env));
   };
-  if((!(ENiels.size == 160)) &&
-     (!(ENiels.size == 128))){
-    return(error_atom(env));
-  }
   
   ERL_NIF_TERM Result;
   char * C = enif_make_new_binary
-    (env, 160, &Result);
+    (env, 128, &Result);
 
-  uint64_t * U = (uint64_t *)&Extended.data[0];
-  uint64_t * V = (uint64_t *)&Extended.data[32];
-  uint64_t * Z = (uint64_t *)&Extended.data[64];
+  uint64_t * X1 = (uint64_t *)&Extended.data[0];
+  uint64_t * Y1 = (uint64_t *)&Extended.data[32];
+  uint64_t * Z1 = (uint64_t *)&Extended.data[64];
   uint64_t * T1 = (uint64_t *)&Extended.data[96];
-  uint64_t * T2 = (uint64_t *)&Extended.data[128];
 
-  uint64_t * Ub = (uint64_t *)&(C[0]);
-  uint64_t * Vb = (uint64_t *)&(C[32]);
-  uint64_t * Zb = (uint64_t *)&(C[64]);
-  uint64_t * T1b = (uint64_t *)&(C[96]);
-  uint64_t * T2b = (uint64_t *)&(C[128]);
+  uint64_t * X2 = (uint64_t *)&ENiels.data[0];
+  uint64_t * Y2 = (uint64_t *)&ENiels.data[32];
+  uint64_t * Z2 = (uint64_t *)&ENiels.data[64];
+  uint64_t * T2 = (uint64_t *)&ENiels.data[96];
 
-  if(ENiels.size == 160){
-    uint64_t * Ua = (uint64_t *)&ENiels.data[0];
-    uint64_t * Va = (uint64_t *)&ENiels.data[32];
-    uint64_t * Z1a = (uint64_t *)&ENiels.data[64];
-    uint64_t * T1a = (uint64_t *)&ENiels.data[96];
-    uint64_t * T2a = (uint64_t *)&ENiels.data[128];
-    uint64_t VPU[4];
-    uint64_t VMU[4];
-    uint64_t T2D[4];
-    uint64_t NZ[4];
-    extended2extended_niels
-      (
-       Ua, Va, Z1a, T1a, T2a,
-       VPU, VMU, T2D, NZ
-       );
-    e_add2(U, V, Z, T1, T2,
-           VPU, VMU, T2D, NZ,
-           Ub, Vb, Zb, T1b, T2b);
+  uint64_t * X3 = (uint64_t *)&(C[0]);
+  uint64_t * Y3 = (uint64_t *)&(C[32]);
+  uint64_t * Z3 = (uint64_t *)&(C[64]);
+  uint64_t * T3 = (uint64_t *)&(C[96]);
+
+  e_add2(X1, Y1, Z1, T1,
+         X2, Y2, Z2, T2,
+         X3, Y3, Z3, T3);
+
   enif_release_binary(&ENiels);
   enif_release_binary(&Extended);
-    return(Result);
-  } else if(ENiels.size == 128){
-    uint64_t * VPU = (uint64_t *)&ENiels.data[0];
-    uint64_t * VMU = (uint64_t *)&ENiels.data[32];
-    uint64_t * T2D = (uint64_t *)&ENiels.data[64];
-    uint64_t * NZ = (uint64_t *)&ENiels.data[96];
-    e_add2(U, V, Z, T1, T2,
-           VPU, VMU, T2D, NZ,
-           Ub, Vb, Zb, T1b, T2b);
-  enif_release_binary(&ENiels);
-  enif_release_binary(&Extended);
-    return(Result);
-  };
+  return(Result);
 }
 
 

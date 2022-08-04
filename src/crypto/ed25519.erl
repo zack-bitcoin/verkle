@@ -28,6 +28,7 @@
          maffine2extended/1,
          mextended2affine_batch/1,
          mextended_double/1,
+         mextended_add/2,
          mextended_mul/2,
          meq/2,
          mencode_point/1,

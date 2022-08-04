@@ -230,6 +230,20 @@ test(3) ->
 
     MAffine2 = c2m(Affine2),
 
+    %add points, check equality
+
+    Extended3 = c_ed:padd(Extended, Extended2),
+    MExtended3 = ed25519:mextended_add(
+                   MExtended2, MExtended),
+    %io:fwrite({Extended, Extended2, Extended3}),
+
+    Affine3 = hd(extended2affine_batch(
+                   [Extended3])),
+    MAffine3 = hd(ed25519:mextended2affine_batch(
+                    [MExtended3])),
+    MAffine3 = c2m(Affine3),
+
+
     success.
         
     
