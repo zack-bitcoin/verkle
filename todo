@@ -1,3 +1,10 @@
+rewrote double in C. needs to be tested.
+
+check that the curve is working as a group.
+P * 5 * 7 = P * 7 * 5.
+P*5 + P*7 = P*3 + P*9.
+
+
 c_ed: need to support the new format of elliptic points, with only 4 numbers each.
 * double, add, mul, mul_long.
 

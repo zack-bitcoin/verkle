@@ -40,6 +40,12 @@ const uint64_t one[4] =
 0U,
  0U};
 
+const uint64_t two[4] =
+{76U,
+0U,
+0U,
+ 0U};
+
 const uint64_t zero[4] =
   {0U,0U,0U,0U};
 
@@ -336,12 +342,44 @@ static void pow2
 }
 
 static inline void e_double2
-(uint64_t * u, uint64_t * v, uint64_t * z,
- uint64_t * t1, uint64_t * t2,
- uint64_t * ub, uint64_t * vb, uint64_t * zb,
- uint64_t * t1b, uint64_t * t2b)
+(uint64_t * x, uint64_t * y, uint64_t * z,
+ uint64_t * t,
+ uint64_t * xb, uint64_t * yb, uint64_t * zb,
+ uint64_t * tb)
 {
   //todo. working here.
+  uint64_t A[4];
+  uint64_t B[4];
+  uint64_t ZZ[4];
+  uint64_t C[4];
+  uint64_t D[4];
+  uint64_t XY[4];
+  uint64_t AB[4];
+  uint64_t XYXY[4];
+  uint64_t E[4];
+  uint64_t G[4];
+  uint64_t F[4];
+  uint64_t H[4];
+
+  square2(x, A);
+  square2(y, A);
+  square2(z, ZZ);
+  mul2(two, ZZ, C);
+  neg2(A, D);
+  add2(x, y, XY);
+  square2(XY, XYXY);
+  add2(A, B, AB);
+  sub2(XYXY, AB, E);
+  add2(D, B, G);
+  sub2(G, C, F);
+  sub2(D, B, H);
+
+  mul2(E, B, xb);
+  mul2(G, H, yb);
+  mul2(E, H, tb);
+  mul2(F, G, zb);
+
+  /*
   uint64_t uu[4];
   uint64_t vv[4];
   uint64_t z2[4];
@@ -360,6 +398,7 @@ static inline void e_double2
   mul2(t1b, uu, ub);
   mul2(t2b, zb, vb);
   mul2(zb, uu, zb);
+  */
 };
 static inline void e_add2
 (const uint64_t * u, const uint64_t * v,
@@ -408,15 +447,6 @@ static inline void extended2extended_niels
   add2(u, v, vpu);
   sub2(v, u, vmu);
   memcpy(z2, z1, 32);
-  /*
-     T3 = mul(<<T1:256>>, <<T2:256>>),
-     VPU = add(<<U:256>>, <<V:256>>),
-     VMU = sub(<<V:256>>, <<U:256>>),
-     T2D = mul(T3, ?D2),
-     <<VPU/binary, VMU/binary, 
-       T2D/binary, Z:256>>.
-  */
-
 };
 static inline void extended_niels2extended
 (uint64_t * vpu, uint64_t * vmu,//niels points
@@ -428,15 +458,6 @@ static inline void extended_niels2extended
   e_add2(zero, one, one, zero, zero,//zero point
          vpu, vmu, td, z2,
          u, v, z1, t1, t2);
-  /*
-  add2(vpu, vmu, v);
-  sub2(vpu, vmu, u);
-  mul2(v, (uint64_t *)i2, v);//would need to multiply by inverse of z here...
-  mul2(u, (uint64_t *)i2, u);//and here.
-  memcpy(z1, one, 32);
-  memcpy(t1, u, 32);
-  memcpy(t2, v, 32);
-  */
 };
 static inline void e_mul2
 (uint64_t * vpu, uint64_t * vmu,//niels points
@@ -461,8 +482,10 @@ static inline void e_mul2
     e_mul2(vpu, vmu, td, z2,
            b / 2,
            u, v, z1, t1, t2);
-    e_double2(u, v, z1, t1, t2,
-              u, v, z1, t1, t2);
+    //e_double2(u, v, z1, t1, t2,
+    //          u, v, z1, t1, t2);
+    e_double2(u, v, z1, t1,
+              u, v, z1, t1);
   } else {
     e_mul2(vpu, vmu, td, z2,
            b - 1,
@@ -487,8 +510,10 @@ static inline void e_mul_long2
     for(int j = 63; j >= 0; j--){
       int bool = kth_bit(b[i], j);
       if(!(all_zero)){
-        e_double2(u, v, z1, t1, t2,
-                  u, v, z1, t1, t2);
+        //e_double2(u, v, z1, t1, t2,
+        //          u, v, z1, t1, t2);
+        e_double2(u, v, z1, t1,
+                  u, v, z1, t1);
         if(bool){
           e_add2(u, v, z1, t1, t2,
                  vpu, vmu, td, z2,
@@ -958,28 +983,28 @@ static ERL_NIF_TERM e_double
   ErlNifBinary A;
   int checka =
     enif_inspect_binary(env, argv[0], &A);
-  if((!checka) || (!(A.size == 160))){
+  if((!checka) || (!(A.size == 128))){
     return(error_atom(env));
   };
 
   ERL_NIF_TERM Result;
   char * C = enif_make_new_binary
-    (env, 160, &Result);
+    (env, 128, &Result);
 
   uint64_t * U = (uint64_t *)&A.data[0];
   uint64_t * V = (uint64_t *)&A.data[32];
   uint64_t * Z = (uint64_t *)&A.data[64];
-  uint64_t * T1 = (uint64_t *)&A.data[96];
-  uint64_t * T2 = (uint64_t *)&A.data[128];
+  uint64_t * T = (uint64_t *)&A.data[96];
 
   uint64_t * Ub = (uint64_t *)&(C[0]);
   uint64_t * Vb = (uint64_t *)&(C[32]);
   uint64_t * Zb = (uint64_t *)&(C[64]);
-  uint64_t * T1b = (uint64_t *)&(C[96]);
-  uint64_t * T2b = (uint64_t *)&(C[128]);
+  uint64_t * Tb = (uint64_t *)&(C[96]);
 
-  e_double2(U, V, Z, T1, T2,
-            Ub, Vb, Zb, T1b, T2b);
+  //e_double2(U, V, Z, T1, T2,
+             //          Ub, Vb, Zb, T1b, T2b);
+  e_double2(U, V, Z, T,
+            Ub, Vb, Zb, Tb);
   //  return enif_make_binary(env, &A);
   enif_release_binary(&A);
   return(Result);

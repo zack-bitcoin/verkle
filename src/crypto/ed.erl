@@ -15,6 +15,7 @@
          test/1
         ]).
 
+% 2^255 - 19
 -define(q, 
         57896044618658097711785492504343953926634992332820282019728792003956564819949
        ).
@@ -98,6 +99,7 @@ gen_point() ->
         P -> P
     end.
 compress_point(<<X0:256, Y0:256>>) ->
+    %Y = decode(<<Y0:256>>),
     S = case not((Y0 band  ?max255) == 0) of
             true -> 1;
             false -> 0
@@ -175,6 +177,8 @@ decode(C) ->
     <<Y:256/little>> = X,
     Y.
 
+    
+
 test(1) ->
     X = 55,
     Y = ed25519:encode(X),
@@ -183,4 +187,27 @@ test(1) ->
 test(2) ->
     L = [encode(5), encode(9), encode(11)],
     L = batch_inverse(batch_inverse(L)),
+    success;
+test(3) ->
+    C0 = gen_point(),
+    io:fwrite("have point\n"),
+    C = affine2extended(C0),
+    P = compress_point(C0),
+%    Pm = ed25519:mencode_point(P),
+%    Pf = ed25519:fencode_point(P),
+%    io:fwrite({P, Pm, Pf}),
+    C0 = decompress_point(P),
+    M = ed25519:maffine2extended(
+          ed25519:mdecode_point(P)),
+    M2 = ed25519:mextended_double(M),
+    C2 = c_ed:double(C),
+
+    P2 = compress_point(
+           hd(extended2affine_batch([C2]))),
+    M2b = ed25519:maffine2extended(
+            ed25519:mdecode_point(P2)),
+    true = ed25519:meq(M2, M2b),
     success.
+        
+    
+

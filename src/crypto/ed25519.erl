@@ -24,6 +24,13 @@
          mpow/2,
          mneg/1,
          msqrt/1,
+         mdecode_point/1,
+         maffine2extended/1,
+         mextended2affine_batch/1,
+         mextended_mul/2,
+         meq/2,
+         mencode_point/1,
+         mdecode_point/1,
 
          test/1
         ]).
@@ -42,6 +49,7 @@ setup(_) ->
     ok.
 
 %finite field the curve is defined over
+%2^255 - 19
 -define(q, 
         57896044618658097711785492504343953926634992332820282019728792003956564819949
        ).
@@ -205,8 +213,7 @@ fextended_sub(P1, P2) ->
 fextended_mul(P = #extended{}, N) ->
     [P2] = fnormalize([P]),
     fextended_mul2(?fzero_point, P2, N, 256).
-fextended_mul2(A, _, _, 0) -> 
-    A;
+fextended_mul2(A, _, _, 0) -> A;
 fextended_mul2(A, B, N, C) 
   when ((N band 1) == 0) ->
     fextended_mul2(A, fextended_double(B), 
@@ -235,7 +242,8 @@ fgen_point() ->
         error -> fgen_point();
         P -> P
     end.
-fdecode_point(<<S:1, P:255>>) ->
+fdecode_point(<<S:1, P0:255>>) ->
+    P = decode(P0),
     true = P < ?q,
     UU = fmul(P, P),
     DUU = fmul(?D, UU),
@@ -248,10 +256,15 @@ fdecode_point(<<S:1, P:255>>) ->
             %io:fwrite("invalid, no square root\n"),
             error;
         {V1, V2} ->
-            V = case S of
-                    0 -> V1;
-                    1 -> V2
+            S2 = fis_positive(V1),
+            V = if
+                    (S == S2) -> V1;
+                    true -> V2
                 end,
+%            V = case S of
+%                    0 -> V1;
+%                    1 -> V2
+%                end,
             Point = #affine{x = P, y = V},
             Bool = fis_on_curve(Point),
             if
@@ -262,14 +275,17 @@ fdecode_point(<<S:1, P:255>>) ->
                     error
             end
     end.
+fis_positive(Y) ->
+    (Y band ?max255) == 0.
 fencode_point(#affine{x = X, y = Y}) ->
-    S = case not((Y band ?max255) == 0) of
+    S = case not(fis_positive(Y)) of
             true -> 1;
             false -> 0
         end,
-    <<S:1, X:255>>.
+    X2 = encode(X),
+    <<S:1, X2:255>>.
 mencode_point(#affine{x = X, y = Y}) ->
-    S = case not((Y band ?max255) == 0) of
+    S = case not(fis_positive(Y)) of
             true -> 1;
             false -> 0
         end,
@@ -453,8 +469,8 @@ mdecode_point(<<S:1, P:255>>) ->
     %P is a montgomery encoded integer.
     UU = mmul(P, P),
     DUU = mmul(?mD, UU),
-    B = minv(msub(1, DUU)),
-    T = madd(1, UU),
+    B = minv(msub(?m_one, DUU)),
+    T = madd(?m_one, UU),
     VV = mmul(T, B),
     case msqrt(VV) of
         error ->
@@ -462,10 +478,15 @@ mdecode_point(<<S:1, P:255>>) ->
             io:fwrite("invalid, no square root\n"),
             error;
         {V1, V2} ->
-            V = case S of
-                    0 -> V1;
-                    1 -> V2
+            S2 = fis_positive(V1),
+            V = if
+                    (S == S2) -> V1;
+                    true -> V2
                 end,
+%            V = case S of
+%                    0 -> V1;
+%                    1 -> V2
+%                end,
             Point = #affine{x = P, y = V},
             Bool = mis_on_curve(Point),
             if
@@ -473,6 +494,7 @@ mdecode_point(<<S:1, P:255>>) ->
                 true -> 
                     %invalid point
                     io:fwrite("invalid, not on curve\n"),
+                    io:fwrite(Point),
                     error
             end
     end.
@@ -528,8 +550,6 @@ test(1) ->
     L = mbatch_inverse(L2),
     success;
 test(2) ->
-    %point encoding
-    
     Pf = fgen_point(),
 
     %to montgomery and back
@@ -608,8 +628,22 @@ test(2) ->
     Pm2 = hd(mextended2affine_batch(
                [mextended_mul(Pme, F)])),
     Pf2b = m2f(Pm2),
-    {Pf, Pf2, Pf2b}.
-%success.
+    {Pf, Pf2, Pf2b},
+    success;
+test(3) ->
+    %point encoding.
+
+    %io:fwrite(mgen_point()),
+
+    Pf = fgen_point(),
+
+    E = fencode_point(Pf),
+    Pf = fdecode_point(E),
+    Pm = mdecode_point(E),
+    %io:fwrite({E, Pm, Pf}),
+    E = mencode_point(Pm),
+
+    success.
     
     
 
