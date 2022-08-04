@@ -27,6 +27,7 @@
          mdecode_point/1,
          maffine2extended/1,
          mextended2affine_batch/1,
+         mextended_double/1,
          mextended_mul/2,
          meq/2,
          mencode_point/1,
@@ -483,18 +484,13 @@ mdecode_point(<<S:1, P:255>>) ->
                     (S == S2) -> V1;
                     true -> V2
                 end,
-%            V = case S of
-%                    0 -> V1;
-%                    1 -> V2
-%                end,
             Point = #affine{x = P, y = V},
             Bool = mis_on_curve(Point),
             if
                 Bool -> Point;
                 true -> 
                     %invalid point
-                    io:fwrite("invalid, not on curve\n"),
-                    io:fwrite(Point),
+                    %io:fwrite("invalid, not on curve\n"),
                     error
             end
     end.
@@ -643,7 +639,57 @@ test(3) ->
     %io:fwrite({E, Pm, Pf}),
     E = mencode_point(Pm),
 
+    #affine{x = Xm, y = Ym} = Pm,
+    Xf = decode(Xm),
+    Yf = decode(Ym),
+    Pf = #affine{x = Xf, y = Yf},
+
+    success;
+test(4) ->
+    %check group operations hold
+%P * 5 * 7 = P * 7 * 5.
+%P*5 + P*7 = P*3 + P*9.
+
+    %first with normal integers.
+    F = faffine2extended(fgen_point()),
+    F5 = fextended_mul(F, 5),
+    F7 = fextended_mul(F, 7),
+    F35a = fextended_mul(F5, 7),
+    F35b = fextended_mul(F7, 5),
+    [F35, F35] = 
+        fextended2affine_batch([F35a, F35b]),
+
+    F3 = fextended_mul(F, 3),
+    F9 = fextended_mul(F, 9),
+
+    F12a = fextended_add(F5, F7),
+    F12b = fextended_add(F3, F9),
+    [F12, F12] = 
+        fextended2affine_batch([F12a, F12b]),
+    true = fis_on_curve(F35),
+    true = fis_on_curve(F12),
+
+    %now montgomery version
+    M = maffine2extended(mgen_point()),
+    M5 = mextended_mul(M, 5),
+    M7 = mextended_mul(M, 7),
+    M35a = mextended_mul(M5, 7),
+    M35b = mextended_mul(M7, 5),
+    [M35, M35] = 
+        mextended2affine_batch([M35a, M35b]),
+
+    M3 = mextended_mul(M, 3),
+    M9 = mextended_mul(M, 9),
+
+    M12a = mextended_add(M5, M7),
+    M12b = mextended_add(M3, M9),
+    [M12, M12] = 
+        mextended2affine_batch([M12a, M12b]),
+    true = mis_on_curve(M35),
+    true = mis_on_curve(M12),
+
     success.
+
     
     
 

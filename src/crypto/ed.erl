@@ -63,9 +63,16 @@ is_on_curve(<<X0:256, Y0:256>>) ->
     YY = mul(Y, Y),
     XY = mul(XX, YY),
     sub(YY, XX) == add(?one, mul(?D, XY)).
+compress_point(<<X0:256/little, Y0:256/little>>) ->
+    %Y = decode(<<Y0:256>>),
+    S = case not(is_positive(Y0)) of
+            true -> 1;
+            false -> 0
+        end,
+    <<S:1, X0:255>>.
 decompress_point(<<S:1, P:255>>) ->
     true = P < ?q,
-    UU = mul(<<P:256>>, <<P:256>>),
+    UU = mul(<<P:256/little>>, <<P:256/little>>),
     DUU = mul(?D, UU),
     B = inv(sub(?one, DUU)),
     T = add(?one, UU),
@@ -75,12 +82,17 @@ decompress_point(<<S:1, P:255>>) ->
             %invalid point.
             io:fwrite("invalid, no square root\n"),
             error;
-        {V1, V2} ->
-            V = case S of
-                    0 -> V1;
-                    1 -> V2
+        {V1 = <<V1n:256>>, V2} ->
+            S2 = is_positive(V1n),
+            V = if
+                    (S == S2) -> V1;
+                    true -> V2
                 end,
-            Point = <<P:256, V/binary>>,
+%            V = case S of
+%                    0 -> V1;
+%                    1 -> V2
+%                end,
+            Point = <<P:256/little, V/binary>>,
             Bool = is_on_curve(Point),
             if
                 Bool -> Point;
@@ -98,13 +110,9 @@ gen_point() ->
         error -> gen_point();
         P -> P
     end.
-compress_point(<<X0:256, Y0:256>>) ->
-    %Y = decode(<<Y0:256>>),
-    S = case not((Y0 band  ?max255) == 0) of
-            true -> 1;
-            false -> 0
-        end,
-    <<S:1, X0:255>>.
+is_positive(Y) ->
+    (Y band ?max255) == 0.
+
 affine2extended(P = <<X0:256, Y0:256>>) ->
     B = a_eq(P, ?affine_zero),
     if
@@ -197,6 +205,7 @@ test(3) ->
 %    Pf = ed25519:fencode_point(P),
 %    io:fwrite({P, Pm, Pf}),
     C0 = decompress_point(P),
+    %io:fwrite({C0, C0b, P}),
     M = ed25519:maffine2extended(
           ed25519:mdecode_point(P)),
     M2 = ed25519:mextended_double(M),
