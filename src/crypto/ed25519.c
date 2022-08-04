@@ -362,7 +362,7 @@ static inline void e_double2
   uint64_t H[4];
 
   square2(x, A);
-  square2(y, A);
+  square2(y, B);
   square2(z, ZZ);
   mul2(two, ZZ, C);
   neg2(A, D);
@@ -374,7 +374,7 @@ static inline void e_double2
   sub2(G, C, F);
   sub2(D, B, H);
 
-  mul2(E, B, xb);
+  mul2(E, F, xb);
   mul2(G, H, yb);
   mul2(E, H, tb);
   mul2(F, G, zb);
