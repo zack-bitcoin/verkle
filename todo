@@ -1,19 +1,18 @@
-rewrote double in C. needs to be tested.
-
-check that the curve is working as a group.
-P * 5 * 7 = P * 7 * 5.
-P*5 + P*7 = P*3 + P*9.
+ed: addition and doubling should be supported in-place, so we don't need to copy data around as much.
 
 
-c_ed: need to support the new format of elliptic points, with only 4 numbers each.
-* double, add, mul, mul_long.
+ed: multiply points.
 
 ed:
 batch decompress_point (has an inverse)
 
+ed25519.c
+in addition and subtraction, if a z value starts as 1, then we can skip one of the multiplications, but currently we are not.
 
+generating parameters for the new ed25519 version.
+This time we want a deterministic way to do it, so we can all have the same parameters.
 
-switch to ed25519.
+switch everything to ed25519.
 
 
 we need an off switch that protects the database. it is for testing as well.

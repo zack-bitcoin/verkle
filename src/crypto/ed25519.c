@@ -160,8 +160,8 @@ static inline void sub2
 (const uint64_t * a, const uint64_t * b,
  uint64_t * c)
 {
+  // dont do sub2(a, b, a). it doesn't work.
   //c = (a-b) mod ?q
-
   if(greater_than(a, b)){
     subtract64(a, b, c);//c=a-b
   } else {
@@ -344,61 +344,44 @@ static void pow2
 static inline void e_double2
 (const uint64_t * x, const uint64_t * y,
  const uint64_t * z, const uint64_t * t,
- uint64_t * xb, uint64_t * yb, uint64_t * zb,
- uint64_t * tb)
+ uint64_t * x2, uint64_t * y2, uint64_t * z2,
+ uint64_t * t2)
 {
-  //todo. working here.
-  uint64_t A[4];
-  uint64_t B[4];
-  uint64_t ZZ[4];
-  uint64_t C[4];
-  uint64_t D[4];
-  uint64_t XY[4];
-  uint64_t AB[4];
-  uint64_t XYXY[4];
-  uint64_t E[4];
-  uint64_t G[4];
-  uint64_t F[4];
-  uint64_t H[4];
-
-  square2(x, A);
-  square2(y, B);
-  square2(z, ZZ);
-  mul2(two, ZZ, C);
-  neg2(A, D);
-  add2(x, y, XY);
-  square2(XY, XYXY);
-  add2(A, B, AB);
-  sub2(XYXY, AB, E);
-  add2(D, B, G);
-  sub2(G, C, F);
-  sub2(D, B, H);
-
-  mul2(E, F, xb);
-  mul2(G, H, yb);
-  mul2(E, H, tb);
-  mul2(F, G, zb);
-
+  //http://hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#doubling-dbl-2008-hwcd
   /*
-  uint64_t uu[4];
-  uint64_t vv[4];
-  uint64_t z2[4];
-  square2(u, uu);
-  square2(v, vv);
-  add2(z, z, z2);
-  mul2(z2, z, z2);//zz2
-  add2(u, v, ub);//uv1
-  mul2(ub, ub, ub);//uv2
-
-  add2(vv, uu, t2b);//vv_plus_uu, completed v
-  sub2(vv, uu, zb);//vv_minus_uu, completed z
-  sub2(ub, t2b, t1b);//completed u
-  sub2(z2, zb, uu);//completed t
-
-  mul2(t1b, uu, ub);
-  mul2(t2b, zb, vb);
-  mul2(zb, uu, zb);
+      A = X1^2 //
+      B = Y1^2 // A
+      C = 2*Z1^2  //B A
+      D = a*A //a is -1 for this curve.  // B C A
+      E = (X1+Y1)^2-A-B  // D B C A
+      G = D+B   // E D B C
+      F = G-C   // G E D B C
+      H = D-B   // F G E D B
+      X3 = E*F  // F G E H
+      Y3 = G*H  // F G E H
+      T3 = E*H  // F G E H
+      Z3 = F*G  // F G
   */
+  uint64_t J[4];
+  uint64_t K[4];
+
+  square2(z, z2);
+  square2(y, J);
+  add2(x, y, y2);
+  square2(x, t2);
+  add2(z2, z2, x2);
+  memcpy(K, t2, 32);
+  square2(y2, y2);
+  add2(t2, J, z2);
+  sub2(y2, z2, t2);
+  sub2(J, K, z2);
+  add2(K, J, K);
+  neg2(K, K);
+  sub2(z2, x2, J);
+  mul2(t2, J, x2);
+  mul2(z2, K, y2);
+  mul2(t2, K, t2);
+  mul2(J, z2, z2);
 };
 static inline void e_add2
 (const uint64_t * x1, const uint64_t * y1,
@@ -408,71 +391,80 @@ static inline void e_add2
  uint64_t * x3, uint64_t * y3, uint64_t * z3,
  uint64_t * t3)
 {
-  uint64_t k[4];
-  uint64_t m[4];
+  //also works if x1 = x3, y1 = y3, ...
 
-  uint64_t a[4];
-  uint64_t b[4];
-  uint64_t f[4];
-  uint64_t c[4];
-  uint64_t d[4];
-  uint64_t e[4];
-  uint64_t g[4];
-  uint64_t h[4];
-  uint64_t tb[4];
-  uint64_t zb[4];
-
-  sub2(y1, x1, k);
-  add2(y2, x2, m);
-  mul2(k, m, a);
-
-  add2(y1, x1, k);
-  sub2(y2, x2, m);
-  mul2(k, m, b);
-
-  sub2(b, a, f);
+  //http://hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#addition-add-2008-hwcd-4
+  /*
+  A = (Y1-X1)*(Y2+X2)
+    B = (Y1+X1)*(Y2-X2)
+    C = Z1*2*T2
+    D = T1*2*Z2
+      E = D+C
+      F = B-A
+      G = B+A
+      H = D-C
+      X3 = E*F
+      Y3 = G*H
+      T3 = E*H
+      Z3 = F*G
+  */
   
-  if(f == 0){
-    e_double2(x1, y1, z1, t1,
+  uint64_t M[4];
+  uint64_t N[4];
+
+  //z3: A B F I J K L     | G 
+  //t3: A B C F I J K     | E D
+  //M:                    | F I
+  //N:                    | H A J 
+  //x3: A E F G H I J     | B L
+  //y3: A E F G H I J     | C K
+
+
+  sub2(y1, x1, M); // t z y x
+  add2(y2, x2, N); // I t z y x
+  mul2(M, N, N); // I J t z y x
+  add2(y1, x1, y3); // A t z y x
+  sub2(y2, x2, x3); //K A t z
+  mul2(y3, x3, x3); // K L A t z
+  sub2(x3, N, M); // B A t z
+  if(M == 0){ return(e_double2(x2, y2, z2, t2, x3, y3, z3, t3));}
+  mul2(two, z1, y3); //F B A t z
+  mul2(y3, t2, y3);  //F C B A t
+  mul2(two, z2, t3);//F C B A t
+  mul2(t3, t1, t3); //F D C B A t
+  add2(x3, N, z3);  //F D C B A
+  sub2(t3, y3, N);  //F G D C
+  add2(t3, y3, t3);  //F G D C H
+  mul2(t3, M, x3); //F G E H
+  mul2(z3, N, y3); //F G E H x
+  mul2(t3, N, t3); //F G E H x y
+  mul2(M, z3, z3); //F G x y t
+
+  /*
+  sub2(y1, x1, e);
+  add2(y2, x2, g);
+  mul2(e, g, y3);
+  add2(y1, x1, e);
+  sub2(y2, x2, g);
+  mul2(e, g, e);
+  sub2(e, y3, z3);
+  
+  if(z3 == 0){
+    e_double2(x2, y2, z2, t2,
               x3, y3, z3, t3);
   } else {
-    add2(t2, t2, tb);
-    //mul2(two, t2, tb);
-    mul2(z1, tb, c);
-    add2(z2, z2, zb);
-    //mul2(two, z2, zb);
-    mul2(t1, zb, d);
-    add2(d, c, e);
-    add2(b, a, g);
-    sub2(d, c, h);
-    mul2(e, f, x3);
-    mul2(g, h, y3);
-    mul2(e, h, t3);
-    mul2(f, g, z3);
+    add2(z2, z2, g);
+    mul2(t1, g, x3);
+    add2(e, y3, g);
+    add2(t2, t2, y3);
+    mul2(z1, y3, e);
+    sub2(x3, e, t3);
+    add2(e, x3, e);
+    mul2(e, z3, x3);
+    mul2(g, t3, y3);
+    mul2(t3, e, t3);
+    mul2(z3, g, z3);
   }
-  /*
-  uint64_t a[4];
-  uint64_t b[4];
-  uint64_t c[4];
-  uint64_t d[4];
-
-  sub2(v, u, a);
-  mul2(a, vmu2, a);
-  add2(v, u, b);
-  mul2(b, vpu2, b);
-  mul2(t1, t2, c);
-  mul2(c, td2, c);
-  add2(z1, z1, d);
-  mul2(d, z2, d);
-
-  sub2(b, a, t1b);//completed u.
-  add2(b, a, t2b);//completed v.
-  add2(d, c, z1b);//completed z.
-  sub2(d, c, a);//completed t
-
-  mul2(t1b, a, ub);
-  mul2(t2b, z1b, vb);
-  mul2(z1b, a, z1b);
   */
 };
 static inline void extended2extended_niels
@@ -502,26 +494,22 @@ static inline void extended_niels2extended
          vpu, vmu, td, z2,
          u, v, z1, t1, t2);*/
 };
+/*
 static inline void e_mul2
-(uint64_t * vpu, uint64_t * vmu,//niels points
- uint64_t * td, uint64_t * z2,
+(uint64_t * x, uint64_t * y,//starting point
+ uint64_t * z, uint64_t * t,
  uint64_t b,//exponent
- uint64_t * u, uint64_t * v, uint64_t * z1,//resulting extended point.
- uint64_t * t1, uint64_t * t2)
+ uint64_t * x2, uint64_t * y2,//result
+ uint64_t * z2, uint64_t * t2)
 {
   if(b == 1){
-    extended_niels2extended
-      (vpu, vmu, td, z2, u, v, z1, t1, t2);
-    /*
-    add2(vpu, vmu, v);
-    sub2(vpu, vmu, u);
-    mul2(v, (uint64_t *)i2, v);
-    mul2(u, (uint64_t *)i2, u);
-    memcpy(z1, one, 32);
-    memcpy(t1, u, 32);
-    memcpy(t2, v, 32);
-    */
+    memcpy(x2, x, 32);
+    memcpy(y2, y, 32);
+    memcpy(z2, z, 32);
+    memcpy(t2, t, 32);
   } else if((b % 2) == 0){
+    e_mul2(x, y, z, t, b / 2, x2, y2, z2, t2);
+
     e_mul2(vpu, vmu, td, z2,
            b / 2,
            u, v, z1, t1, t2);
@@ -533,31 +521,27 @@ static inline void e_mul2
     e_mul2(vpu, vmu, td, z2,
            b - 1,
            u, v, z1, t1, t2);
-    /*    e_add2(u, v, z1, t1, t2,
-           vpu, vmu, td, z2,
-           u, v, z1, t1, t2);
-    */
+    //    e_add2(u, v, z1, t1, t2,
+    //       vpu, vmu, td, z2,
+    //       u, v, z1, t1, t2);
   };
 };
+*/
 
 static inline void e_mul_long2
-(uint64_t * vpu, uint64_t * vmu,//niels points
- uint64_t * td, uint64_t * z2,
+(uint64_t * x, uint64_t * y,//point
+ uint64_t * z, uint64_t * t,
  uint64_t * b,//exponent
- uint64_t * u, uint64_t * v, uint64_t * z1,//resulting extended point.
- uint64_t * t1, uint64_t * t2)
+ uint64_t * x2, uint64_t * y2, //resulting point.
+ uint64_t * z2, uint64_t * t2)
 {
-  extended_niels2extended
-    (vpu, vmu, td, z2, u, v, z1, t1, t2);
-  int all_zero = 1;//true
   for(int i = 3; i >= 0; i--){
     for(int j = 63; j >= 0; j--){
       int bool = kth_bit(b[i], j);
-      if(!(all_zero)){
         //e_double2(u, v, z1, t1, t2,
         //          u, v, z1, t1, t2);
-        e_double2(u, v, z1, t1,
-                  u, v, z1, t1);
+        e_double2(x, y, z, t,
+                  x, y, z, t);
         if(bool){
           /*
           e_add2(u, v, z1, t1, t2,
@@ -565,160 +549,10 @@ static inline void e_mul_long2
                  u, v, z1, t1, t2);
           */
         }
-      }
-      all_zero = (all_zero && (!(bool)));
     }
   }
 }
-    // 1 0 1
-    // double, add, double, double, add
-  
 
-/*
-  if(b == 1){
-    //extended_niels2extended
-    add2(vpu, vmu, v);
-    sub2(vpu, vmu, u);
-    mul2(v, (uint64_t *)i2, v);
-    mul2(u, (uint64_t *)i2, u);
-    memcpy(z1, one, 32);
-    memcpy(t1, u, 32);
-    memcpy(t2, v, 32);
-  } else if((b % 2) == 0){
-    e_mul2(vpu, vmu, td, z2,
-           b / 2,
-           u, v, z1, t1, t2);
-    e_double2(u, v, z1, t1, t2,
-              u, v, z1, t1, t2);
-  } else {
-    e_mul2(vpu, vmu, td, z2,
-           b - 1,
-           u, v, z1, t1, t2);
-    e_add2(u, v, z1, t1, t2,
-           vpu, vmu, td, z2,
-           u, v, z1, t1, t2);
-  };
-};
-*/
-/*
-static void square_multi
-(uint64_t * n, uint times)
-{
-  for(; times>0; times--){
-    square2(n, n);
-  };
-};
-
-static inline void inv2
-(uint64_t * a, uint64_t * b)
-{
-  uint64_t t0[4];
-  uint64_t t1[4];
-  uint64_t t2[4];
-  uint64_t t3[4];
-  uint64_t t4[4];
-  uint64_t t5[4];
-  uint64_t t6[4];
-  uint64_t t7[4];
-  uint64_t t8[4];
-  uint64_t t9[4];
-  uint64_t t11[4];
-  uint64_t t12[4];
-  uint64_t t13[4];
-  uint64_t t14[4];
-  uint64_t t15[4];
-  uint64_t t16[4];
-  uint64_t t17[4];
-  
-  square2(a, t0);
-  mul2(t0, a, t1);
-  square2(t0, t16);
-  square2(t16, t6);
-  mul2(t6, t0, t5);
-  mul2(t6, t16, t0);
-  mul2(t5, t16, t12);
-  square2(t6, t2);
-  mul2(t5, t6, t7);
-  mul2(t0, t5, t15);
-  square2(t12, t17);
-  mul2(t1, t17, t1);
-  mul2(t7, t2, t3);
-  mul2(t1, t17, t8);
-  mul2(t8, t2, t4);
-  mul2(t8, t7, t9);
-  mul2(t4, t5, t7);
-  mul2(t4, t17, t11);
-  mul2(t9, t17, t5);
-  mul2(t7, t15, t14);
-  mul2(t11, t12, t13);
-  mul2(t11, t17, t12);
-  mul2(t15, t12, t15);
-  mul2(t16, t15, t16);
-  mul2(t3, t16, t3);
-  mul2(t17, t3, t17);
-  mul2(t0, t17, t0);
-  mul2(t6, t0, t6);
-  mul2(t2, t6, t2);
-
-  square_multi(t0, 8);
-  mul2(t0, t17, t0);
-  square_multi(t0, 9);
-  mul2(t0, t16, t0);
-  square_multi(t0, 9);
-  mul2(t0, t15, t0);
-  square_multi(t0, 9);
-  mul2(t0, t15, t0);
-  square_multi(t0, 7);
-  mul2(t0, t14, t0);
-  square_multi(t0, 7);
-  mul2(t0, t13, t0);
-  square_multi(t0, 10);
-  mul2(t0, t12, t0);
-  square_multi(t0, 9);
-  mul2(t0, t11, t0);
-  square_multi(t0, 8);
-  mul2(t0, t8, t0);
-  square_multi(t0, 8);
-  mul2(t0, a, t0);
-  square_multi(t0, 14);
-  mul2(t0, t9, t0);
-  square_multi(t0, 10);
-  mul2(t0, t8, t0);
-  square_multi(t0, 15);
-  mul2(t0, t7, t0);
-  square_multi(t0, 10);
-  mul2(t0, t6, t0);
-  square_multi(t0, 8);
-  mul2(t0, t5, t0);
-  square_multi(t0, 16);
-  mul2(t0, t3, t0);
-  square_multi(t0, 8);
-  mul2(t0, t2, t0);
-  square_multi(t0, 7);
-  mul2(t0, t4, t0);
-  square_multi(t0, 9);
-  mul2(t0, t2, t0);
-  square_multi(t0, 8);
-  mul2(t0, t3, t0);
-  square_multi(t0, 8);
-  mul2(t0, t2, t0);
-  square_multi(t0, 8);
-  mul2(t0, t2, t0);
-  square_multi(t0, 8);
-  mul2(t0, t2, t0);
-  square_multi(t0, 8);
-  mul2(t0, t3, t0);
-  square_multi(t0, 8);
-  mul2(t0, t2, t0);
-  square_multi(t0, 8);
-  mul2(t0, t2, t0);
-  square_multi(t0, 5);
-  mul2(t0, t1, t0);
-  square_multi(t0, 5);
-  mul2(t0, t1, b);
-  
-}
-*/
 static ERL_NIF_TERM error_atom
 (ErlNifEnv* env)
 {  
@@ -893,111 +727,86 @@ static ERL_NIF_TERM short_power
   enif_release_binary(&A);
   return Result;
 };
+/*
 static ERL_NIF_TERM e_mul
 (ErlNifEnv* env, int argc,
  const ERL_NIF_TERM argv[])
 {
-  ErlNifBinary ENiels;
+  ErlNifBinary Point;
   ErlNifUInt64 B;
 
   ERL_NIF_TERM Extended2;
   char * C = enif_make_new_binary
-    (env, 160, &Extended2);
+    (env, 128, &Extended2);
   
   int checka =
-    enif_inspect_binary(env, argv[0], &ENiels);
+    enif_inspect_binary(env, argv[0], &Point);
   int checkb =
     enif_get_uint64(env, argv[1], &B);
-  if((!checka) || (!(ENiels.size == 128))){
+  if((!checka) || (!(Point.size == 128))){
     return(error_atom(env));
   };
   if((!checkb)){
     return(error_atom(env));
   };
   
-  uint64_t * VPU = (uint64_t *)&(ENiels.data[0]);
-  uint64_t * VMU = (uint64_t *)&(ENiels.data[32]);
-  uint64_t * T2D = (uint64_t *)&(ENiels.data[64]);
-  uint64_t * NZ = (uint64_t *)&(ENiels.data[96]);
+  uint64_t * X = (uint64_t *)&(Point.data[0]);
+  uint64_t * Y = (uint64_t *)&(Point.data[32]);
+  uint64_t * Z = (uint64_t *)&(Point.data[64]);
+  uint64_t * T = (uint64_t *)&(Point.data[96]);
 
-  uint64_t * U = (uint64_t *)&(C[0]);
-  uint64_t * V = (uint64_t *)&(C[32]);
-  uint64_t * Z = (uint64_t *)&(C[64]);
-  uint64_t * T1 = (uint64_t *)&(C[96]);
-  uint64_t * T2 = (uint64_t *)&(C[128]);
+  uint64_t * X2 = (uint64_t *)&(C[0]);
+  uint64_t * Y2 = (uint64_t *)&(C[32]);
+  uint64_t * Z2 = (uint64_t *)&(C[64]);
+  uint64_t * T2 = (uint64_t *)&(C[96]);
 
-  e_mul2(VPU, VMU, T2D, NZ,
+  e_mul2(X, Y, Z, T,
          (uint64_t) B,
-         U, V, Z, T1, T2);
-  enif_release_binary(&ENiels);
+         X2, Y2, Z2, T2);
+  enif_release_binary(&Point);
 
   return Extended2;
 };
+*/
 static ERL_NIF_TERM e_mul_long
 (ErlNifEnv* env, int argc,
  const ERL_NIF_TERM argv[])
 {
-  ErlNifBinary ENiels, B;
+  ErlNifBinary Point, B;
 
-  ERL_NIF_TERM Extended2;
+  ERL_NIF_TERM Result;
   char * C = enif_make_new_binary
-    (env, 160, &Extended2);
+    (env, 128, &Result);
   
   int checka =
-    enif_inspect_binary(env, argv[0], &ENiels);
+    enif_inspect_binary(env, argv[0], &Point);
   int checkb =
     enif_inspect_binary(env, argv[1], &B);
   if((!checka)){
     return(error_atom(env));
   };
-  if((!(ENiels.size == 160)) &&
-     (!(ENiels.size == 128))){
+  if((!(Point.size == 128))){
     return(error_atom(env));
   }
   if((!checkb) || (!(B.size == 32))){
     return(error_atom(env));
   };
-  uint64_t * U = (uint64_t *)&(C[0]);
-  uint64_t * V = (uint64_t *)&(C[32]);
-  uint64_t * Z = (uint64_t *)&(C[64]);
-  uint64_t * T1 = (uint64_t *)&(C[96]);
-  uint64_t * T2 = (uint64_t *)&(C[128]);
+  uint64_t * X2 = (uint64_t *)&(C[0]);
+  uint64_t * Y2 = (uint64_t *)&(C[32]);
+  uint64_t * Z2 = (uint64_t *)&(C[64]);
+  uint64_t * T2 = (uint64_t *)&(C[96]);
 
-  if(ENiels.size == 160){
-    uint64_t * Ua = (uint64_t *)&ENiels.data[0];
-    uint64_t * Va = (uint64_t *)&ENiels.data[32];
-    uint64_t * Z1a = (uint64_t *)&ENiels.data[64];
-    uint64_t * T1a = (uint64_t *)&ENiels.data[96];
-    uint64_t * T2a = (uint64_t *)&ENiels.data[128];
-    uint64_t VPU[4];
-    uint64_t VMU[4];
-    uint64_t T2D[4];
-    uint64_t NZ[4];
-    extended2extended_niels
-      (
-       Ua, Va, Z1a, T1a, T2a,
-       VPU, VMU, T2D, NZ
-       );
-  e_mul_long2(VPU, VMU, T2D, NZ,
-         (uint64_t *)B.data,
-         U, V, Z, T1, T2);
-  enif_release_binary(&ENiels);
-  enif_release_binary(&B);
-  return Extended2;
-    
-  } else if(ENiels.size == 128){
-  uint64_t * VPU = (uint64_t *)&(ENiels.data[0]);
-  uint64_t * VMU = (uint64_t *)&(ENiels.data[32]);
-  uint64_t * T2D = (uint64_t *)&(ENiels.data[64]);
-  uint64_t * NZ = (uint64_t *)&(ENiels.data[96]);
+  uint64_t * X = (uint64_t *)&(Point.data[0]);
+  uint64_t * Y = (uint64_t *)&(Point.data[32]);
+  uint64_t * Z = (uint64_t *)&(Point.data[64]);
+  uint64_t * T = (uint64_t *)&(Point.data[96]);
 
-  e_mul_long2(VPU, VMU, T2D, NZ,
+  e_mul_long2(X, Y, Z, T,
          (uint64_t *)B.data,
-         U, V, Z, T1, T2);
-  enif_release_binary(&ENiels);
+         X2, Y2, Z2, T2);
+  enif_release_binary(&Point);
   enif_release_binary(&B);
-  return Extended2;
-  }
+  return Result;
 };
 /*
 static ERL_NIF_TERM inv
@@ -1113,7 +922,7 @@ static ErlNifFunc nif_funcs[] =
 
    {"double", 1, e_double},
    {"padd", 2, e_add},
-   {"pmul", 2, e_mul},
+   //{"pmul", 2, e_mul},
    {"pmul_long", 2, e_mul_long},
 
    {"ctest", 1, ctest}
