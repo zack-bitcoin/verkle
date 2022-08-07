@@ -1,13 +1,7 @@
-ed: addition and doubling should be supported in-place, so we don't need to copy data around as much.
-
-
-ed: multiply points.
 
 ed:
 batch decompress_point (has an inverse)
 
-ed25519.c
-in addition and subtraction, if a z value starts as 1, then we can skip one of the multiplications, but currently we are not.
 
 generating parameters for the new ed25519 version.
 This time we want a deterministic way to do it, so we can all have the same parameters.

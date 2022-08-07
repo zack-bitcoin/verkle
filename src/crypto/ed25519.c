@@ -345,7 +345,7 @@ static inline void e_double2
 (const uint64_t * x, const uint64_t * y,
  const uint64_t * z, const uint64_t * t,
  uint64_t * x2, uint64_t * y2, uint64_t * z2,
- uint64_t * t2)
+ uint64_t * t2, uint64_t * J, uint64_t * K)
 {
   //http://hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#doubling-dbl-2008-hwcd
   /*
@@ -362,8 +362,8 @@ static inline void e_double2
       T3 = E*H  // F G E H
       Z3 = F*G  // F G
   */
-  uint64_t J[4];
-  uint64_t K[4];
+  //uint64_t J[4];
+  //uint64_t K[4];
 
   square2(z, z2);
   square2(y, J);
@@ -389,7 +389,7 @@ static inline void e_add2
  const uint64_t * x2, const uint64_t * y2,
  const uint64_t * z2, const uint64_t * t2,
  uint64_t * x3, uint64_t * y3, uint64_t * z3,
- uint64_t * t3)
+ uint64_t * t3, uint64_t * M, uint64_t * N)
 {
   //also works if x1 = x3, y1 = y3, ...
 
@@ -409,8 +409,8 @@ static inline void e_add2
       Z3 = F*G
   */
   
-  uint64_t M[4];
-  uint64_t N[4];
+  //uint64_t M[4];
+  //uint64_t N[4];
 
   sub2(y1, x1, M);
   add2(y2, x2, N);
@@ -429,7 +429,7 @@ static inline void e_add2
   if(M == 0){
     //this check could have occured 2 multiplications sooner. but in that case, we would have needed 32 more bytes of memory. because M can't store two things at once.
     return(e_double2(x2, y2, z2, t2,
-                     x3, y3, z3, t3));}
+                     x3, y3, z3, t3, M, N));}
   add2(x3, N, z3);
   sub2(t3, y3, N);
   add2(t3, y3, t3);
@@ -438,66 +438,6 @@ static inline void e_add2
   mul2(t3, N, t3);
   mul2(M, z3, z3);
 };
-static inline void extended2extended_niels
-(
- //extended point
- uint64_t * u, uint64_t * v, uint64_t * z1,
- uint64_t * t1, uint64_t * t2,
- //resulting niels points
- uint64_t * vpu, uint64_t * vmu,
- uint64_t * td, uint64_t * z2
- )
-{
-  mul2(t1, t2, td);
-  mul2(td, D2, td);
-  add2(u, v, vpu);
-  sub2(v, u, vmu);
-  memcpy(z2, z1, 32);
-};
-static inline void extended_niels2extended
-(uint64_t * vpu, uint64_t * vmu,//niels points
- uint64_t * td, uint64_t * z2,
- uint64_t * u, uint64_t * v, uint64_t * z1,//resulting extended point.
- uint64_t * t1, uint64_t * t2)
-{
-  //{u = 0, v = 1, z = 1, t1 = 0, t2 = 0},
-  /*  e_add2(zero, one, one, zero, zero,//zero point
-         vpu, vmu, td, z2,
-         u, v, z1, t1, t2);*/
-};
-/*
-static inline void e_mul2
-(uint64_t * x, uint64_t * y,//starting point
- uint64_t * z, uint64_t * t,
- uint64_t b,//exponent
- uint64_t * x2, uint64_t * y2,//result
- uint64_t * z2, uint64_t * t2)
-{
-  if(b == 1){
-    memcpy(x2, x, 32);
-    memcpy(y2, y, 32);
-    memcpy(z2, z, 32);
-    memcpy(t2, t, 32);
-  } else if((b % 2) == 0){
-    e_mul2(x, y, z, t, b / 2, x2, y2, z2, t2);
-
-    e_mul2(vpu, vmu, td, z2,
-           b / 2,
-           u, v, z1, t1, t2);
-    //e_double2(u, v, z1, t1, t2,
-    //          u, v, z1, t1, t2);
-    e_double2(u, v, z1, t1,
-              u, v, z1, t1);
-  } else {
-    e_mul2(vpu, vmu, td, z2,
-           b - 1,
-           u, v, z1, t1, t2);
-    //    e_add2(u, v, z1, t1, t2,
-    //       vpu, vmu, td, z2,
-    //       u, v, z1, t1, t2);
-  };
-};
-*/
 
 static inline void e_mul_long2
 (uint64_t * x, uint64_t * y,//point
@@ -506,6 +446,8 @@ static inline void e_mul_long2
  uint64_t * x2, uint64_t * y2, //resulting point.
  uint64_t * z2, uint64_t * t2)
 {
+  uint64_t J[4];
+  uint64_t K[4];
   memcpy(x2, x, 32);
   memcpy(y2, y, 32);
   memcpy(z2, z, 32);
@@ -516,11 +458,12 @@ static inline void e_mul_long2
       int bool = kth_bit(b[i], j);
       if(!(all_zero)){
         e_double2(x2, y2, z2, t2,
-                  x2, y2, z2, t2);
+                  x2, y2, z2, t2, J, K);
         if(bool){
           e_add2(x2, y2, z2, t2,
                  x, y, z, t,
-                 x2, y2, z2, t2);
+                 x2, y2, z2, t2,
+                 J, K);
         }
       }
       all_zero = (all_zero && (!(bool)));
@@ -841,10 +784,12 @@ static ERL_NIF_TERM e_double
   uint64_t * Zb = (uint64_t *)&(C[64]);
   uint64_t * Tb = (uint64_t *)&(C[96]);
 
-  //e_double2(U, V, Z, T1, T2,
-             //          Ub, Vb, Zb, T1b, T2b);
+  
+  uint64_t J[4];
+  uint64_t K[4];
+
   e_double2(U, V, Z, T,
-            Ub, Vb, Zb, Tb);
+            Ub, Vb, Zb, Tb, J, K);
   //  return enif_make_binary(env, &A);
   enif_release_binary(&A);
   return(Result);
@@ -884,9 +829,13 @@ static ERL_NIF_TERM e_add
   uint64_t * Z3 = (uint64_t *)&(C[64]);
   uint64_t * T3 = (uint64_t *)&(C[96]);
 
+  uint64_t J[4];
+  uint64_t K[4];
+
   e_add2(X1, Y1, Z1, T1,
          X2, Y2, Z2, T2,
-         X3, Y3, Z3, T3);
+         X3, Y3, Z3, T3,
+         J, K);
 
   enif_release_binary(&ENiels);
   enif_release_binary(&Extended);

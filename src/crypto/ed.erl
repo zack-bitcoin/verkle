@@ -80,7 +80,7 @@ decompress_point(<<S:1, P:255>>) ->
     case sqrt(VV) of
         error ->
             %invalid point.
-            io:fwrite("invalid, no square root\n"),
+            %io:fwrite("invalid, no square root\n"),
             error;
         {V1 = <<V1n:256>>, V2} ->
             S2 = is_positive(V1n),
@@ -88,17 +88,13 @@ decompress_point(<<S:1, P:255>>) ->
                     (S == S2) -> V1;
                     true -> V2
                 end,
-%            V = case S of
-%                    0 -> V1;
-%                    1 -> V2
-%                end,
             Point = <<P:256/little, V/binary>>,
             Bool = is_on_curve(Point),
             if
                 Bool -> Point;
                 true -> 
                     %invalid point
-                    io:fwrite("invalid, not on curve\n"),
+                    %io:fwrite("invalid, not on curve\n"),
                     error
             end
     end.
