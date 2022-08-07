@@ -70,16 +70,40 @@ compress_point(<<X0:256/little, Y0:256/little>>) ->
             false -> 0
         end,
     <<S:1, X0:255>>.
+decompress_points(L) when is_list(L) ->
+    L2 = lists:map(fun(<<S:1, P:255>>) ->
+                      true = P < ?q,
+                      U = <<P:256/little>>,
+                      UU = mul(U, U),
+                      DUU = sub(?one, mul(?D, UU)),
+                      T = add(?one, UU),
+                      {DUU, U, S, T}
+                   end, L),
+    DUUs = lists:map(fun({DUU, U, S, T}) -> 
+                             DUU end, 
+                  L2),
+    IDUUs = batch_inverse(DUUs),
+    lists:zipwith(
+      fun(B, {_, U, S, T}) ->
+              decompress_point2(U, S, T, B)
+      end, IDUUs, L2).
 decompress_point(<<S:1, P:255>>) ->
     true = P < ?q,
-    UU = mul(<<P:256/little>>, <<P:256/little>>),
-    DUU = mul(?D, UU),
-    B = inv(sub(?one, DUU)),
-    T = add(?one, UU),
+    if
+        (P < ?q) ->
+            U = <<P:256/little>>,
+            UU = mul(U, U),
+            DUU = sub(?one, mul(?D, UU)),
+            T = add(?one, UU),
+            B = inv(DUU),
+
+            decompress_point2(U, S, T, B);
+        true -> error
+    end.
+decompress_point2(U, S, T, B) ->
     VV = mul(T, B),
     case sqrt(VV) of
         error ->
-            %invalid point.
             %io:fwrite("invalid, no square root\n"),
             error;
         {V1 = <<V1n:256>>, V2} ->
@@ -88,12 +112,11 @@ decompress_point(<<S:1, P:255>>) ->
                     (S == S2) -> V1;
                     true -> V2
                 end,
-            Point = <<P:256/little, V/binary>>,
+            Point = <<U/binary, V/binary>>,
             Bool = is_on_curve(Point),
             if
                 Bool -> Point;
                 true -> 
-                    %invalid point
                     %io:fwrite("invalid, not on curve\n"),
                     error
             end
@@ -187,6 +210,9 @@ c2m(<<X:256/little, Y:256/little,
       Z:256/little, T:256/little>>) ->
     {extended, X, Y, Z, T}.
 
+range(N, N) -> [N];
+range(A, B) when (A < B) -> 
+    [A|range(A+1, B)].
 test(1) ->
     X = 55,
     Y = ed25519:encode(X),
@@ -271,6 +297,38 @@ test(4) ->
     true = Try(2),
     true = Try(3),
     true = Try(10000000),
-    success.
+    success;
+test(5) ->
+    %batch decompression of points.
+    R = range(1, 20),
+    Cs = lists:map(fun(_) ->
+                           compress_point(
+                             gen_point())
+                   end, R),
+    Ps = decompress_points(Cs),
+    Cs = lists:map(fun(P) ->
+                           compress_point(P)
+                   end, Ps),
+    success;
+test(6) ->
+    %multiplication speed test
+    Many = 1000,
+    R = range(0, Many),
+    Ps = lists:map(
+           fun(_) ->
+                   <<X:256>> = crypto:strong_rand_bytes(32),
+                   X2 = X rem ?q,
+                   {affine2extended(gen_point()), 
+                    <<X2:256/little>>}
+              end, R),
+    T1 = erlang:timestamp(),
+    lists:foldl(fun({P, R}, _) ->
+                        c_ed:pmul_long(P, R)
+                end, 0, Ps),
+    T2 = erlang:timestamp(),
+    {{c, timer:now_diff(T2, T1)/Many}}.
+    
+    
+
     
 

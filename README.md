@@ -34,7 +34,7 @@ https://docs.google.com/spreadsheets/d/1740XUDJ89aSRE-4HBD44brjGake_MRAqC4YF7YcE
 Lets look at how this software is falling short of the ideal.
 
 I changed the field multiplication speed to 1.5*10^-7, because that is how fast I got it to run on my computer. ```fq:test(8).``` (test results in millionths of a second)
-  I similarly decreased the elliptic curve speed to 6*10-5, because that is the speed I can get it to run. ```fq:test(22).```
+  I similarly decreased the elliptic curve speed to 2.4*10-5, because that is the speed I can get it to run. (6x slower than the suggested speed.) ```ed:test(6).```
   
 For my test, I loaded the tree with 130 000 elements. so I edited the "Number of Elements" variable in the calculator page.
 
@@ -42,8 +42,8 @@ The calculator gives: prover time, verify proof, verify updates.
 
 ```
 prover time: 2.96 seconds
-verify proof: 0.175 seconds
-verify updates: 0.215 seconds
+verify proof: 0.757 seconds
+verify updates: 0.933 seconds
 ```
 
 To run the benchmark, use these commands:
@@ -60,10 +60,8 @@ The results I get are:
  root hash of the updated proof: 5.0938 seconds
 
 So, making the proof is 80% slower than optimal.
-verifying the proof is 22x slower than optimal.
-calculating the root hash is 24x slower than optimal.
-
-
+verifying the proof is 5.0x slower than optimal.
+calculating the root hash is 5.5x slower than optimal.
 
 
 Crypto used 
