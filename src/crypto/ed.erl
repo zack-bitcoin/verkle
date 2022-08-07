@@ -186,8 +186,10 @@ decode(C) ->
     Y.
 
 c2m(<<X:256/little, Y:256/little>>) ->
-    {affine, X, Y}.
-    
+    {affine, X, Y};
+c2m(<<X:256/little, Y:256/little, 
+      Z:256/little, T:256/little>>) ->
+    {extended, X, Y, Z, T}.
 
 test(1) ->
     X = 55,
@@ -243,8 +245,36 @@ test(3) ->
                     [MExtended3])),
     MAffine3 = c2m(Affine3),
 
+    success;
+test(4) ->
+    Affine = gen_point(),
+    Extended = affine2extended(Affine),
 
+    MAffine = c2m(Affine),
+    MExtended = ed25519:maffine2extended(MAffine),
+
+    Try = fun(F) ->
+                  Extended2 = c_ed:pmul_long(
+                                Extended, <<F:256/little>>),
+                  MExtended2 = ed25519:mextended_mul(
+                                 MExtended, F),
+
+                  [Affine2] = extended2affine_batch([Extended2]),
+                  [MAffine2] = ed25519:mextended2affine_batch(
+                   [MExtended2]),
+                  B = MAffine2 == c2m(Affine2),
+                  if
+                      not(B) ->
+                          io:fwrite({c2m(Extended2),
+                                     MExtended2});
+                      true ->true
+                  end
+          end,
+    true = Try(0),
+    true = Try(1),
+    true = Try(2),
+    true = Try(3),
+    true = Try(10000000),
     success.
-        
     
 

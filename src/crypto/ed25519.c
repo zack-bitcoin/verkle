@@ -367,7 +367,7 @@ static inline void e_double2
 
   square2(z, z2);
   square2(y, J);
-  add2(x, y, y2);
+  add2(y, x, y2);
   square2(x, t2);
   add2(z2, z2, x2);
   memcpy(K, t2, 32);
@@ -412,60 +412,31 @@ static inline void e_add2
   uint64_t M[4];
   uint64_t N[4];
 
-  //z3: A B F I J K L     | G 
-  //t3: A B C F I J K     | E D
-  //M:                    | F I
-  //N:                    | H A J 
-  //x3: A E F G H I J     | B L
-  //y3: A E F G H I J     | C K
+  sub2(y1, x1, M);
+  add2(y2, x2, N);
+  mul2(M, N, N); 
+  add2(y1, x1, y3);
+  sub2(y2, x2, x3);
+  mul2(y3, x3, x3);
+  //sub2(x3, N, M); 
+  //if(M == 0){ return(e_double2(x2, y2, z2, t2, x3, y3, z3, t3));}
+  add2(z1, z1, y3);
+  mul2(y3, t2, y3);
+  add2(z2, z2, M);
+  mul2(M, t1, t3);
 
-
-  sub2(y1, x1, M); // t z y x
-  add2(y2, x2, N); // I t z y x
-  mul2(M, N, N); // I J t z y x
-  add2(y1, x1, y3); // A t z y x
-  sub2(y2, x2, x3); //K A t z
-  mul2(y3, x3, x3); // K L A t z
-  sub2(x3, N, M); // B A t z
-  if(M == 0){ return(e_double2(x2, y2, z2, t2, x3, y3, z3, t3));}
-  mul2(two, z1, y3); //F B A t z
-  mul2(y3, t2, y3);  //F C B A t
-  mul2(two, z2, t3);//F C B A t
-  mul2(t3, t1, t3); //F D C B A t
-  add2(x3, N, z3);  //F D C B A
-  sub2(t3, y3, N);  //F G D C
-  add2(t3, y3, t3);  //F G D C H
-  mul2(t3, M, x3); //F G E H
-  mul2(z3, N, y3); //F G E H x
-  mul2(t3, N, t3); //F G E H x y
-  mul2(M, z3, z3); //F G x y t
-
-  /*
-  sub2(y1, x1, e);
-  add2(y2, x2, g);
-  mul2(e, g, y3);
-  add2(y1, x1, e);
-  sub2(y2, x2, g);
-  mul2(e, g, e);
-  sub2(e, y3, z3);
-  
-  if(z3 == 0){
-    e_double2(x2, y2, z2, t2,
-              x3, y3, z3, t3);
-  } else {
-    add2(z2, z2, g);
-    mul2(t1, g, x3);
-    add2(e, y3, g);
-    add2(t2, t2, y3);
-    mul2(z1, y3, e);
-    sub2(x3, e, t3);
-    add2(e, x3, e);
-    mul2(e, z3, x3);
-    mul2(g, t3, y3);
-    mul2(t3, e, t3);
-    mul2(z3, g, z3);
-  }
-  */
+  sub2(x3, N, M); //
+  if(M == 0){
+    //this check could have occured 2 multiplications sooner. but in that case, we would have needed 32 more bytes of memory. because M can't store two things at once.
+    return(e_double2(x2, y2, z2, t2,
+                     x3, y3, z3, t3));}
+  add2(x3, N, z3);
+  sub2(t3, y3, N);
+  add2(t3, y3, t3);
+  mul2(t3, M, x3);
+  mul2(z3, N, y3);
+  mul2(t3, N, t3);
+  mul2(M, z3, z3);
 };
 static inline void extended2extended_niels
 (
@@ -535,20 +506,25 @@ static inline void e_mul_long2
  uint64_t * x2, uint64_t * y2, //resulting point.
  uint64_t * z2, uint64_t * t2)
 {
+  memcpy(x2, x, 32);
+  memcpy(y2, y, 32);
+  memcpy(z2, z, 32);
+  memcpy(t2, t, 32);
+  int all_zero = 1;
   for(int i = 3; i >= 0; i--){
     for(int j = 63; j >= 0; j--){
       int bool = kth_bit(b[i], j);
-        //e_double2(u, v, z1, t1, t2,
-        //          u, v, z1, t1, t2);
-        e_double2(x, y, z, t,
-                  x, y, z, t);
+      if(!(all_zero)){
+        e_double2(x2, y2, z2, t2,
+                  x2, y2, z2, t2);
         if(bool){
-          /*
-          e_add2(u, v, z1, t1, t2,
-                 vpu, vmu, td, z2,
-                 u, v, z1, t1, t2);
-          */
+          e_add2(x2, y2, z2, t2,
+                 x, y, z, t,
+                 x2, y2, z2, t2);
         }
+      }
+      all_zero = (all_zero && (!(bool)));
+
     }
   }
 }
@@ -800,7 +776,16 @@ static ERL_NIF_TERM e_mul_long
   uint64_t * Y = (uint64_t *)&(Point.data[32]);
   uint64_t * Z = (uint64_t *)&(Point.data[64]);
   uint64_t * T = (uint64_t *)&(Point.data[96]);
-
+  if((B.data[0] == 0) &&
+     (B.data[1] == 0) &&
+     (B.data[2] == 0) &&
+     (B.data[3] == 0)){
+    memcpy(X2, zero, 32);
+    memcpy(Y2, one, 32);
+    memcpy(Z2, one, 32);
+    memcpy(T2, zero, 32);
+    return(Result);
+  };
   e_mul_long2(X, Y, Z, T,
          (uint64_t *)B.data,
          X2, Y2, Z2, T2);
