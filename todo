@@ -1,4 +1,8 @@
 
+use windowed method in C for multiplication. will make IPA verification faster.
+
+need fr working for new curve.
+
 ed:
 batch decompress_point (has an inverse)
 

@@ -34,7 +34,7 @@ https://docs.google.com/spreadsheets/d/1740XUDJ89aSRE-4HBD44brjGake_MRAqC4YF7YcE
 Lets look at how this software is falling short of the ideal.
 
 I changed the field multiplication speed to 1.5*10^-7, because that is how fast I got it to run on my computer. ```fq:test(8).``` (test results in millionths of a second)
-  I similarly decreased the elliptic curve speed to 2.4*10-5, because that is the speed I can get it to run. (6x slower than the suggested speed.) ```ed:test(6).```
+  I similarly decreased the elliptic curve speed to 2.3*10-4, because that is the speed I can get it to run. (6x slower than the suggested speed of 4*10-5) ```ed:test(6).```
   
 For my test, I loaded the tree with 130 000 elements. so I edited the "Number of Elements" variable in the calculator page.
 

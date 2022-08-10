@@ -341,7 +341,6 @@ static inline void e_double2
  uint64_t * ub, uint64_t * vb, uint64_t * zb,
  uint64_t * t1b, uint64_t * t2b)
 {
-  //todo. working here.
   uint64_t uu[4];
   uint64_t vv[4];
   uint64_t z2[4];

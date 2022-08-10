@@ -733,8 +733,8 @@ test(21, CFG) ->
     success;
 test(22, CFG) ->
     Loc = 1,
-    StartingElements = 1000,
-    UpdateElements = 100,
+    StartingElements = 100,
+    UpdateElements = 10,
     Leaves = 
         lists:map(
           fun(N) -> 

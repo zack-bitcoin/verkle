@@ -380,20 +380,19 @@ gen_point(U, Tries, S) ->
 gen_point(U, _, S, VV) ->
     case sqrt(VV) of
         error ->
-            gen_point(add(U, 1), S, S);
+            gen_point(add(U, encode(1)), S, S);
         {V1, V2} ->
             A = <<U/binary, V1/binary>>,
             A2 = <<U/binary, V2/binary>>,
             G = affine2extended(A),
-            Prime = is_prime_order(G),
-            %Prime = is_on_curve(A),
-            io:fwrite(is_on_curve(A)),
-            io:fwrite(is_on_curve(A2)),
-            R = if
-                not(Prime) -> A;
+            %Prime = is_prime_order(G),
+            OnCurve = is_on_curve(A),
+            %io:fwrite(is_on_curve(A)),
+            if
+                not(OnCurve) -> gen_point(add(U, encode(1)), S, S);
+                %not(Prime) -> A;
                 true -> <<U/binary, V2/binary>>
-            end,
-            R
+            end
     end.
             
 

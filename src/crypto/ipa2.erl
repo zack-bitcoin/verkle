@@ -1,8 +1,8 @@
 -module(ipa2).
 -export([make_ipa/5, verify_ipa/5,
          commit/2, eq/2, 
-         gen_point/1,
-         basis/2, dot/2,
+         gen_point/0,
+         basis/1, dot/2,
          test/1]).
 %inner product arguments using pedersen commitments.
 
@@ -270,17 +270,17 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
             end
     end.
 
-gen_point(_E) ->
-    fq:extended2extended_niels(
+gen_point() ->
+    fq:affine2extended(
       fq:gen_point()).
-basis(S, E) ->
+basis(S) ->
     G = lists:map(fun(_) ->
-                           gen_point(E)
+                           gen_point()
                    end, range(0, S)),
     H = lists:map(fun(_) ->
-                           gen_point(E)
+                           gen_point()
                    end, range(0, S)),
-    Q = gen_point(E),
+    Q = gen_point(),
     {G, H, Q}.
 
 range(X, X) -> [];
@@ -296,8 +296,7 @@ test(1) ->
     A = encode_list(A0),
     %A = A0,
     S = length(A),
-    E = secp256k1:make(),
-    {G, H, Q} = basis(S, E),
+    {G, H, Q} = basis(S),
 
     %todo, it is only working iwth lists that are palindrones.
 
@@ -325,8 +324,7 @@ test(2) ->
     A = range(100, 356),
     %A = range(100, 132),
     S = length(A),
-    E = secp256k1:make(),
-    {G, H, Q} = basis(S, E),
+    {G, H, Q} = basis(S),
     B = range(200, 200 + length(A)),
     T1 = erlang:timestamp(),
     Proof = make_ipa(A, B, G, H, Q),
@@ -356,8 +354,7 @@ test(3) ->
     %testing compression.
     A = range(100, 108),
     S = length(A),
-    E = secp256k1:make(),
-    {G, H, Q} = basis(S, E),
+    {G, H, Q} = basis(S),
     Bv = [0,0,0,1,1,0,0,0],%103+104 = 207
     Proof = make_ipa(
               A, Bv,%103+104 = 207
@@ -406,8 +403,7 @@ test(5) ->
     A0 = range(100, 108),
     A = encode_list(A0),
     S = length(A),
-    E = secp256k1:make(),
-    {G, H, Q} = basis(S, E),
+    {G, H, Q} = basis(S),
     Bv2 = encode_list([1,0,0,0,0,0,0,0]),
     Proof2 = make_ipa(
               A, Bv2,

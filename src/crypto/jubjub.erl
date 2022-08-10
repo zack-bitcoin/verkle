@@ -417,7 +417,7 @@ gen_point(X) ->
     gen_point(X, ?tries, ?tries).
 gen_point(U, 0, StartTries) ->
     gen_point(U+1, StartTries, StartTries);
-gen_point(Us, Tries, StartTries) 
+gen_point(Us, _Tries, _StartTries) 
   when is_list(Us) ->
     UUs = lists:map(fun(X) -> ?mul(X, X) end, Us),
     DUUs = lists:map(fun(X) -> ?sub(1, ?mul(?D, X))
