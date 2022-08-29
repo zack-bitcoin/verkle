@@ -128,7 +128,8 @@ batch(Keys, Root, CFG) ->
     Listed = [Tree4, CommitG, TLO],
     PointsList = 
         points_list(Listed),
-    Spoints = fq:compress(PointsList),
+    %Spoints = fq:compress(PointsList),
+    Spoints = ed:compress_points(PointsList),
     {[Tree5, CommitG2, Opening2], []} =
         fill_points(Spoints, Listed, []),
     {Tree5, CommitG2, list_to_tuple(Opening2)}.

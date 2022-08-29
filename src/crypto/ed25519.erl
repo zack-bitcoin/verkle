@@ -609,6 +609,12 @@ test(2) ->
     Pft2 = m2f(Pmt),
     true = feq(Pft2, Pft),
 
+    %adding same
+    Pfdb = fextended_add(Pfe, Pfe),
+    Pmdb = mextended_add(Pme, Pme),
+    Pfd2b = m2f(Pmdb),
+    true = feq(Pfd2b, Pfdb),
+
     %adding zero should change nothing.
 
     Pfe2 = fextended_add(Pfe, ?fzero_point),

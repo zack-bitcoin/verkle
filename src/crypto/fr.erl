@@ -64,9 +64,9 @@ encode([H|T]) ->
 encode(0) ->
     <<0:256>>;
 encode(1) ->
-<<217,7,150,185,179,11,248,37,80,231,182,102,47,
-  214,21,243,244,20,136,235,238,20,37,147,198,85,
-  145,71,111,252,166,9>>;
+<<29,149,152,141,116,49,236,214,112,207,125,115,244,
+  91,239,198,254,255,255,255,255,255,255,255,255,255,
+  255,255,255,255,255,15>>;
 encode(A) when ((A < ?q) and (A > -1)) ->
     %mul(reverse_bytes(<<A:256>>),
     %    reverse_bytes(<<?r2:256>>));
@@ -391,7 +391,26 @@ test(21) ->
         fr:decode(
           lists:zipwith(fun(X, Y) -> mul(X, Y) end,
                         A, AI)),
+    success;
+test(22) ->
+    io:fwrite("test it doesn't overwrite existing data.\n"),
+    S = [1, 101],
+    [A, B] = encode(S),
+    mul(A, B),
+    add(A, B),
+    neg(A),
+    inv(A),
+    square(A),
+    pow(A, B),
+    short_pow(A, B),
+    %encode(A),
+    decode(B),
+    batch_inverse([A, B]),
+    add_all([A, B]),
+    S = decode([A, B]),
     success.
+    
+
                           
 
     

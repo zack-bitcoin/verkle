@@ -1,14 +1,10 @@
+in stem2:serialize, we could batch this to make it faster.
 
-use windowed method in C for multiplication. will make IPA verification faster.
-
-need fr working for new curve.
-
-ed:
-batch decompress_point (has an inverse)
-
+in stem2:hash_point, we could batch this to make it faster.
 
 generating parameters for the new ed25519 version.
 This time we want a deterministic way to do it, so we can all have the same parameters.
+parameters2.erl
 
 switch everything to ed25519.
 

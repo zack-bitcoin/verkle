@@ -298,10 +298,8 @@ test(1) ->
     S = length(A),
     {G, H, Q} = basis(S),
 
-    %todo, it is only working iwth lists that are palindrones.
 
     Bv = encode_list([10,0,3,1,1,2,0,10]),%103+104 = 207
-    %Bv2 = encode_list([1,0,0,0,0,1,0,0]),%100+105 = 205
     Bv2 = encode_list([0,0,0,0,0,0,0,1]),%100+105 = 205
     io:fwrite("test 1 0 \n"),
     Proof = make_ipa(

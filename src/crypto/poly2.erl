@@ -142,6 +142,7 @@ all_div_e_parameters(Domain, DA) ->
     io:fwrite("calculating "),
     io:fwrite(integer_to_list(length(Domain))),
     io:fwrite(" div e parameters.\n"),
+    io:fwrite(integer_to_list(fr:decode(hd(Domain)))),
     L = lists:map(
           fun(M) ->
                   io:fwrite("div e parameter "),
@@ -153,7 +154,7 @@ all_div_e_parameters(Domain, DA) ->
     list_to_tuple(L).
 
 %div_e_parameters(_, _, M) ->
-%    parameters:div_e(M);
+%    parameters2:div_e(M);
 div_e_parameters(Domain, DA, M) ->
     Dividends = 
         lists:map(
@@ -201,7 +202,6 @@ div_e(Ps, Domain, DA, M, DivEAll, DivEAll2) ->
     {DA_M, IDs, IDs2} = 
         if
             true -> element(fr:decode(M), DivEAll);
-                %parameters:div_e(M);
             true ->
                 %to use this version, uncomment these parameters from calc_G_e.
                 {IAs, IBs, IDAs} = DivEAll2,
@@ -336,6 +336,7 @@ remove_element(X, [A|T]) ->
     [A|remove_element(X, T)].
 
 c2e(P, Domain) ->
+    %convert to evaluation format
     %cost is (length of polynomial)*(elements in the domain). 
     %currently: O(length(P)^2)
     %can be made faster with the DFT: P*log(P)/2 only if our domain is the roots of unity.
@@ -365,6 +366,7 @@ lagrange2(Z, [H|D], Domain, DA, DivEAll, A) ->
 test(1) ->    
     Ps = fr:encode([9,12,15,18]),
     Domain = fr:encode([1,2,3,4]),
+    io:fwrite({fr:decode(Domain)}),
     A = calc_A(Domain),
     DA = c2e(calc_DA(Domain), Domain),
     DivEAll = all_div_e_parameters(Domain, DA),

@@ -383,6 +383,15 @@ static inline void e_double2
   mul2(t2, K, t2);
   mul2(J, z2, z2);
 };
+
+static inline int is_zero(const uint64_t * M)
+{
+  return((M[0] == 0) &&
+         (M[1] == 0) &&
+         (M[2] == 0) &&
+         (M[3] == 0));
+};
+
 static inline void e_add2
 (const uint64_t * x1, const uint64_t * y1,
  const uint64_t * z1,const uint64_t * t1,
@@ -409,34 +418,33 @@ static inline void e_add2
       Z3 = F*G
   */
   
-  //uint64_t M[4];
-  //uint64_t N[4];
+  // A -> z3, B -> x3, C -> t3, D -> y3,
+  // E -> N, F-> M, G -> z3, H -> t3
 
   sub2(y1, x1, M);
   add2(y2, x2, N);
-  mul2(M, N, N); 
-  add2(y1, x1, y3);
-  sub2(y2, x2, x3);
-  mul2(y3, x3, x3);
-  //sub2(x3, N, M); 
-  //if(M == 0){ return(e_double2(x2, y2, z2, t2, x3, y3, z3, t3));}
-  add2(z1, z1, y3);
-  mul2(y3, t2, y3);
-  add2(z2, z2, M);
-  mul2(M, t1, t3);
-
-  sub2(x3, N, M); //
-  if(M == 0){
-    //this check could have occured 2 multiplications sooner. but in that case, we would have needed 32 more bytes of memory. because M can't store two things at once.
-    return(e_double2(x2, y2, z2, t2,
-                     x3, y3, z3, t3, M, N));}
-  add2(x3, N, z3);
-  sub2(t3, y3, N);
-  add2(t3, y3, t3);
-  mul2(t3, M, x3);
-  mul2(z3, N, y3);
-  mul2(t3, N, t3);
-  mul2(M, z3, z3);
+  mul2(M, N, z3);
+  add2(y1, x1, M);
+  sub2(y2, x2, N);
+  mul2(N, M, x3);
+  sub2(x3, z3, M);
+  if(is_zero(M)){
+    return(e_double2(x2, y2, z2, t2, x3,
+                     y3, z3, t3, M, N));
+  } else {
+    add2(z1, z1, t3);
+    mul2(t3, t2, t3);
+    add2(z2, z2, y3);
+    mul2(y3, t1, y3);
+    add2(y3, t3, N);
+    sub2(x3, z3, M);
+    add2(z3, x3, z3);
+    sub2(y3, t3, t3);
+    mul2(N, M, x3);
+    mul2(z3, t3, y3);
+    mul2(N, t3, t3);
+    mul2(M, z3, z3);
+  }
 };
 
 static inline void e_mul_long2

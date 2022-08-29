@@ -53,10 +53,11 @@ init(ok) ->
 
     %C is the config factor for the bucket algorithm. Higher means a bigger precompute, lower means more elliptic curve additions when operating over the verkle tree.
     C = 8,
+    G2 = ed:affine2extended(G),
     ME = read_or_gen(
           "precomputes/ME.db",
-          fun() -> store2:multi_exponent_parameters(C, G) end),
-    DB = #db{g = G, h = H, q = Q, a = A, da = DA, 
+          fun() -> store2:multi_exponent_parameters(C, G2) end),
+    DB = #db{g = G2, h = H, q = Q, a = A, da = DA, 
              domain = Domain, dive = DivE, 
              me = ME},
     {ok, DB}.
@@ -124,9 +125,11 @@ range(X, Y) when X < Y ->
 det_point(X) ->
     %deterministicly generated point.
     <<Y:256>> = hash:doit(<<X:256>>),
-    Z = Y rem fr:prime(),
-    fq:extended2extended_niels(
-      fq:gen_point(Z)).
+    Z = Y rem ed:prime(),
+    ed:gen_point(<<Z:256>>).
+%    Z = Y rem fr:prime(),
+%    fq:extended2extended_niels(
+%      fq:gen_point(Z)).
    
 calc_domain(Many) -> 
     lists:map(fun(X) -> fr:encode(X) end,
@@ -148,7 +151,7 @@ make_ghq() ->
     H = lists:map(fun(X) ->
                           io:fwrite(integer_to_list(X)),
                           io:fwrite("\n"),
-                          det_point(X)
+                          det_point(X+256)
                   end, R),
     io:fwrite("generating Q generator point"),
     Q = det_point(513),

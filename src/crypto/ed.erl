@@ -3,15 +3,19 @@
 %using the c library c_ed.erl to build out the rest of ed25519
 
 -export([
-         inv/1, pow/2,
-         sqrt/1, 
-         gen_point/0,
+         inv/1, pow/2, mul/2, square/2, sub/2, add/2,
+         neg/1, sqrt/1, 
+         is_on_curve/1,
+         gen_point/0, gen_point/1,
          compress_point/1, decompress_point/1,
+         decompress_points/1, compress_points/1,
          affine2extended/1,
          extended2affine_batch/1,
          a_neg/1, e_neg/1, normalize/1, 
          a_eq/2, e_eq/2,
+         e_add/2, e_mul/2,
          encode/1, decode/1,
+         prime/0, affine_zero/0, extended_zero/0,
          test/1
         ]).
 
@@ -38,15 +42,24 @@
 %decode(<<Y:256/little>>) ->
 %    ed25519:decode(Y).
 
+prime() -> ?q.
+affine_zero() -> ?affine_zero.
+extended_zero() -> ?extended_zero.
 inv(X) -> encode(ff:inverse(decode(X), ?q)).
 pow(X, Y) when is_integer(Y) ->
     c_ed:pow(X, <<Y:256/little>>).
 mul(X, Y) ->
     c_ed:mul(X, Y).
+square(X, Y) ->
+    c_ed:square(X, Y).
 sub(X, Y) ->
     c_ed:sub(X, Y).
 add(X, Y) ->
     c_ed:add(X, Y).
+e_add(X, Y) ->
+    c_ed:padd(X, Y).
+e_mul(X, Y) ->
+    c_ed:pmul_long(X, Y).
 neg(X) ->
     c_ed:neg(X).
 sqrt(A) ->
@@ -63,11 +76,18 @@ is_on_curve(<<X0:256, Y0:256>>) ->
     YY = mul(Y, Y),
     XY = mul(XX, YY),
     sub(YY, XX) == add(?one, mul(?D, XY)).
+compress_points(Es) -> %<<P:1024/little>>) ->
+    %from list of 128 byte extended to list of 32-byte compressed.
+    As = extended2affine_batch(Es), 
+    lists:map(fun(A) ->
+                      compress_point(A)
+              end, As).
 compress_point(<<X0:256/little, Y0:256/little>>) ->
+    %from 64 byte affine to 32 byte compressed
     %Y = decode(<<Y0:256>>),
-    S = case not(is_positive(Y0)) of
-            true -> 1;
-            false -> 0
+    S = case is_positive(Y0) of
+            true -> 0;
+            false -> 1
         end,
     <<S:1, X0:255>>.
 decompress_points(L) when is_list(L) ->
@@ -124,9 +144,11 @@ decompress_point2(U, S, T, B) ->
             
     
 gen_point() ->
-    <<X0:256>> = crypto:strong_rand_bytes(32),
-    case decompress_point(<<X0:256>>) of
-        error -> gen_point();
+    <<X:256>> = crypto:strong_rand_bytes(32),
+    gen_point(<<X:256>>).
+gen_point(<<X:256>>) ->
+    case decompress_point(<<X:256>>) of
+        error -> gen_point(<<(X+1):256>>);
         P -> P
     end.
 is_positive(Y) ->
@@ -140,7 +162,12 @@ affine2extended(P = <<X0:256, Y0:256>>) ->
             T = mul(<<X0:256>>, <<Y0:256>>),
             <<X0:256, Y0:256, 
               ?one/binary, T/binary>>
-    end.
+    end;
+affine2extended([]) -> [];
+affine2extended([H|T]) ->
+    [affine2extended(H)|
+     affine2extended(T)].
+
 
 pis([], _) -> [];
 pis([H|T], A) -> 
@@ -160,7 +187,12 @@ batch_inverse(Vs) ->
                   end, V4, VI2).
 
 extended2affine_batch(L) ->
-    Zs = lists:map(fun(<<_:512, Z:256, _:256>>) ->
+    Zs = lists:map(fun(<<X:256, Y:256, Z:256, T:256>>) ->
+                           if
+                               (Z == 0) ->
+                                   io:fwrite({X, Y, Z, T});
+                               true -> ok
+                           end,
                            <<Z:256>>
                    end, L),
     Is = batch_inverse(Zs),
@@ -276,12 +308,14 @@ test(4) ->
     MExtended = ed25519:maffine2extended(MAffine),
 
     Try = fun(F) ->
-                  Extended2 = c_ed:pmul_long(
-                                Extended, <<F:256/little>>),
+                  Extended2 = 
+                      e_mul(Extended, 
+                            <<F:256/little>>),
                   MExtended2 = ed25519:mextended_mul(
                                  MExtended, F),
 
-                  [Affine2] = extended2affine_batch([Extended2]),
+                  [Affine2] = extended2affine_batch(
+                                [Extended2]),
                   [MAffine2] = ed25519:mextended2affine_batch(
                    [MExtended2]),
                   B = MAffine2 == c2m(Affine2),
@@ -323,10 +357,55 @@ test(6) ->
               end, R),
     T1 = erlang:timestamp(),
     lists:foldl(fun({P, R}, _) ->
-                        c_ed:pmul_long(P, R)
+                        e_mul(P, R)
                 end, 0, Ps),
     T2 = erlang:timestamp(),
-    {{c, timer:now_diff(T2, T1)/Many}}.
+    {{c, timer:now_diff(T2, T1)/Many}};
+test(7) ->
+    %multiply test
+    P = gen_point(),
+    R = e_mul(affine2extended(P), <<1:256/little>>),
+    {P, R};
+test(8) ->
+    %add zero test
+    P = affine2extended(gen_point()),
+    Z = extended_zero(),
+    P2 = e_add(P, Z),
+    %<<_:512, PZ:256, _:256>>,
+    %io:fwrite({P2}),
+    true = e_eq(P, P2),
+    success;
+test(9) ->
+    P1 = <<185,242,223,138,53,21,37,141,21,83,123,0,96,62,
+           119,105,86,100,243,119,237,190,212,227,132,244,
+           203,14,195,236,112,95,7,55,148,39,44,100,229,76,
+           101,87,123,149,65,239,33,172,192,152,33,229,32,98,
+           87,42,35,110,112,103,92,35,50,30,33,6,3,175,211,
+           113,228,255,237,58,193,229,128,136,116,8,167,103,
+           245,17,34,19,114,166,158,183,238,219,193,98,92,80,
+           73,102,131,178,8,86,173,34,65,38,107,192,93,99,
+           200,218,75,110,235,115,115,250,31,2,141,140,121,
+           143,19,45,211,114>>,
+    P2 = <<216,139,172,250,203,36,115,179,198,8,222,191,60,
+           231,26,238,81,204,217,165,124,40,142,215,16,76,
+           252,40,221,22,73,108,76,167,184,225,112,138,155,
+           105,165,194,167,95,228,196,244,233,50,105,69,202,
+           176,90,20,123,134,32,248,215,135,110,227,5,38,0,
+           0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+           0,0,0,0,0,0,115,62,63,20,139,227,6,128,68,177,
+           143,198,223,221,226,61,22,166,130,123,55,123,99,
+           86,24,82,4,137,79,231,232,11>>,
+    P3 = affine2extended(gen_point()),
+    P4 = affine2extended(gen_point()),
+    P5 = e_add(P3, P4),
+    P6 = e_add(P1, P2),
+    P7 = e_add(P1, e_neg(P1)),
+    Z = extended_zero(),
+    P8 = e_add(P1, e_add(P1, Z)),
+    P9 = e_add(P1, P1),
+    {P7, P6, P5, P8, P9}.
+    
+
     
     
 

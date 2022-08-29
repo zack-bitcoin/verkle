@@ -40,7 +40,8 @@ update(PL = [OldRoot0|ProofTree], Leaves, CFG) ->
                       0, CFG, MEP),
     NewRoot = case Diff of
                   0 -> OldRoot;
-                  _ -> fq:e_add(Diff, OldRoot)
+                  %_ -> fq:e_add(Diff, OldRoot)
+                  _ -> ed:e_add(Diff, OldRoot)
               end,
     [NewRoot|Tree2].
 
@@ -64,7 +65,8 @@ update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
     SubPoints = sub_points(Diffs0),
     Es = lists:map(fun({sub, X, _}) -> X end, 
                    SubPoints),
-    Cs = fq:compress(Es),
+    %Cs = fq:compress(Es),
+    Cs = ed:compress_points(Es),
     ECs = lists:zipwith(fun(A, B) -> {A, B} end,
                         Es, Cs),
     ECdict = 
@@ -189,9 +191,11 @@ update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees],
     {Point, Tree2} = 
         update_batch2(LH, S1, Depth+1, CFG, MEP),
     OldN = stem2:hash_point(B),
-    NewPoint0 = fq:e_add(B, Point),
+    %NewPoint0 = fq:e_add(B, Point),
+    NewPoint0 = ed:e_add(B, Point),
     {NewPoint, Diff, Hash} = 
-        case (fq:eq(NewPoint0, fq:e_zero())) of
+        %case (fq:eq(NewPoint0, fq:e_zero())) of
+        case (ed:e_eq(NewPoint0, ed:extended_zero())) of
             true -> {NewPoint0, <<0:256>>, <<0:256>>};
             false ->
                 {NewPoint0, 
@@ -269,7 +273,8 @@ update_merge([LH|Leaves],
              Depth, CFG, MEP, R, Diffs, N) 
   when (length(LH) > 1) ->
     update_merge([LH|Leaves],
-                 [[{N, fq:e_zero()}]|Subtrees],
+                 %[[{N, fq:e_zero()}]|Subtrees],
+                 [[{N, ed:extended_zero()}]|Subtrees],
                  Depth, CFG, MEP, R, Diffs, N);
 update_merge([LH|Leaves],
              [[{N, 0}]|Subtrees],
@@ -328,7 +333,8 @@ merge_find_helper(P, D) ->
 proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
     {Open1, Open2, OpenL, Open4, Open5} = Open0,
     [CommitG, Open1b |Decompressed2] = 
-        fq:decompress(
+        %fq:decompress(
+        ed:decompress_points(
           [CommitG0, Open1] ++ 
               OpenL ++
               get2:compressed_points_list(Tree0)),
@@ -348,7 +354,8 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
     [Root|Rest] = Tree,
     Domain = parameters2:domain(),
     Root1 = hd(Decompressed),
-    B = fq:eq(Root1, Root),
+    %B = fq:eq(Root1, Root),
+    B = ed:e_eq(Root1, Root),
     if
         not(B) -> false;
         true ->
@@ -425,7 +432,8 @@ unfold(Root, {Index, {Key, B}}, T, CFG) %leaf case
 unfold(Root, [{Index, X}|R], T, CFG) %stem case
   when (is_binary(X) and (size(X) == (32*5)))
    ->
-    <<H:256>> = fq:hash_point(X),
+    %<<H:256>> = fq:hash_point(X),
+    <<H:256>> = ed:compress_point(X),
     unfold(X, R, [{Root, Index, <<H:256>>}|T], CFG);
 unfold(Root, [H|J], T, CFG) ->
     unfold(Root, H, T, CFG)
