@@ -22,6 +22,11 @@ You need to install erlang first to use this database.
 
 To run the software: ```sh start.sh```
 
+to turn off the software, and save everything
+```verkle_sup:stop(ID).```
+where ID is the name of the database (allowing multiple databases.)
+The test database is `trie01`.
+
 Then, to run the benchmark: `benchmark:doit(1).`
 
 Speed comparison.

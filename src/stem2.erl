@@ -181,7 +181,7 @@ put_batch(Leaves, CFG) ->
     SL = serialize_stems(Leaves, CFG),
     dump:put_batch(SL, ids:stem(CFG)).
 
-serialize_stems(L, CFG) ->
+serialize_stems(L, CFG) when false ->
     %L is like [{N, #stem{}}, {N2, #stem{}}, ...]
     ERoots = 
         lists:map(

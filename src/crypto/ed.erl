@@ -56,10 +56,18 @@ sub(X, Y) ->
     c_ed:sub(X, Y).
 add(X, Y) ->
     c_ed:add(X, Y).
-e_add(X, Y) ->
-    c_ed:padd(X, Y).
-e_mul(X, Y) ->
+e_add(X = <<_:1024>>, Y = <<_:1024>>) ->
+    c_ed:padd(X, Y);
+e_add(X = <<_:512>>, Y) ->
+    e_add(affine2extended(X), Y);
+e_add(X, Y = <<_:512>>) ->
+    e_add(X, affine2extended(Y)).
+e_mul(X = <<_:512>>, Y) ->
+    e_mul(affine2extended(X), Y);
+e_mul(X = <<_:1024>>, Y = <<_:256>>) ->
     c_ed:pmul_long(X, Y).
+   
+
 neg(X) ->
     c_ed:neg(X).
 sqrt(A) ->
@@ -154,6 +162,9 @@ gen_point(<<X:256>>) ->
 is_positive(Y) ->
     (Y band ?max255) == 0.
 
+affine2extended(P = <<_:1024>>) -> P;%already in extended format.
+affine2extended(P = <<_:256>>) ->
+    affine2extended(decompress_point(P));
 affine2extended(P = <<X0:256, Y0:256>>) ->
     B = a_eq(P, ?affine_zero),
     if
@@ -166,13 +177,17 @@ affine2extended(P = <<X0:256, Y0:256>>) ->
 affine2extended([]) -> [];
 affine2extended([H|T]) ->
     [affine2extended(H)|
-     affine2extended(T)].
+     affine2extended(T)];
+affine2extended(X) -> io:fwrite({X, size(X)}).
+                      
+
 
 
 pis([], _) -> [];
 pis([H|T], A) -> 
     X = mul(H, A),
     [X|pis(T, X)].
+batch_inverse([]) -> [];
 batch_inverse(Vs) ->
     [All|V2] = lists:reverse(pis(Vs, ?one)),%[v16, v15, v14, v13, v12, v1]
     AllI = inv(All),
@@ -376,6 +391,7 @@ test(8) ->
     true = e_eq(P, P2),
     success;
 test(9) ->
+    %using addition to double a point test.
     P1 = <<185,242,223,138,53,21,37,141,21,83,123,0,96,62,
            119,105,86,100,243,119,237,190,212,227,132,244,
            203,14,195,236,112,95,7,55,148,39,44,100,229,76,
@@ -403,7 +419,8 @@ test(9) ->
     Z = extended_zero(),
     P8 = e_add(P1, e_add(P1, Z)),
     P9 = e_add(P1, P1),
-    {P7, P6, P5, P8, P9}.
+    {P7, P6, P5, P8, P9},
+    success.
     
 
     

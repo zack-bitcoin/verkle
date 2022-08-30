@@ -156,13 +156,27 @@ points_list([]) -> [];
 points_list(_) -> [].
 
 compressed_points_list(X = <<_:256>>) -> [X];
-compressed_points_list({I, X = <<E:256>>}) 
+compressed_points_list(X = <<_:512>>) -> 
+    [ed:compress_point(X)];
+compressed_points_list(X = <<_:1024>>) -> 
+    ed:compress_points([X]);
+compressed_points_list({I, X = <<_:256>>}) 
+  when is_integer(I) -> [X];
+compressed_points_list({I, X = <<_:512>>}) 
   when is_integer(I) -> 
-    [<<E:256>>];
+    [ed:compress_point(X)];
+compressed_points_list({I, X = <<_:1024>>}) 
+  when is_integer(I) -> 
+    ed:compress_points([X]);
 compressed_points_list([H|T]) -> 
     compressed_points_list(H) ++
         compressed_points_list(T);
 compressed_points_list([]) -> [];
+compressed_points_list({_Key, _Value}) -> 
+    %a leaf
+    [];
+%compressed_points_list(X) -> 
+%    io:fwrite({X, size(X)});
 compressed_points_list(_) -> [].
 
 fill_points(Points, [], Result) -> 

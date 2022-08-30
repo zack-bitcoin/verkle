@@ -49,8 +49,9 @@ commit(V, G) ->
 
     multi_exponent:doit(V, G).
 
-add(A = <<_:(256*5)>>, B) ->
-    fq:e_add(A, B).
+add(A, B) ->
+    %fq:e_add(A, B).
+    ed:e_add(A, B).
 
 mul(X, G) ->
     mul2(X, G).
@@ -62,18 +63,21 @@ mul2(X, G) ->
 %    true = is_binary(G),
 %    true = (((32*4) == size(G)) or
 %            ((32*5) == size(G))),
-    fq:e_mul2(G, X).
+    %fq:e_mul2(G, X).
+    ed:e_mul(G, X).
 mul1(X, G) ->
+    mul2(X, G).
     %multiply point G by scalar X.
     %X is a little endian integer.
-    true = is_binary(X),
-    true = 32 == size(X),
-    true = is_binary(G),
-    true = (32*4) == size(G),
-    fq:e_mul1(G, X).
+%    true = is_binary(X),
+%    true = 32 == size(X),
+%    true = is_binary(G),
+%    true = (32*4) == size(G),
+    %fq:e_mul1(G, X).
 eq(G, H) ->
     %secp256k1:jacob_equal(G, H, E).
-    fq:eq(G, H).
+    %fq:eq(G, H).
+    ed:e_eq(G, H).
 v_add(As, Bs) ->
     lists:zipwith(
       fun(A, B) ->
@@ -92,10 +96,12 @@ simplify_v(X) ->
     %simplifies jacobian points to make the denomenator of the projective points Z = 1.
     %secp256k1:simplify_Zs_batch(X).
     %fq:e_simplify_batch(X).
-    fq:e_simplify_batch(X).
+    %fq:e_simplify_batch(X).
+    ed:normalize(X).
 
 points_to_entropy(L) ->
-    lists:map(fun(X) -> fq:hash_point(X) end,
+    %lists:map(fun(X) -> fq:hash_point(X) end,
+    lists:map(fun(X) -> ed:compress_point(X) end,
               L).
 
 %    L2 = simplify_v(L),
@@ -138,7 +144,8 @@ make_ipa2(C1, [A], [G], [B], [H], Q, Cs, _, _) ->
             io:fwrite("B is: "),
             io:fwrite(integer_to_list(fr:decode(B))),
             io:fwrite("\n"),
-            Bool = fq:eq(C1, C2),
+            %Bool = fq:eq(C1, C2),
+            Bool = ed:e_eq(C1, C2),
             if
                 not(Bool) ->
                     io:fwrite("sanity check\n"),
@@ -159,7 +166,8 @@ make_ipa2(C1, A, G, B, H, Q, Cs, X, Xi)  ->
             C1b =  add(add(commit(A, G), 
                           commit(B, H)),
                       mul(dot(A, B), Q)),
-            Bool = fq:eq(C1, C1b),
+            %Bool = fq:eq(C1, C1b),
+            Bool = ed:e_eq(C1, C1b),
             if
                 not(Bool) ->
                     io:fwrite("sanity check\n"),
@@ -200,12 +208,12 @@ make_ipa2(C1, A, G, B, H, Q, Cs, X, Xi)  ->
     C12 = add(mul(X,Cl),
              mul(Xi, Cr)),
     C2 = add(C1, C12),
-    G20 = v_add(v_mul(Xi, Gr), Gl),
-    H20 = v_add(v_mul(X, Hr), Hl),
+    G2 = v_add(v_mul(Xi, Gr), Gl),
+    H2 = v_add(v_mul(X, Hr), Hl),
     %G20 = v_add(simplify_v(v_mul(Xi, Gr)), Gl),
     %H20 = v_add(simplify_v(v_mul(X, Hr)), Hl),
-    G2 = fq:extended2extended_niels(G20),
-    H2 = fq:extended2extended_niels(H20),
+    %G2 = fq:extended2extended_niels(G20),
+    %H2 = fq:extended2extended_niels(H20),
                
     make_ipa2(C2, A2, G2, B2, 
               H2, Q, [Cl, Cr|Cs], X, Xi).
@@ -230,7 +238,8 @@ fold_cs(X, Xi, Cs) ->
     Cs3 = foldh_mul(X, Xi, Cs),
     lists:foldl(fun(A, B) ->
                         add(A, B)
-                end, fq:e_zero(), 
+                %end, fq:e_zero(), 
+                end, ed:e_zero(), 
                 Cs3).
 
 %-define(comp(X), secp256k1:compress(X)).
@@ -270,9 +279,9 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
             end
     end.
 
-gen_point() ->
-    fq:affine2extended(
-      fq:gen_point()).
+gen_point() -> ed:gen_point().
+%    fq:affine2extended(
+%      fq:gen_point()).
 basis(S) ->
     G = lists:map(fun(_) ->
                            gen_point()

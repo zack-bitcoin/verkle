@@ -44,7 +44,8 @@ simple_exponent(
   Acc) -> %encoded point
     %e_add(extended, eniels)
     %e_mul_long(eniels, exponent)%exponent is a 256 bit little endian number in binary.
-    A2 = fq:e_add(fq:e_mul2(G, R), Acc),
+    A2 = ed:e_add(ed:e_mul(G, R), Acc),
+    %A2 = fq:e_add(fq:e_mul2(G, R), Acc),
     %A2 = fq:e_add(fq:e_mul_long(G, (R)), Acc2),
     simple_exponent(RT, GT, A2).
 
@@ -58,7 +59,8 @@ doit(
         length(Rs1) < 2 ->
         %true ->
             simple_exponent(
-              Rs1, Gs, fq:e_zero());
+              Rs1, Gs, ed:extended_zero());
+              %Rs1, Gs, fq:e_zero());
               %Rs0, Gs0, fq:e_zero());
         true ->
             multi_exponent2(Rs1, Gs)
@@ -69,10 +71,12 @@ bucketify([], BucketsETS, [], ManyBuckets) ->
     T = lists:map(
           fun(N) ->
                   X = ets:lookup(BucketsETS, N),
-                  case X of
-                      [] -> fq:e_zero();
-                      [{_, Y}] -> Y
-                  end
+                  Z = case X of
+                          [] -> ed:extended_zero();
+                          [{_, Y}] -> Y
+                      end,
+                  false = (Z == error),
+                  Z
           end, range(1, ManyBuckets)),
     T2 = lists:reverse(T),
     %T2 = T,
@@ -94,18 +98,28 @@ bucketify([BucketNumber|T], BucketsETS,
                    BucketsETS, BucketNumber),
     Bucket2 = 
         case BucketETS0 of
-            [] -> 
-                case G of
-                    <<_:(256*5)>> -> G;
-                    _ ->
-                        fq:extended_niels2extended(G)
-                end;
+            [] ->  G;
+%                case G of
+%                    <<_:(256*5)>> -> G;
+%                    _ ->
+                        %fq:extended_niels2extended(G)
+%                        fq:extended_niels2extended(G)
+%                end;
             %[] -> G;
-            [{_, X}] -> fq:e_add(X, G)
+            %[{_, X}] -> fq:e_add(X, G)
+            [{_, X}] -> 
+                ed:e_add(X, G)
         end,
 
 %todo, instead of adding here, we should build up a list. so we can do efficient addition later with simplified format numbers. this can potentially make it twice as fast. This was tried, and it made it slower. but it still seems possible.
             
+    if
+        (Bucket2 == error) ->
+            {_, X2} = hd(BucketETS0),
+            io:fwrite({size(X2), size(G),
+                      X2, G});
+        true -> ok
+    end,
     ets:insert(BucketsETS, {BucketNumber, Bucket2}),
     bucketify(T, BucketsETS, Gs, ManyBuckets).
 bucketify3(T) ->
@@ -120,14 +134,17 @@ bucketify2([S|R], L, T) ->
     %L2 = jacob_add(S, L, E),
     %B = fq:is_zero(S),
     %B2 = fq:is_zero(L),
-    L2 = fq:e_add(L, S),
-    T2 = fq:e_add(L2, T),
+    %L2 = fq:e_add(L, S),
+    L2 = ed:e_add(L, S),
+    %T2 = fq:e_add(L2, T),
+    T2 = ed:e_add(L2, T),
     bucketify2(R, L2, T2).
 
 
 
 multi_exponent2([], []) ->
-    fq:e_zero();
+    %fq:e_zero();
+    ed:extended_zero();
 multi_exponent2(Rs0, Gs) 
   when is_binary(hd(Rs0)) ->
     Rs = lists:map(fun(X) -> fr:decode(X) end, 
@@ -160,16 +177,26 @@ multi_exponent2(Rs, Gs) ->
                        bucketify(X, BucketsETS, 
                                  Gs, F),
                    ets:delete(BucketsETS),
+                   false = (error == Result),
                    Result
            end, Ts),
-    me3(Ss, fq:e_zero(), 
+    %me3(Ss, fq:e_zero(), 
+    me3(Ss, ed:extended_zero(), 
         %fr:reverse_bytes(<<F:256>>)).
         fr:encode(F)).
 me3([H], A, _) -> 
-    fq:e_add(H, A);
+    %fq:e_add(H, A);
+    ed:e_add(H, A);
 me3([H|T], A, F) -> 
-    X = fq:e_add(A, H),
-    X2 = fq:e_mul2(X, F),
+    X = ed:e_add(A, H),
+    %X = fq:e_add(A, H),
+    %X2 = fq:e_mul2(X, F),
+    X2 = ed:e_mul(X, F),
+    if
+        (X == error) -> io:fwrite({me3, one, A, H});
+        (X2 == error) -> io:fwrite({me3, two, X, F});
+        true -> ok
+    end,
     me3(T, X2, F).
 
 

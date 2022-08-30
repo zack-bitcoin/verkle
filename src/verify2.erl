@@ -332,16 +332,26 @@ merge_find_helper(P, D) ->
 
 proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
     {Open1, Open2, OpenL, Open4, Open5} = Open0,
+%    io:fwrite({size(CommitG0), size(Open1),
+%               size(hd(OpenL))
+               %size(hd(get2:compressed_points_list(Tree0)))
+%              }),
+    CPL = get2:compressed_points_list(Tree0),
+    false = CPL == [],
     [CommitG, Open1b |Decompressed2] = 
+%          [CommitG0, Open1] ++ 
+%              OpenL ++
+%              get2:compressed_points_list(Tree0),
+            
         %fq:decompress(
-        ed:decompress_points(
+        ed:affine2extended(
           [CommitG0, Open1] ++ 
-              OpenL ++
-              get2:compressed_points_list(Tree0)),
+              OpenL ++ CPL),
     {OpenLb, Decompressed} = 
         lists:split(length(OpenL), Decompressed2),
     {Tree, _} = fill_points(
                   Decompressed, Tree0, []),
+    %true = length(Decompressed) == length(CPL),
     Open = {Open1b, Open2, OpenLb, Open4, Open5},
 
     %multiproof:verify(Proof = {CommitG, Commits, Open_G_E}, Zs, Ys, ?p)

@@ -112,6 +112,10 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     %NewRoot2 = fq:e_add(Root, EllDiff),
     %true = fq:eq(NewRoot, NewRoot2),
     %<<HP:256>> = fq:hash_point(NewRoot),
+    if
+        (NewRoot == error) -> io:fwrite({EllDiff, Root});
+        true -> ok
+    end,
     [Affine] = ed:extended2affine_batch([NewRoot]),
     %[<<HP:256>>] = ed:compress_points([Affine]),
     %io:fwrite({size(EllDiff), size(Root), fq:decode_extended(NewRoot)}),
@@ -396,6 +400,11 @@ precomputed_multi_exponent(Rs0, MEP) ->
                lists:reverse(Ss), 
                EZero, 
                fr:encode(F)),%  5%
+    if
+        (Result == error) ->
+            io:fwrite({Ss, EZero, F});
+        true -> ok
+    end,
     Result.
                       
     %Now the problem has been broken into 256/C instances of multi-exponentiation.

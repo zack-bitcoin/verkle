@@ -1,17 +1,14 @@
+update references to fq to use ed instead.
+
+get the tests to pass.
+
 in stem2:serialize, we could batch this to make it faster.
+%look into serialize_stems, there is some commented out code that should be a faster version.
 
 in stem2:hash_point, we could batch this to make it faster.
 
-generating parameters for the new ed25519 version.
-This time we want a deterministic way to do it, so we can all have the same parameters.
-parameters2.erl
-
 switch everything to ed25519.
 
-
-we need an off switch that protects the database. it is for testing as well.
-
-we need code that is more deterministic for generating the pre-computes. set up so that it is clear I didn't choose malicious pre-computes.
 
 javascript version of the code.
 
@@ -37,8 +34,6 @@ get2:batch. we should convert the points in a proof to affine format, because th
 
 now we can use the updated proof to update the database. but we need more tests to be sure that this works.
 
-
-* make a SNARK of a verkle proof.
 
 
 we want to store all the different sized things in a single tree.
