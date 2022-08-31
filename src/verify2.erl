@@ -338,6 +338,12 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
 %              }),
     CPL = get2:compressed_points_list(Tree0),
     false = CPL == [],
+%    io:fwrite(
+    List = [CommitG0, Open1] ++ 
+        OpenL ++ CPL,
+    lists:map(fun(X) ->
+                      false = (X == error)
+              end, List),
     [CommitG, Open1b |Decompressed2] = 
 %          [CommitG0, Open1] ++ 
 %              OpenL ++

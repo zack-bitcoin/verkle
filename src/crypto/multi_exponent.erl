@@ -44,7 +44,7 @@ simple_exponent(
   Acc) -> %encoded point
     %e_add(extended, eniels)
     %e_mul_long(eniels, exponent)%exponent is a 256 bit little endian number in binary.
-    A2 = ed:e_add(ed:e_mul(G, R), Acc),
+    A2 = ed:e_add(ed:e_mul2(G, R), Acc),
     %A2 = fq:e_add(fq:e_mul2(G, R), Acc),
     %A2 = fq:e_add(fq:e_mul_long(G, (R)), Acc2),
     simple_exponent(RT, GT, A2).
@@ -191,7 +191,7 @@ me3([H|T], A, F) ->
     X = ed:e_add(A, H),
     %X = fq:e_add(A, H),
     %X2 = fq:e_mul2(X, F),
-    X2 = ed:e_mul(X, F),
+    X2 = ed:e_mul2(X, F),
     if
         (X == error) -> io:fwrite({me3, one, A, H});
         (X2 == error) -> io:fwrite({me3, two, X, F});

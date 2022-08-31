@@ -13,7 +13,7 @@
          extended2affine_batch/1,
          a_neg/1, e_neg/1, normalize/1, 
          a_eq/2, e_eq/2,
-         e_add/2, e_mul/2,
+         e_add/2, e_mul/2, e_mul2/2,
          encode/1, decode/1,
          prime/0, affine_zero/0, extended_zero/0,
          test/1
@@ -66,6 +66,17 @@ e_mul(X = <<_:512>>, Y) ->
     e_mul(affine2extended(X), Y);
 e_mul(X = <<_:1024>>, Y = <<_:256>>) ->
     c_ed:pmul_long(X, Y).
+%e_mul2(X = <<_:256>>, Y) ->
+%    e_mul2(decompress_point(X), Y);
+e_mul2(X = <<_:512>>, Y) ->
+    e_mul2(affine2extended(X), Y);
+e_mul2(X = <<_:1024>>, Y = <<_:256>>) ->
+    %Y is montgomery encoded.
+    case decode(Y) of
+        0 -> extended_zero();
+        R -> e_mul(X, <<R:256/little>>)
+    end.
+
    
 
 neg(X) ->
@@ -164,6 +175,7 @@ is_positive(Y) ->
 
 affine2extended(P = <<_:1024>>) -> P;%already in extended format.
 affine2extended(P = <<_:256>>) ->
+    io:fwrite("compressed to extended instead \n"),
     affine2extended(decompress_point(P));
 affine2extended(P = <<X0:256, Y0:256>>) ->
     B = a_eq(P, ?affine_zero),
@@ -178,6 +190,7 @@ affine2extended([]) -> [];
 affine2extended([H|T]) ->
     [affine2extended(H)|
      affine2extended(T)];
+affine2extended(error) -> 1=2;
 affine2extended(X) -> io:fwrite({X, size(X)}).
                       
 
@@ -242,15 +255,12 @@ a_eq(<<_:512>>, <<_:512>>) ->
 %encode(0) -> <<0:256>>;
 %encode(1) -> <<38:256/little>>;
 encode(A) -> mul(<<A:256/little>>, ?r2).
-decode(C) ->
+decode(C = <<_:256>>) ->
     X = mul(C, <<1:256/little>>),
-    case X of
-        error -> io:fwrite(C);
-        _ -> ok
-    end,
     <<Y:256/little>> = X,
     Y.
 
+%2 montgomery
 c2m(<<X:256/little, Y:256/little>>) ->
     {affine, X, Y};
 c2m(<<X:256/little, Y:256/little, 
@@ -261,11 +271,13 @@ range(N, N) -> [N];
 range(A, B) when (A < B) -> 
     [A|range(A+1, B)].
 test(1) ->
+    %encode decode test
     X = 55,
     Y = ed25519:encode(X),
     <<Y:256/little>> = encode(X),
     success;
 test(2) ->
+    %inverse test.
     L = [encode(5), encode(9), encode(11)],
     L = batch_inverse(batch_inverse(L)),
     success;
@@ -316,11 +328,49 @@ test(3) ->
 
     success;
 test(4) ->
+    %checking multiplication is the same
     Affine = gen_point(),
     Extended = affine2extended(Affine),
 
+    %doubling is the same as adding to itself.
+    Extended_t_2 = c_ed:double(Extended),
+    Extended_t_2b = e_add(Extended, Extended),
+    true = e_eq(Extended_t_2, Extended_t_2b),
+   
+    %adding is commutative
+    Extended_t_3 = e_add(Extended, Extended_t_2),
+    Extended_t_3b = e_add(Extended_t_2, Extended),
+    true = e_eq(Extended_t_3, Extended_t_3b),
+
+    %multiplication is repeated addition
+    Extended_t_3c = 
+        e_mul(Extended, <<3:256/little>>),
+    true = e_eq(Extended_t_3, Extended_t_3c),
+    
+
     MAffine = c2m(Affine),
     MExtended = ed25519:maffine2extended(MAffine),
+
+    %doubling is the same as adding to itself.
+    MExtended_t_2 = ed25519:mextended_double(
+                      MExtended),
+    MExtended_t_2b = ed25519:mextended_add(
+                       MExtended, MExtended),
+    true = ed25519:meq(MExtended_t_2, MExtended_t_2b),
+    
+    %adding is commutative
+    MExtended_t_3 = ed25519:mextended_add(
+                      MExtended, MExtended_t_2),
+    MExtended_t_3b = ed25519:mextended_add(
+                       MExtended_t_2, MExtended),
+    true = ed25519:meq(MExtended_t_3, MExtended_t_3b),
+
+    %multiplication is repeated addition
+    MExtended_t_3c = 
+       ed25519:mextended_mul(MExtended, 3),
+    true = ed25519:meq(MExtended_t_3, MExtended_t_3c),
+
+
 
     Try = fun(F) ->
                   Extended2 = 
@@ -329,14 +379,18 @@ test(4) ->
                   MExtended2 = ed25519:mextended_mul(
                                  MExtended, F),
 
-                  [Affine2] = extended2affine_batch(
-                                [Extended2]),
-                  [MAffine2] = ed25519:mextended2affine_batch(
-                   [MExtended2]),
+                  [Affine2] = 
+                      extended2affine_batch(
+                        [Extended2]),
+                  [MAffine2] = 
+                      ed25519:mextended2affine_batch(
+                        [MExtended2]),
                   B = MAffine2 == c2m(Affine2),
                   if
                       not(B) ->
-                          io:fwrite({c2m(Extended2),
+                          io:fwrite({%MAffine2,
+                                     %c2m(Affine2),
+                                     c2m(Extended2),
                                      MExtended2});
                       true ->true
                   end
@@ -344,7 +398,9 @@ test(4) ->
     true = Try(0),
     true = Try(1),
     true = Try(2),
-    true = Try(3),
+    true = Try(4),
+    true = Try(8),
+    true = Try(3),%here
     true = Try(10000000),
     success;
 test(5) ->

@@ -1,3 +1,5 @@
+ed:test(4).
+
 update references to fq to use ed instead.
 
 get the tests to pass.

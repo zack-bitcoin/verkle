@@ -64,9 +64,15 @@ mul2(X, G) ->
 %    true = (((32*4) == size(G)) or
 %            ((32*5) == size(G))),
     %fq:e_mul2(G, X).
-    ed:e_mul(G, X).
+    %ed:e_mul(G, X).
+    ed:e_mul2(G, X).
+%    case ed:decode(X) of
+%        0 -> ed:extended_zero();
+%        R -> ed:e_mul(G, <<R:256/little>>)
+%    end.
 mul1(X, G) ->
-    mul2(X, G).
+    %mul2(X, G).
+    ed:e_mul(G, X).
     %multiply point G by scalar X.
     %X is a little endian integer.
 %    true = is_binary(X),
@@ -117,8 +123,9 @@ make_ipa(A, B, G, H, Q) ->
     %C = AG+BH+AB*Q
     AG = commit(A, G),
     AB = dot(A, B),
+    %io:fwrite({size(Q), size(AB)}),%64, 32
     C1 = add(add(AG, commit(B, H)), 
-             mul(AB, Q)),
+             mul(AB, Q)),%AB is int, Q is e-point
     %[X] = points_to_entropy([C1]),
     X = fr:encode(1),
     Xi = fr:inv(X),
@@ -149,10 +156,6 @@ make_ipa2(C1, [A], [G], [B], [H], Q, Cs, _, _) ->
             if
                 not(Bool) ->
                     io:fwrite("sanity check\n"),
-                    io:fwrite(base64:encode(fq:extended2affine(C1))),
-                    io:fwrite("\n"),
-                    io:fwrite(base64:encode(fq:extended2affine(C2))),
-                    io:fwrite("\n"),
                     1=2;
                 true -> 
                     ok
@@ -171,9 +174,6 @@ make_ipa2(C1, A, G, B, H, Q, Cs, X, Xi)  ->
             if
                 not(Bool) ->
                     io:fwrite("sanity check\n"),
-                    io:fwrite(base64:encode(fq:extended2affine(C1))),
-                    io:fwrite("\n"),
-                    io:fwrite(base64:encode(fq:extended2affine(C1b))),
                     io:fwrite("\n"),
                     1=2;
                 true -> 
@@ -239,7 +239,7 @@ fold_cs(X, Xi, Cs) ->
     lists:foldl(fun(A, B) ->
                         add(A, B)
                 %end, fq:e_zero(), 
-                end, ed:e_zero(), 
+                end, ed:extended_zero(), 
                 Cs3).
 
 %-define(comp(X), secp256k1:compress(X)).
@@ -275,7 +275,8 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
                 B2 -> true;
                 true ->
                     io:fwrite("verify ipa false 2\n"),
-                    io:fwrite({size(CNa), size(CNb), base64:encode(fq:extended2affine(CNa)), base64:encode(fq:extended2affine(CNb))})
+                    false
+                    %io:fwrite({size(CNa), size(CNb), base64:encode(fq:extended2affine(CNa)), base64:encode(fq:extended2affine(CNb))})
             end
     end.
 

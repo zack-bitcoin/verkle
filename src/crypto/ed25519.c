@@ -398,7 +398,8 @@ static inline void e_add2
  const uint64_t * x2, const uint64_t * y2,
  const uint64_t * z2, const uint64_t * t2,
  uint64_t * x3, uint64_t * y3, uint64_t * z3,
- uint64_t * t3, uint64_t * M, uint64_t * N)
+ uint64_t * t3, uint64_t * M, uint64_t * N,
+ uint64_t * P, uint64_t * Q)
 {
   //also works if x1 = x3, y1 = y3, ...
 
@@ -421,25 +422,35 @@ static inline void e_add2
   // A -> z3, B -> x3, C -> t3, D -> y3,
   // E -> N, F-> M, G -> z3, H -> t3
 
+  //optimized to enable in-place addition, for less copying when multiplying. requires 64 extra bytes of memory.
+
   sub2(y1, x1, M);
   add2(y2, x2, N);
-  mul2(M, N, z3);
+  //mul2(M, N, z3);
+  mul2(M, N, P);//
   add2(y1, x1, M);
   sub2(y2, x2, N);
   mul2(N, M, x3);
-  sub2(x3, z3, M);
+  //sub2(x3, z3, M);
+  sub2(x3, P, M);//
   if(is_zero(M)){
     return(e_double2(x2, y2, z2, t2, x3,
                      y3, z3, t3, M, N));
   } else {
-    add2(z1, z1, t3);
-    mul2(t3, t2, t3);
+    //add2(z1, z1, t3);
+    add2(z1, z1, Q);//
+    //mul2(t3, t2, t3);
+    mul2(Q, t2, Q);//
     add2(z2, z2, y3);
-    mul2(y3, t1, y3);
-    add2(y3, t3, N);
-    sub2(x3, z3, M);
-    add2(z3, x3, z3);
-    sub2(y3, t3, t3);
+    mul2(y3, t1, y3);//
+    //add2(y3, t3, N);
+    add2(y3, Q, N);//
+    //sub2(x3, z3, M);
+    sub2(x3, P, M);//
+    //add2(z3, x3, z3);
+    add2(P, x3, z3);//
+    //sub2(y3, t3, t3);
+    sub2(y3, Q, t3);//
     mul2(N, M, x3);
     mul2(z3, t3, y3);
     mul2(N, t3, t3);
@@ -456,6 +467,8 @@ static inline void e_mul_long2
 {
   uint64_t J[4];
   uint64_t K[4];
+  uint64_t L[4];
+  uint64_t M[4];
   memcpy(x2, x, 32);
   memcpy(y2, y, 32);
   memcpy(z2, z, 32);
@@ -471,7 +484,7 @@ static inline void e_mul_long2
           e_add2(x2, y2, z2, t2,
                  x, y, z, t,
                  x2, y2, z2, t2,
-                 J, K);
+                 J, K, L, M);
         }
       }
       all_zero = (all_zero && (!(bool)));
@@ -839,11 +852,13 @@ static ERL_NIF_TERM e_add
 
   uint64_t J[4];
   uint64_t K[4];
+  uint64_t L[4];
+  uint64_t M[4];
 
   e_add2(X1, Y1, Z1, T1,
          X2, Y2, Z2, T2,
          X3, Y3, Z3, T3,
-         J, K);
+         J, K, L, M);
 
   enif_release_binary(&ENiels);
   enif_release_binary(&Extended);

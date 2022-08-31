@@ -624,7 +624,7 @@ test(2) ->
 
     %multiplication
 
-    F = 1,
+    F = 3,
     
     Pf2 = hd(fextended2affine_batch(
                [fextended_mul(Pfe, F)])),
