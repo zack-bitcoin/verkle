@@ -39,7 +39,7 @@ range(A, B) when A < B ->
 
 simple_exponent([], [], A) -> A;
 simple_exponent(
-  [R|RT], %256 bit numbers
+  [R|RT], %256 bit montgomery encoded numbers
   [G|GT], %encoded eniels points
   Acc) -> %encoded point
     %e_add(extended, eniels)
@@ -50,14 +50,14 @@ simple_exponent(
     simple_exponent(RT, GT, A2).
 
 doit(
-  Rs0, %256 bit numbers
-  Gs0 %encoded eniels points
+  Rs0, %256 bit mongomery encoded numbers
+  Gs0 %extended point
  ) ->
     {Rs1, Gs} = 
         remove_zero_terms(Rs0, Gs0, [], []),
     if
-        length(Rs1) < 2 ->
-        %true ->
+        %length(Rs1) < 2 ->
+        true ->
             simple_exponent(
               Rs1, Gs, ed:extended_zero());
               %Rs1, Gs, fq:e_zero());
@@ -151,7 +151,7 @@ multi_exponent2(Rs0, Gs)
                    Rs0),
     multi_exponent2(Rs, Gs);
 multi_exponent2(Rs, Gs) ->
-    %io:fwrite({Rs}),
+%    io:fwrite({Rs, Gs}),
     C0 = floor(math:log(length(Rs))/math:log(2))-2,
     C1 = min(C0, 16),
     C = max(1, C1),%how many bits per chunk
@@ -181,17 +181,23 @@ multi_exponent2(Rs, Gs) ->
                    Result
            end, Ts),
     %me3(Ss, fq:e_zero(), 
+    %false = ed:e_eq(ed:extended_zero(), hd(lists:reverse(Ss))),
+%    io:fwrite({length(Ss), 
+    %true = ed:e_eq(hd(lists:reverse(Ss)), hd(Gs)),
+    
     me3(Ss, ed:extended_zero(), 
         %fr:reverse_bytes(<<F:256>>)).
-        fr:encode(F)).
+                 <<F:256/little>>).
+    %true = ed:e_eq(hd(Gs), Result),
+   
+%fr:encode(F)).
 me3([H], A, _) -> 
     %fq:e_add(H, A);
+    %io:fwrite({ed:e_eq(A, ed:extended_zero())}),
     ed:e_add(H, A);
 me3([H|T], A, F) -> 
     X = ed:e_add(A, H),
-    %X = fq:e_add(A, H),
-    %X2 = fq:e_mul2(X, F),
-    X2 = ed:e_mul2(X, F),
+    X2 = ed:e_mul(X, F),
     if
         (X == error) -> io:fwrite({me3, one, A, H});
         (X2 == error) -> io:fwrite({me3, two, X, F});
@@ -201,150 +207,159 @@ me3([H|T], A, F) ->
 
 
 test(0) ->
-    G = ipa2:gen_point(0),
-    EG = fq:extended_niels2extended(G),
-     A = fq:e_add(EG, G),
-     A2 = fq:e_mul2(G, fr:encode(2)),
-    B = fq:e_add(A, G),
-     B2 = fq:e_mul2(G, fr:encode(3)),
-    {
-      fq:eq(EG, 
+    G = ed:affine2extended(ed:gen_point()),
+
+    %normal multiplication first
+    A = ed:e_add(G, G),
+    A2 = ed:e_mul2(G, fr:encode(2)),
+    true = ed:e_eq(A, A2),
+    B = ed:e_add(A, G),
+    B2 = ed:e_mul2(G, fr:encode(3)),
+    true = ed:e_eq(B, B2),
+      ed:e_eq(G, 
            multi_exponent2([fr:encode(1)], [G])),
-      fq:eq(EG, 
+    {
+      ed:e_eq(ed:extended_zero(), 
+           multi_exponent2([], [])),
+      ed:e_eq(ed:extended_zero(), 
+           multi_exponent2([fr:encode(0)], [G])),
+      ed:e_eq(G, 
+           multi_exponent2([fr:encode(1)], [G])),
+      ed:e_eq(G, 
            multi_exponent2(
              [fr:encode(1), fr:encode(0)], 
              [G, G])),
-     fq:eq(multi_exponent2(
+     ed:e_eq(multi_exponent2(
               [fr:encode(1), fr:encode(1)], 
               [G, G]),
-            fq:e_mul2(G, fr:encode(2))),
-     fq:eq(multi_exponent2([fr:encode(2)], 
+             A),
+     ed:e_eq(multi_exponent2([fr:encode(2)], 
                  [G]),
-            fq:e_mul2(G, fr:encode(2))),
-      fq:eq(multi_exponent2(
+             A),
+      ed:e_eq(multi_exponent2(
                [fr:encode(1), fr:encode(1)], 
                [G, G]), 
-            fq:e_mul2(G, fr:encode(2))),
-      fq:eq(multi_exponent2(
+             A),
+      ed:e_eq(multi_exponent2(
                [fr:encode(2)], 
                [G]), 
-             fq:e_mul2(G, fr:encode(2))),
-      fq:eq(multi_exponent2(
+             A),
+      ed:e_eq(multi_exponent2(
                [fr:encode(4)], 
                [G]), 
-             fq:e_mul2(G, fr:encode(4))),
-      fq:eq(doit(
+             ed:e_mul2(G, fr:encode(4))),
+      ed:e_eq(doit(
                [fr:encode(1), fr:encode(4)], 
                [G, G]), 
-             fq:e_mul2(G, fr:encode(5)))
+             ed:e_mul2(G, fr:encode(5)))
      %doit([fr:encode(2)], [G]),
-     %fq:e_mul1(G, fr:reverse_bytes(<<2:256>>)),
+     %ed:e_mul1(G, fr:reverse_bytes(<<2:256>>)),
      %A2, B2
-    % fq:eq(A, A2),
-    % fq:eq(B, B2),
-    % fq:eq(fq:e_double(B), 
-    %        fq:e_mul2(G, fr:encode(6)))
+    % ed:e_eq(A, A2),
+    % ed:e_eq(B, B2),
+    % ed:e_eq(ed:e_double(B), 
+    %        ed:e_mul2(G, fr:encode(6)))
      %doit([fr:encode(1), fr:encode(1)], [G, G])
     };
 test(1) ->
     %testing bucketify3. (S7*7 + S6*6 + S5*5 + ...)
-    ENiels = ipa2:gen_point(0),
-    Extended = fq:extended_niels2extended(ENiels),
-    Zero = fq:e_zero(),
-    NielsZero = fq:extended2extended_niels(Zero),
+    ENiels = ed:gen_point(),
+    Extended = ed:extended_niels2extended(ENiels),
+    Zero = ed:e_zero(),
+    NielsZero = ed:extended2extended_niels(Zero),
     L = [Extended, Zero],%[S2, S1]
-    fq:eq(bucketify3([Extended, Zero]),
-           fq:e_mul2(ENiels, fr:encode(2))
+    ed:e_eq(bucketify3([Extended, Zero]),
+           ed:e_mul2(ENiels, fr:encode(2))
           );
 test(2) ->
     %testing addition orders
-    ENiels1 = ipa2:gen_point(0),
-    ENiels2 = ipa2:gen_point(0),
-    ZeroNiels = fq:extended2extended_niels(fq:e_zero()),
+    ENiels1 = ed:gen_point(),
+    ENiels2 = ed:gen_point(),
+    ZeroNiels = ed:extended2extended_niels(ed:e_zero()),
     Extended1 = 
-        fq:extended_niels2extended(ENiels1),
+        ed:extended_niels2extended(ENiels1),
     Extended2 = 
-        fq:extended_niels2extended(ENiels2),
+        ed:extended_niels2extended(ENiels2),
     ZeroPlus = 
-      fq:e_add(fq:e_zero(), 
+      ed:e_add(ed:e_zero(), 
                 ZeroNiels),
     ZeroMul = 
-        fq:e_mul2(ZeroNiels,
+        ed:e_mul2(ZeroNiels,
                    fr:encode(27)),
     
     {
       % a + b = b + a
-      fq:eq(fq:e_add(Extended1, ENiels2),
-            fq:e_add(Extended2, ENiels1)),
+      ed:e_eq(ed:e_add(Extended1, ENiels2),
+            ed:e_add(Extended2, ENiels1)),
      % 0 + 0 = 0
-     fq:eq(fq:e_zero(), 
-            fq:e_add(fq:e_zero(), 
+     ed:e_eq(ed:e_zero(), 
+            ed:e_add(ed:e_zero(), 
                       ZeroNiels)),
      % 0 * 27 = 0
-     fq:eq(fq:e_zero(), 
-            fq:e_mul2(ZeroNiels,
+     ed:e_eq(ed:e_zero(), 
+            ed:e_mul2(ZeroNiels,
                        fr:encode(27))),
       %can niels encode the default version of zero.
-      fq:eq(fq:e_zero(),
-             fq:extended_niels2extended(fq:extended2extended_niels(fq:e_zero()))),
+      ed:e_eq(ed:e_zero(),
+             ed:extended_niels2extended(ed:extended2extended_niels(ed:e_zero()))),
       %cannot niel encode other versions of zero.
-      fq:is_zero(ZeroPlus),
-      fq:is_zero(
-             fq:extended_niels2extended(fq:extended2extended_niels(ZeroPlus)))
+      ed:is_zero(ZeroPlus),
+      ed:is_zero(
+             ed:extended_niels2extended(ed:extended2extended_niels(ZeroPlus)))
     };
 test(3) ->
-    G = ipa2:gen_point(0),
-    EG = fq:extended_niels2extended(G),
+    G = ed:gen_point(),
+    EG = ed:extended_niels2extended(G),
     F = fr:encode(4),
     R = multi_exponent2([F], 
                         [G]),
     {
-      fq:e_double(fq:e_double(EG)),
-      fq:e_mul2(G, F),
-      fq:e_mul2(fq:extended2extended_niels(EG), 
+      ed:e_double(ed:e_double(EG)),
+      ed:e_mul2(G, F),
+      ed:e_mul2(ed:extended2extended_niels(EG), 
                  F),
       R,
-      fq:eq(R,
-             fq:e_mul2(G, F))
+      ed:e_eq(R,
+             ed:e_mul2(G, F))
     };
 test(4) ->
-    N = ipa2:gen_point(0),
-    E0 = fq:extended_niels2extended(N),
-    Nb = fq:extended2extended_niels(E0),
-    E0b = fq:extended_niels2extended(Nb),
+    N = ed:gen_point(),
+    E0 = ed:extended_niels2extended(N),
+    Nb = ed:extended2extended_niels(E0),
+    E0b = ed:extended_niels2extended(Nb),
 
-    E = fq:e_mul2(N, fr:encode(2)),
-    N2 = fq:extended2extended_niels(E),
-    Eb = fq:extended_niels2extended(N2),
-    N2b = fq:extended2extended_niels(Eb),
+    E = ed:e_mul2(N, fr:encode(2)),
+    N2 = ed:extended2extended_niels(E),
+    Eb = ed:extended_niels2extended(N2),
+    N2b = ed:extended2extended_niels(Eb),
 
-    E2 = fq:e_mul2(N2, fr:encode(2)),
-    E4 = fq:e_mul2(N, fr:encode(4)),
-    DD = fq:e_double(fq:e_double(E0)),
+    E2 = ed:e_mul2(N2, fr:encode(2)),
+    E4 = ed:e_mul2(N, fr:encode(4)),
+    DD = ed:e_double(ed:e_double(E0)),
 
 
 
     {
-      fq:eq(E0, E0b),%false.
-      fq:eq(E, Eb),%false.
-      fq:eq(E, fq:e_double(E0)),%true
+      ed:e_eq(E0, E0b),%false.
+      ed:e_eq(E, Eb),%false.
+      ed:e_eq(E, ed:e_double(E0)),%true
 
-      fq:eq(E2, E4),%false
-      fq:eq(E2, DD),%false
-      fq:eq(DD, E4)%true
+      ed:e_eq(E2, E4),%false
+      ed:e_eq(E2, DD),%false
+      ed:e_eq(DD, E4)%true
     };
 test(5) ->
-    G = ipa2:gen_point(0),
-    fq:eq(multi_exponent2(
+    G = ed:gen_point(),
+    ed:e_eq(multi_exponent2(
              [fr:encode(4)], 
              [G]), 
-           fq:e_mul2(G, fr:encode(4)));
+           ed:e_mul2(G, fr:encode(4)));
 test(6) ->
-    G = ipa2:gen_point(0),
-    H = ipa2:gen_point(0),
+    G = ed:gen_point(),
+    H = ed:gen_point(),
     B = [fr:encode(4), fr:encode(5)],
-    fq:eq(multi_exponent2(B, [G, H]),
+    ed:e_eq(multi_exponent2(B, [G, H]),
            simple_exponent(B, [G, H], 
-                          fq:e_zero())).
+                          ed:e_zero())).
     
 

@@ -366,7 +366,7 @@ lagrange2(Z, [H|D], Domain, DA, DivEAll, A) ->
 test(1) ->    
     Ps = fr:encode([9,12,15,18]),
     Domain = fr:encode([1,2,3,4]),
-    io:fwrite({fr:decode(Domain)}),
+    %io:fwrite({fr:decode(Domain)}),
     A = calc_A(Domain),
     DA = c2e(calc_DA(Domain), Domain),
     DivEAll = all_div_e_parameters(Domain, DA),
@@ -406,7 +406,7 @@ test(2) ->
     Result2 = eval_outside(Z, E, Domain, A, DA),
     Result3 = eval_outside_v(Z, Domain, A, DA),
 
-    io:fwrite({symetric_view(fr:decode([ipa2:dot(Result3, E), Result, Result2, E]), fr:prime())}),
+    %io:fwrite({symetric_view(fr:decode([ipa2:dot(Result3, E), Result, Result2, E]), fr:prime())}),
     success;
 test(3) -> 
     %testing mul_c_all

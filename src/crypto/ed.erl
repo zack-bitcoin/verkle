@@ -3,8 +3,11 @@
 %using the c library c_ed.erl to build out the rest of ed25519
 
 -export([
+         %finite field used to implement the curve.
          inv/1, pow/2, mul/2, square/2, sub/2, add/2,
-         neg/1, sqrt/1, 
+         neg/1, sqrt/1, prime/0, 
+
+         %elliptic curve operations
          is_on_curve/1,
          gen_point/0, gen_point/1,
          compress_point/1, decompress_point/1,
@@ -15,7 +18,7 @@
          a_eq/2, e_eq/2,
          e_add/2, e_mul/2, e_mul2/2,
          encode/1, decode/1,
-         prime/0, affine_zero/0, extended_zero/0,
+         affine_zero/0, extended_zero/0,
          test/1
         ]).
 
@@ -56,6 +59,10 @@ sub(X, Y) ->
     c_ed:sub(X, Y).
 add(X, Y) ->
     c_ed:add(X, Y).
+e_add(X = <<0:256,_:768>>, Y = <<_:1024>>) ->
+    Y;
+e_add(X = <<_:1024>>, Y = <<0:256,_:768>>) ->
+    X;
 e_add(X = <<_:1024>>, Y = <<_:1024>>) ->
     c_ed:padd(X, Y);
 e_add(X = <<_:512>>, Y) ->
@@ -64,15 +71,21 @@ e_add(X, Y = <<_:512>>) ->
     e_add(X, affine2extended(Y)).
 e_mul(X = <<_:512>>, Y) ->
     e_mul(affine2extended(X), Y);
+e_mul(X = <<0:256,_:768>>, Y = <<_:256>>) ->
+    %zero to the power of anything.
+    extended_zero();
 e_mul(X = <<_:1024>>, Y = <<_:256>>) ->
     c_ed:pmul_long(X, Y).
 %e_mul2(X = <<_:256>>, Y) ->
 %    e_mul2(decompress_point(X), Y);
 e_mul2(X = <<_:512>>, Y) ->
     e_mul2(affine2extended(X), Y);
+e_mul2(X = <<0:256,_:768>>, Y = <<_:256>>) ->
+    %zero to the power of anything.
+    extended_zero();
 e_mul2(X = <<_:1024>>, Y = <<_:256>>) ->
     %Y is montgomery encoded.
-    case decode(Y) of
+    case fr:decode(Y) of
         0 -> extended_zero();
         R -> e_mul(X, <<R:256/little>>)
     end.
@@ -139,6 +152,8 @@ decompress_point(<<S:1, P:255>>) ->
             decompress_point2(U, S, T, B);
         true -> error
     end.
+decompress_point2(<<0:256>>, _S, _T, _B) ->
+    ?affine_zero;
 decompress_point2(U, S, T, B) ->
     VV = mul(T, B),
     case sqrt(VV) of
@@ -439,13 +454,57 @@ test(7) ->
     {P, R};
 test(8) ->
     %add zero test
-    P = affine2extended(gen_point()),
+    G = gen_point(),
+    %compression is reversible for normal points.
+    G = decompress_point(compress_point(G)),
+    E = affine2extended(G),
+    E2 = affine2extended(gen_point()),
+    E3 = e_add(extended_zero(), E),
+    E4 = e_mul2(extended_zero(), fr:encode(3)),
+
+    P0 = affine2extended(gen_point()),
+    P = e_mul(P0, <<29394:256/little>>),
     Z = extended_zero(),
-    P2 = e_add(P, Z),
+    Zb = extended_zero(),
+
+    %compression is not reversible for zero points.
+    AZ = affine_zero(),
+    AZb = decompress_point(compress_point(AZ)),
+    %true = (AZ == AZb),
+
+    Z2 = e_add(Z, Z),
+    [AZ2, AZ2] = extended2affine_batch([Z, Z2]),
+    true = is_on_curve(AZ2),
+    AZ2b = decompress_point(compress_point(AZ2)),
+    P2 = e_add(P, Z2),
+    P3 = e_add(Z2, P),
+    P4 = e_add(Z, P),
+    P5 = e_add(P, Z),
+    P6 = e_add(e_add(P, E), e_neg(E)),
+    P7 = e_add(P, e_add(E, e_add(E2, e_add(e_neg(E), e_neg(E2))))),
+    P8 = e_add(e_add(P, E3), e_neg(E3)),
+    P9 = e_add(e_add(P, E4), e_neg(E4)),
+
+    if
+        true ->
+            {
+               e_eq(Z, Z2), 
+               e_eq(P, P2), 
+               e_eq(P, P3),
+               e_eq(P, P4),
+               e_eq(P, P5),
+               e_eq(P, P6),
+               e_eq(P, P7),
+               e_eq(P, P8),
+               e_eq(P, P9)
+            };
+        true ->
     %<<_:512, PZ:256, _:256>>,
     %io:fwrite({P2}),
-    true = e_eq(P, P2),
-    success;
+            true = e_eq(P, P2),
+            true = e_eq(P, P3),
+            success
+    end;
 test(9) ->
     %using addition to double a point test.
     P1 = <<185,242,223,138,53,21,37,141,21,83,123,0,96,62,
@@ -475,8 +534,8 @@ test(9) ->
     Z = extended_zero(),
     P8 = e_add(P1, e_add(P1, Z)),
     P9 = e_add(P1, P1),
-    {P7, P6, P5, P8, P9},
-    success.
+    {P7, P6, P5, P8, P9}.
+%success.
     
 
     
