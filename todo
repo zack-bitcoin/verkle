@@ -1,5 +1,3 @@
-
-
 multiproof:test(7).
 
 get the tests to pass.

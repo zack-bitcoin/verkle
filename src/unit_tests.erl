@@ -7,16 +7,23 @@ doit(0) ->
     S = stem2:test(1),
     S = get2:test(1),
     lists:map(fun(N) ->
+                      io:fwrite("fr "),
                       io:fwrite(integer_to_list(N)),
                       io:fwrite("\n"),
                       S = fr:test(N)
               end, [2,3,5,6,10,11,17,19,20,21,22]),
     lists:map(fun(N) ->
+                      io:fwrite("ed "),
+                      io:fwrite(integer_to_list(N)),
+                      io:fwrite("\n"),
                       S = ed:test(N)
               end, [1,2,3,4,5,7,8,9]),
     lists:map(fun(N) ->
+                      io:fwrite("poly "),
+                      io:fwrite(integer_to_list(N)),
+                      io:fwrite("\n"),
                       S = poly2:test(N)
-              end, [2,3,4,5,6]),
+              end, [2,3,4,5]),
     lists:map(fun(N) ->
                       S = 
                           multi_exponent:test(N)

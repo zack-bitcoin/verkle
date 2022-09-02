@@ -484,7 +484,8 @@ test(7) ->
     true = e_eq(P5, P5d),
     true = e_eq(P5, P5e),
 
-    {P, R};
+    {P, R},
+    success;
 test(8) ->
     %add zero test
     G = gen_point(),
@@ -542,7 +543,7 @@ test(8) ->
     
 
     if
-        true ->
+        false ->
             {
           Z, e_neg(Z),
           {decode(<<Z2x:256>>),
@@ -570,6 +571,12 @@ test(8) ->
     %io:fwrite({P2}),
             true = e_eq(P, P2),
             true = e_eq(P, P3),
+            true = e_eq(P, P4),
+            true = e_eq(P, P5),
+            true = e_eq(P, P6),
+            true = e_eq(P, P7),
+            true = e_eq(P, P8),
+            true = e_eq(P, P9),
             success
     end;
 test(9) ->

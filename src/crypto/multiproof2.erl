@@ -236,7 +236,7 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     io:fwrite("multiproof verify ipa\n"),
     benchmark:now(),
     %here.
-    io:fwrite({Open_G_E, EV}),
+    %io:fwrite({Open_G_E, EV}),
     true = ipa2:verify_ipa(
              Open_G_E, EV, Gs, Hs, Q),
     T5 = erlang:timestamp(),
