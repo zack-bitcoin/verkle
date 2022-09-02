@@ -302,7 +302,8 @@ test(11) ->
     A = A0 rem ?q,
     A = decode(inv(inv(encode(A)))),
     IA = decode(inv(encode(A))),
-    {A, IA, A * IA rem ?q};
+    1 = A * IA rem ?q,
+    success;
 test(12) ->
     io:fwrite("inverse speed test\n"),
     Many = 1000,
@@ -334,13 +335,12 @@ test(17) ->
     B0 = 1,
     B = B0 rem ?q,
     AE = encode(A),
-    New = decode(pow(AE,
-                     reverse_bytes(<<B:256>>))),
+    New = decode(pow(AE, <<B:256/little>>)),
+%                     reverse_bytes(<<B:256>>))),
                      %reverse_bytes(<<B:256>>))),
-    AE = encode(A),
     Old = basics:rlpow(A, B, ?q),
-    {New == Old,
-     New, Old};
+    true = New == Old,
+    success;
 %success;
 test(18) ->
     io:fwrite("test pow speed\n"),

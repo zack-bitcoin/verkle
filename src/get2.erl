@@ -6,7 +6,7 @@ split3parts/4,
 keys2paths/2, 
 withdraw_points/1, withdraw_points2/1,
 compressed_points_list/1,
-test/0]).
+test/1]).
 -include("constants.hrl").
 
 -define(pipe, false).
@@ -369,7 +369,7 @@ tl_times(N, L) when N < 1 -> L;
 tl_times(N, L) ->
     tl_times(N-1, tl(L)).
 
-test() ->
+test(1) ->
     CFG = trie:cfg(trie01),
     A = [1,2,3,4,5],
     B = [3,4,5] ++ A,

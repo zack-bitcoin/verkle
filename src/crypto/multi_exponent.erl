@@ -216,59 +216,51 @@ test(0) ->
     B = ed:e_add(A, G),
     B2 = ed:e_mul2(G, fr:encode(3)),
     true = ed:e_eq(B, B2),
-      ed:e_eq(G, 
-           multi_exponent2([fr:encode(1)], [G])),
-    {
-      ed:e_eq(ed:extended_zero(), 
-           multi_exponent2([], [])),
-      ed:e_eq(ed:extended_zero(), 
-           multi_exponent2([fr:encode(0)], [G])),
-      ed:e_eq(G, 
-           multi_exponent2([fr:encode(1)], [G])),
-      ed:e_eq(G, 
-           multi_exponent2(
-             [fr:encode(1), fr:encode(0)], 
-             [G, G])),
-     ed:e_eq(multi_exponent2(
-              [fr:encode(1), fr:encode(1)], 
-              [G, G]),
-             A),
-     ed:e_eq(multi_exponent2([fr:encode(2)], 
-                 [G]),
-             A),
-      ed:e_eq(multi_exponent2(
-               [fr:encode(1), fr:encode(1)], 
-               [G, G]), 
-             A),
-      ed:e_eq(multi_exponent2(
-               [fr:encode(2)], 
-               [G]), 
-             A),
-      ed:e_eq(multi_exponent2(
-               [fr:encode(4)], 
-               [G]), 
-             ed:e_mul2(G, fr:encode(4))),
-      ed:e_eq(doit(
-               [fr:encode(1), fr:encode(4)], 
-               [G, G]), 
-             ed:e_mul2(G, fr:encode(5)))
-     %doit([fr:encode(2)], [G]),
-     %ed:e_mul1(G, fr:reverse_bytes(<<2:256>>)),
-     %A2, B2
-    % ed:e_eq(A, A2),
-    % ed:e_eq(B, B2),
-    % ed:e_eq(ed:e_double(B), 
-    %        ed:e_mul2(G, fr:encode(6)))
-     %doit([fr:encode(1), fr:encode(1)], [G, G])
-    };
+    true = ed:e_eq(
+             G, 
+             multi_exponent2([fr:encode(1)], [G])),
+    true = ed:e_eq(ed:extended_zero(), 
+                   multi_exponent2([], [])),
+    true = ed:e_eq(ed:extended_zero(), 
+                   multi_exponent2([fr:encode(0)],
+                                   [G])),
+    true = ed:e_eq(
+             G, 
+             multi_exponent2([fr:encode(1)], [G])),
+    true = ed:e_eq(G, 
+                   multi_exponent2(
+                     [fr:encode(1), fr:encode(0)], 
+                     [G, G])),
+    true = ed:e_eq(multi_exponent2(
+                     [fr:encode(1), fr:encode(1)], 
+                     [G, G]),
+                   A),
+    true = ed:e_eq(multi_exponent2([fr:encode(2)], 
+                                   [G]),
+                   A),
+    true = ed:e_eq(multi_exponent2(
+                     [fr:encode(1), fr:encode(1)], 
+                     [G, G]), 
+                   A),
+    true = ed:e_eq(multi_exponent2(
+                     [fr:encode(2)], 
+                     [G]), 
+                   A),
+    true = ed:e_eq(multi_exponent2(
+                     [fr:encode(4)], 
+                     [G]), 
+                   ed:e_mul2(G, fr:encode(4))),
+    true = ed:e_eq(doit(
+                     [fr:encode(1), fr:encode(4)], 
+                     [G, G]), 
+                   ed:e_mul2(G, fr:encode(5))),
+    success;
 test(1) ->
     %testing bucketify3. (S7*7 + S6*6 + S5*5 + ...)
     Extended = ed:affine2extended(ed:gen_point()),
     Zero = ed:extended_zero(),
-    ed:e_eq(bucketify3([Extended, Zero]),
-           ed:e_mul2(Extended, fr:encode(2))
-          );
-test(2) ->
+    true = ed:e_eq(bucketify3([Extended, Zero]),
+                   ed:e_mul2(Extended, fr:encode(2))),
     success;
 test(3) ->
     G = ed:affine2extended(ed:gen_point()),
@@ -282,20 +274,21 @@ test(3) ->
       R,
       ed:e_eq(R, ed:e_mul2(G, F))
     };
-test(4) ->
-    success;
 test(5) ->
     G = ed:gen_point(),
-    ed:e_eq(multi_exponent2(
-             [fr:encode(4)], 
-             [G]), 
-           ed:e_mul2(G, fr:encode(4)));
+    true =ed:e_eq(multi_exponent2(
+                    [fr:encode(4)], 
+                    [G]), 
+                  ed:e_mul2(G, fr:encode(4))),
+    success;
 test(6) ->
     G = ed:gen_point(),
     H = ed:gen_point(),
     B = [fr:encode(4), fr:encode(5)],
-    ed:e_eq(multi_exponent2(B, [G, H]),
-           simple_exponent(B, [G, H], 
-                          ed:extended_zero())).
+    true = ed:e_eq(multi_exponent2(B, [G, H]),
+                   simple_exponent(
+                     B, [G, H], 
+                     ed:extended_zero())),
+    success.
     
 

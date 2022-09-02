@@ -449,7 +449,8 @@ test(1) ->
     %Saved1 = element(2, element(2, MEP)),
     %io:fwrite({Old, New, Saved0}),
     %fq:eq(Old, New);
-    ed:e_eq(Old, New);
+    true = ed:e_eq(Old, New),
+    success;
 test(2) ->
     io:fwrite("ftrace of precomputed multi exponent\n"),
     %multi exponent precompute speed comparison.

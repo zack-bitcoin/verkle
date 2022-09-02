@@ -220,9 +220,8 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
 %    io:fwrite({hd(AffineCommits), hd(Zs),
 %               hd(Ys)}),
     R = calc_R(AffineCommits, Zs, 
-               fr:encode(Ys), <<>>),
-               %Ys, <<>>),
-
+               %fr:encode(Ys), <<>>),
+               Ys, <<>>),
     io:fwrite("multiproof verify calc t\n"),
     benchmark:now(),
     T3 = erlang:timestamp(),
@@ -236,6 +235,8 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
 
     io:fwrite("multiproof verify ipa\n"),
     benchmark:now(),
+    %here.
+    io:fwrite({Open_G_E, EV}),
     true = ipa2:verify_ipa(
              Open_G_E, EV, Gs, Hs, Q),
     T5 = erlang:timestamp(),
@@ -244,7 +245,8 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     benchmark:now(),
     %io:fwrite({R, T, Ys, Zs}),%bin, bin, [int..], [bin]
     {RIDs, G2} = 
-        calc_G2_2(R, T, fr:encode(Ys), Zs),
+        %calc_G2_2(R, T, fr:encode(Ys), Zs),
+        calc_G2_2(R, T, Ys, Zs),
     %io:fwrite({G2, R, T, hd(Ys), hd(Zs)}),
 
     T6 = erlang:timestamp(),
@@ -387,50 +389,20 @@ test(7) ->
     io:fwrite("many is "),
     io:fwrite(integer_to_list(Many)),
     io:fwrite("\n"),
-    %E = secp256k1:make(),
-    %Base = secp256k1:order(E),
-    %Root4 = primitive_nth_root(4, E),
-    %Root4b = fr:mul(Root4, Root4),
-    %Root4c = fr:mul(Root4b, Root4),
-    %Domain = [1, Root4, Root4b, Root4c],
-%    Domain = [fr:encode(1),
-%              fr:encode(2),
-%              fr:encode(3),
-%              fr:encode(4)],
-    
-    %Domain = [5,6,7,8],
-    %P = make_parameters_jacob(Domain, E),
-    %A = [sub(0, 4, Base),
-    %     sub(0, 3, Base),
-    %     sub(0, 2, Base),
-    %     sub(0, 1, Base)],
-    %A = [?neg(4), ?neg(3), ?neg(2), ?neg(1)],
     Domain = parameters2:domain(),
     A = lists:map(fun(X) -> fr:neg(X) end,
                   lists:reverse(Domain)),
     As = lists:map(fun(_) -> A end,
                    range(0, Many)),
-    %As = lists:map(fun(R) -> [sub(0, R, Base),
-    %                          sub(0, R+3, Base),
-    %                          sub(0, R+2, Base),
-   %                           sub(0, R+1, Base)] end,
-   %                range(0, Many)),
-    %Zs = many(Root4, Many),
     Zs = many(hd(tl(Domain)), Many),
     Ys = lists:zipwith(
            fun(F, Z) ->
                    poly2:eval_e(Z, F, Domain)
            end, As, Zs),
     {Gs, Hs, Q} = parameters2:read(),
-    %Gs = P#p.g,
     Commit1 = ipa2:commit(hd(As), Gs),
-    Commits0 = lists:map(
-      fun(A) ->
-              Commit1
-      end, As),
-    %Commits = secp256k1:simplify_Zs_batch(
-    %            Commits0),
-    %Commits = fq:e_simplify_batch(Commits0),
+    Commits0 = lists:map(fun(A) -> Commit1 end, 
+                         As),
     Commits = ed:normalize(Commits0),
     io:fwrite("make proof\n"),
     T1 = erlang:timestamp(),
@@ -440,17 +412,17 @@ test(7) ->
     Domain = parameters2:domain(),
     Proof = prove(As, Zs, Commits, Gs, Hs, 
                   Q, DA, PA, Domain),
-    %{P1, Open = {_,_,Ps2,_,_}} = Proof,
-    %[P1b|Ps2b] = secp256k1:simplify_Zs_batch(
-    %               [P1|Ps2]),
-    %Open2 = setelement(3, Open, Ps2b),
-    %Proof2 = {P1b, Open2},
     T2 = erlang:timestamp(),
     io:fwrite("verify proof\n"),
     %true = verify(Proof2, Commits, Zs, Ys, P),
-    %io:fwrite({hd(Zs), hd(Ys)}),
-    io:fwrite("here\n"),
-    true = verify(Proof, Commits, Zs, fr:decode(Ys)),
+    Verified = verify(Proof, Commits, Zs, Ys),
+    if
+        Verified -> ok;
+        true ->
+            io:fwrite({Proof, hd(Zs), hd(Ys)}),
+            io:fwrite("here\n"),
+            ok
+    end,
     T3 = erlang:timestamp(),
     {prove, timer:now_diff(T2, T1),
       verify, timer:now_diff(T3, T2)}.

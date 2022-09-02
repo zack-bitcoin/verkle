@@ -316,6 +316,7 @@ test(1) ->
               A, Bv,%103+104 = 207
               G, H, Q),
     io:fwrite("test 1 1 \n"),
+%    io:fwrite({Proof, Bv}), %{point point list point point} list
     true = verify_ipa(Proof, Bv, G, H, Q),
     %N207 = fr:encode(207),
     %{_, N207, _, _, _} = Proof,

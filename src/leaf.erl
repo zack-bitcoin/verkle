@@ -3,7 +3,7 @@
          key/1, value/1, meta/1, path/2, path_maker/2, hash/2, put/2, get/2, serialize/2, deserialize/2,
          raw_key/1,
 	 put_batch/2,
-	is_serialized_leaf/2, test/0]).
+	is_serialized_leaf/2, test/1]).
 -include("constants.hrl").
 %-export_type([leaf/0,key/0,value/0,meta/0,leaf_p/0,path/0]).
 
@@ -83,7 +83,7 @@ hash(L, CFG) ->
             %hash:doit(<<(L#leaf.key):P, V/binary>>)
             hash:doit(<<(L#leaf.key)/binary, V/binary>>)
     end.
-test() ->
+test(1) ->
     verkle_app:start(normal, []),
     CFG = trie:cfg(trie01),
 %{cfg,32,2,trie01,2,32,ram,1},[]],
