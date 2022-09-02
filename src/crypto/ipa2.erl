@@ -329,11 +329,11 @@ test(1) ->
     success;
 test(2) ->
     %comparing the speed between versions
-    A = range(100, 356),
+    A = encode_list(range(100, 356)),
     %A = range(100, 132),
     S = length(A),
     {G, H, Q} = basis(S),
-    B = range(200, 200 + length(A)),
+    B = encode_list(range(200, 200 + length(A))),
     T1 = erlang:timestamp(),
     Proof = make_ipa(A, B, G, H, Q),
     T2 = erlang:timestamp(),
@@ -360,10 +360,10 @@ test(2) ->
 
 test(3) ->
     %testing compression.
-    A = range(100, 108),
+    A = encode_list(range(100, 108)),
     S = length(A),
     {G, H, Q} = basis(S),
-    Bv = [0,0,0,1,1,0,0,0],%103+104 = 207
+    Bv = encode_list([0,0,0,1,1,0,0,0]),%103+104 = 207
     Proof = make_ipa(
               A, Bv,%103+104 = 207
               G, H, Q),

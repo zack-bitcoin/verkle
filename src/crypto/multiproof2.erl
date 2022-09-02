@@ -448,9 +448,9 @@ test(7) ->
     T2 = erlang:timestamp(),
     io:fwrite("verify proof\n"),
     %true = verify(Proof2, Commits, Zs, Ys, P),
-    io:fwrite({hd(Zs), hd(Ys)}),
+    %io:fwrite({hd(Zs), hd(Ys)}),
     io:fwrite("here\n"),
-    true = verify(Proof, Commits, Zs, Ys),
+    true = verify(Proof, Commits, Zs, fr:decode(Ys)),
     T3 = erlang:timestamp(),
     {prove, timer:now_diff(T2, T1),
       verify, timer:now_diff(T3, T2)}.

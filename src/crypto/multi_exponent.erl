@@ -263,91 +263,27 @@ test(0) ->
     };
 test(1) ->
     %testing bucketify3. (S7*7 + S6*6 + S5*5 + ...)
-    ENiels = ed:gen_point(),
-    Extended = ed:extended_niels2extended(ENiels),
-    Zero = ed:e_zero(),
-    NielsZero = ed:extended2extended_niels(Zero),
-    L = [Extended, Zero],%[S2, S1]
+    Extended = ed:affine2extended(ed:gen_point()),
+    Zero = ed:extended_zero(),
     ed:e_eq(bucketify3([Extended, Zero]),
-           ed:e_mul2(ENiels, fr:encode(2))
+           ed:e_mul2(Extended, fr:encode(2))
           );
 test(2) ->
-    %testing addition orders
-    ENiels1 = ed:gen_point(),
-    ENiels2 = ed:gen_point(),
-    ZeroNiels = ed:extended2extended_niels(ed:e_zero()),
-    Extended1 = 
-        ed:extended_niels2extended(ENiels1),
-    Extended2 = 
-        ed:extended_niels2extended(ENiels2),
-    ZeroPlus = 
-      ed:e_add(ed:e_zero(), 
-                ZeroNiels),
-    ZeroMul = 
-        ed:e_mul2(ZeroNiels,
-                   fr:encode(27)),
-    
-    {
-      % a + b = b + a
-      ed:e_eq(ed:e_add(Extended1, ENiels2),
-            ed:e_add(Extended2, ENiels1)),
-     % 0 + 0 = 0
-     ed:e_eq(ed:e_zero(), 
-            ed:e_add(ed:e_zero(), 
-                      ZeroNiels)),
-     % 0 * 27 = 0
-     ed:e_eq(ed:e_zero(), 
-            ed:e_mul2(ZeroNiels,
-                       fr:encode(27))),
-      %can niels encode the default version of zero.
-      ed:e_eq(ed:e_zero(),
-             ed:extended_niels2extended(ed:extended2extended_niels(ed:e_zero()))),
-      %cannot niel encode other versions of zero.
-      ed:is_zero(ZeroPlus),
-      ed:is_zero(
-             ed:extended_niels2extended(ed:extended2extended_niels(ZeroPlus)))
-    };
+    success;
 test(3) ->
-    G = ed:gen_point(),
-    EG = ed:extended_niels2extended(G),
+    G = ed:affine2extended(ed:gen_point()),
     F = fr:encode(4),
-    R = multi_exponent2([F], 
-                        [G]),
+    R = multi_exponent2([F], [G]),
+    G2 = ed:e_add(G, G),
+    G4 = ed:e_add(G2, G2),
     {
-      ed:e_double(ed:e_double(EG)),
+      G4,
       ed:e_mul2(G, F),
-      ed:e_mul2(ed:extended2extended_niels(EG), 
-                 F),
       R,
-      ed:e_eq(R,
-             ed:e_mul2(G, F))
+      ed:e_eq(R, ed:e_mul2(G, F))
     };
 test(4) ->
-    N = ed:gen_point(),
-    E0 = ed:extended_niels2extended(N),
-    Nb = ed:extended2extended_niels(E0),
-    E0b = ed:extended_niels2extended(Nb),
-
-    E = ed:e_mul2(N, fr:encode(2)),
-    N2 = ed:extended2extended_niels(E),
-    Eb = ed:extended_niels2extended(N2),
-    N2b = ed:extended2extended_niels(Eb),
-
-    E2 = ed:e_mul2(N2, fr:encode(2)),
-    E4 = ed:e_mul2(N, fr:encode(4)),
-    DD = ed:e_double(ed:e_double(E0)),
-
-
-
-    {
-      ed:e_eq(E0, E0b),%false.
-      ed:e_eq(E, Eb),%false.
-      ed:e_eq(E, ed:e_double(E0)),%true
-
-      ed:e_eq(E2, E4),%false
-      ed:e_eq(E2, DD),%false
-      ed:e_eq(DD, E4)%true
-    };
+    success;
 test(5) ->
     G = ed:gen_point(),
     ed:e_eq(multi_exponent2(
@@ -360,6 +296,6 @@ test(6) ->
     B = [fr:encode(4), fr:encode(5)],
     ed:e_eq(multi_exponent2(B, [G, H]),
            simple_exponent(B, [G, H], 
-                          ed:e_zero())).
+                          ed:extended_zero())).
     
 

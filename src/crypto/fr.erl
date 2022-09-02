@@ -82,7 +82,7 @@ encode(A) when (A > (?q-1)) ->
 decode([]) -> [];
 decode([A|B]) -> 
     [decode(A)|decode(B)];
-decode(C) ->
+decode(C = <<_:256>>) ->
     %X = mul(C, reverse_bytes(<<1:256>>)),
     X = mul(C, (<<1:256/little>>)),
     %<<Y:256>> = reverse_bytes(X),

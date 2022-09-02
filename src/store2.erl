@@ -442,7 +442,7 @@ test(1) ->
     Old = multi_exponent:doit(fr:encode(R), Gs),
     MEP = parameters2:multi_exp(),
     New = precomputed_multi_exponent(
-            R, MEP), 
+            fr:encode(R), MEP), 
     %Saved0 = element(2, element(1, MEP)),
 %    Saved0 = element(2, element(2, MEP)),
 %    Saved = secp256k1:to_affine(secp256k1:jacob_add(Saved0, Saved0, ?p#p.e)),
