@@ -12,6 +12,8 @@
          faffine2extended/1,
          fextended2affine_batch/1,
          fextended_mul/2,
+         fextended_double/1,
+         fextended_add/2,
          fnormalize/1,
          feq/2,
 
@@ -33,6 +35,7 @@
          meq/2,
          mencode_point/1,
          mdecode_point/1,
+         mgen_point/0,
 
          test/1
         ]).
@@ -166,6 +169,7 @@ fneg(E = #extended{x = X, t = T}) ->
     E#extended{x = fneg(X), t = fneg(T)};
 fneg(A = #affine{x = X}) ->
     A#affine{x = fneg(X)};
+fneg(0) -> 0;
 fneg(X) when is_integer(X) -> ?q - X.
 
 

@@ -150,10 +150,21 @@ static inline void addition64
   ADC(a[3], b[3], c[3], *carrystart);
 };
 
+static inline int is_zero(const uint64_t * M)
+{
+  return((M[0] == 0) &&
+         (M[1] == 0) &&
+         (M[2] == 0) &&
+         (M[3] == 0));
+};
 static inline void neg2
 (uint64_t * a, uint64_t * c)
 {
-  subtract64(q, a, c);
+  if(is_zero(a)) {
+    memcpy(c, a, 32);
+  } else {
+    subtract64(q, a, c);
+  }
 };
 
 static inline void sub2
@@ -384,13 +395,22 @@ static inline void e_double2
   mul2(J, z2, z2);
 };
 
-static inline int is_zero(const uint64_t * M)
+static inline int is_eq(const uint64_t * A,
+                        const uint64_t * B)
 {
-  return((M[0] == 0) &&
-         (M[1] == 0) &&
-         (M[2] == 0) &&
-         (M[3] == 0));
+  return((A[0] == B[0]) &&
+         (A[1] == B[1]) &&
+         (A[2] == B[2]) &&
+         (A[3] == B[3]));
 };
+static inline int is_zero_point
+(const uint64_t * X, const uint64_t * Y,
+ const uint64_t * Z)
+{
+  return(is_zero(X) && is_eq(Y, Z));
+};
+                                
+
 
 static inline void e_add2
 (const uint64_t * x1, const uint64_t * y1,
@@ -398,9 +418,16 @@ static inline void e_add2
  const uint64_t * x2, const uint64_t * y2,
  const uint64_t * z2, const uint64_t * t2,
  uint64_t * x3, uint64_t * y3, uint64_t * z3,
- uint64_t * t3, uint64_t * M, uint64_t * N,
- uint64_t * P, uint64_t * Q)
+ uint64_t * t3)
 {
+  uint64_t A[4];
+  uint64_t B[4];
+  uint64_t C[4];
+  uint64_t D[4];
+  uint64_t E[4];
+  uint64_t F[4];
+  uint64_t G[4];
+  uint64_t H[4];
   //also works if x1 = x3, y1 = y3, ...
 
   //http://hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#addition-add-2008-hwcd-4
@@ -418,44 +445,61 @@ static inline void e_add2
       T3 = E*H
       Z3 = F*G
   */
+
+  sub2(y1, x1, E);
+  add2(y2, x2, F);
+  mul2(E, F, A);
+  add2(y1, x1, E);
+  sub2(y2, x2, F);
+  mul2(E, F, B);
+  sub2(B, A, F);
+  if(is_zero(F)){
+    return(e_double2(x2, y2, z2, t2, x3,
+                     y3, z3, t3, A, B));
+  };
+  add2(t2, t2, E);
+  mul2(z1, E, C);
+  add2(t1, t1, E);
+  mul2(z2, E, D);
+  add2(C, D, E);
+  add2(B, A, G);
+  sub2(D, C, H);
+  mul2(E, F, x3);
+  mul2(G, H, y3);
+  mul2(E, H, t3);
+  mul2(F, G, z3);
   
   // A -> z3, B -> x3, C -> t3, D -> y3,
   // E -> N, F-> M, G -> z3, H -> t3
 
   //optimized to enable in-place addition, for less copying when multiplying. requires 64 extra bytes of memory.
 
-  sub2(y1, x1, M);
-  add2(y2, x2, N);
-  //mul2(M, N, z3);
-  mul2(M, N, P);//
-  add2(y1, x1, M);
-  sub2(y2, x2, N);
-  mul2(N, M, x3);
-  //sub2(x3, z3, M);
-  sub2(x3, P, M);//
-  if(is_zero(M)){
+  /*
+  sub2(y1, x1, A);
+  add2(y2, x2, B);
+  mul2(A, B, C);
+  add2(y1, x1, A);
+  sub2(y2, x2, B);
+  mul2(B, A, x3);
+  sub2(x3, C, A);
+  if(is_zero(A)){
     return(e_double2(x2, y2, z2, t2, x3,
-                     y3, z3, t3, M, N));
+                     y3, z3, t3, A, B));
   } else {
-    //add2(z1, z1, t3);
-    add2(z1, z1, Q);//
-    //mul2(t3, t2, t3);
-    mul2(Q, t2, Q);//
+    add2(z1, z1, D);
+    mul2(D, t2, D);
     add2(z2, z2, y3);
-    mul2(y3, t1, y3);//
-    //add2(y3, t3, N);
-    add2(y3, Q, N);//
-    //sub2(x3, z3, M);
-    sub2(x3, P, M);//
-    //add2(z3, x3, z3);
-    add2(P, x3, z3);//
-    //sub2(y3, t3, t3);
-    sub2(y3, Q, t3);//
-    mul2(N, M, x3);
+    mul2(y3, t1, y3);
+    add2(y3, D, B);
+    sub2(x3, C, A);
+    add2(C, x3, z3);
+    sub2(y3, D, t3);
+    mul2(B, A, x3);
     mul2(z3, t3, y3);
-    mul2(N, t3, t3);
-    mul2(M, z3, z3);
+    mul2(B, t3, t3);
+    mul2(A, z3, z3);
   }
+  */
 };
 
 static inline void e_mul_long2
@@ -483,8 +527,7 @@ static inline void e_mul_long2
         if(bool){
           e_add2(x2, y2, z2, t2,
                  x, y, z, t,
-                 x2, y2, z2, t2,
-                 J, K, L, M);
+                 x2, y2, z2, t2);
         }
       }
       all_zero = (all_zero && (!(bool)));
@@ -748,11 +791,16 @@ static ERL_NIF_TERM e_mul_long
     memcpy(Y2, one, 32);
     memcpy(Z2, one, 32);
     memcpy(T2, zero, 32);
-    return(Result);
-  };
-  e_mul_long2(X, Y, Z, T,
-         (uint64_t *)B.data,
-         X2, Y2, Z2, T2);
+  } else if(is_zero_point(X, Y, Z)) {
+    memcpy(X2, zero, 32);
+    memcpy(Y2, one, 32);
+    memcpy(Z2, one, 32);
+    memcpy(T2, zero, 32);
+  } else {
+    e_mul_long2(X, Y, Z, T,
+                (uint64_t *)B.data,
+                X2, Y2, Z2, T2);
+  }
   enif_release_binary(&Point);
   enif_release_binary(&B);
   return Result;
@@ -805,12 +853,18 @@ static ERL_NIF_TERM e_double
   uint64_t * Zb = (uint64_t *)&(C[64]);
   uint64_t * Tb = (uint64_t *)&(C[96]);
 
-  
+  //if(is_zero_point(U, V, Z)){
+  //  memcpy(Ub, zero, 32);
+  //  memcpy(Vb, one, 32);
+  //  memcpy(Zb, one, 32);
+  //  memcpy(Tb, zero, 32);
+  //} else {
   uint64_t J[4];
   uint64_t K[4];
 
   e_double2(U, V, Z, T,
             Ub, Vb, Zb, Tb, J, K);
+  //}
   //  return enif_make_binary(env, &A);
   enif_release_binary(&A);
   return(Result);
@@ -850,16 +904,23 @@ static ERL_NIF_TERM e_add
   uint64_t * Z3 = (uint64_t *)&(C[64]);
   uint64_t * T3 = (uint64_t *)&(C[96]);
 
-  uint64_t J[4];
-  uint64_t K[4];
-  uint64_t L[4];
-  uint64_t M[4];
-
-  e_add2(X1, Y1, Z1, T1,
-         X2, Y2, Z2, T2,
-         X3, Y3, Z3, T3,
-         J, K, L, M);
-
+  /*
+  if(is_zero_point(X1, Y1, Z1)){
+    memcpy(X3, X2, 32);
+    memcpy(Y3, Y2, 32);
+    memcpy(Z3, Z2, 32);
+    memcpy(T3, T2, 32);
+  } else if(is_zero_point(X2, Y2, Z2)){
+    memcpy(X3, X1, 32);
+    memcpy(Y3, Y1, 32);
+    memcpy(Z3, Z1, 32);
+    memcpy(T3, T1, 32);
+  } else {
+    */
+    e_add2(X1, Y1, Z1, T1,
+           X2, Y2, Z2, T2,
+           X3, Y3, Z3, T3);
+    //}
   enif_release_binary(&ENiels);
   enif_release_binary(&Extended);
   return(Result);

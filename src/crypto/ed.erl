@@ -59,36 +59,44 @@ sub(X, Y) ->
     c_ed:sub(X, Y).
 add(X, Y) ->
     c_ed:add(X, Y).
-e_add(X = <<0:256,_:768>>, Y = <<_:1024>>) ->
-    Y;
-e_add(X = <<_:1024>>, Y = <<0:256,_:768>>) ->
-    X;
+%e_add(X = <<0:256,_:768>>, Y = <<_:1024>>) ->
+%    Y;
+%e_add(X = <<_:1024>>, Y = <<0:256,_:768>>) ->
+%    X;
 e_add(X = <<_:1024>>, Y = <<_:1024>>) ->
     c_ed:padd(X, Y);
 e_add(X = <<_:512>>, Y) ->
     e_add(affine2extended(X), Y);
 e_add(X, Y = <<_:512>>) ->
     e_add(X, affine2extended(Y)).
+e_mul(X, Y = <<0:256>>) -> ?extended_zero;
 e_mul(X = <<_:512>>, Y) ->
     e_mul(affine2extended(X), Y);
-e_mul(X = <<0:256,_:768>>, Y = <<_:256>>) ->
+%e_mul(X = <<0:256,_:768>>, Y = <<_:256>>) ->
     %zero to the power of anything.
-    extended_zero();
+%    extended_zero();
 e_mul(X = <<_:1024>>, Y = <<_:256>>) ->
-    c_ed:pmul_long(X, Y).
+%    B = e_eq(X, ?extended_zero),
+%    if
+%        B -> ?extended_zero;
+%        true ->
+            c_ed:pmul_long(X, Y).
+%    end.
 %e_mul2(X = <<_:256>>, Y) ->
 %    e_mul2(decompress_point(X), Y);
 e_mul2(X = <<_:512>>, Y) ->
     e_mul2(affine2extended(X), Y);
-e_mul2(X = <<0:256,_:768>>, Y = <<_:256>>) ->
+%e_mul2(X = <<0:256,_:768>>, Y = <<_:256>>) ->
     %zero to the power of anything.
-    extended_zero();
+%    extended_zero();
 e_mul2(X = <<_:1024>>, Y = <<_:256>>) ->
     %Y is montgomery encoded.
-    case fr:decode(Y) of
-        0 -> extended_zero();
-        R -> e_mul(X, <<R:256/little>>)
-    end.
+    R = fr:decode(Y),
+    e_mul(X, <<R:256/little>>).
+    %case fr:decode(Y) of
+    %    0 -> extended_zero();
+    %    R -> e_mul(X, <<R:256/little>>)
+    %end.
 
    
 
@@ -256,6 +264,13 @@ a_neg(<<X:256, Y:256>>) ->
 
 normalize(L) ->
     affine2extended(extended2affine_batch(L)).
+
+%0,1,1,0
+is_extended_zero(<<0:256, Y:256, Y:256, _:256>>) ->
+    true;
+is_extended_zero(<<_:1024>>) -> false.
+         
+    
 e_eq(<<X1:256, Y1:256, Z1:256, _:256>>, 
      <<X2:256, Y2:256, Z2:256, _:256>>) ->
     (mul(<<X1:256>>, <<Z2:256>>) 
@@ -451,6 +466,24 @@ test(7) ->
     %multiply test
     P = gen_point(),
     R = e_mul(affine2extended(P), <<1:256/little>>),
+
+    P2 = e_add(P, P),
+    P3 = e_add(P, P2),
+    P3b = e_add(P2, P),
+    true = e_eq(P3, P3b),
+    P4 = e_add(P2, P2),
+    P4b = e_add(P, P3),
+    true = e_eq(P4, P4b),
+    P5 = e_add(P3, P2),
+    P5b = e_add(P, P4),
+    P5c = e_add(P4, P),
+    P5d = e_add(P3b, P2),
+    P5e = e_add(P4b, P),
+    true = e_eq(P5, P5b),
+    true = e_eq(P5, P5c),
+    true = e_eq(P5, P5d),
+    true = e_eq(P5, P5e),
+
     {P, R};
 test(8) ->
     %add zero test
@@ -472,8 +505,26 @@ test(8) ->
     AZb = decompress_point(compress_point(AZ)),
     %true = (AZ == AZb),
 
+    Gi = ed25519:faffine2extended(
+           ed25519:fgen_point()),
+    Zi = {extended, 0,1,1,0},
+    Zi2 = ed25519:fextended_double(Zi),
+    P2i = ed25519:fextended_add(Gi, Zi2),
+
+    Gm = ed25519:maffine2extended(
+           ed25519:mgen_point()),
+    Zm = {extended, 0, 38, 38, 0},
+    Zm2 = ed25519:mextended_double(Zm),
+    P2m = ed25519:mextended_add(Gm, Zm2),
+
     Z2 = e_add(Z, Z),
-    [AZ2, AZ2] = extended2affine_batch([Z, Z2]),
+    Z3 = c_ed:double(Z),
+    Z2 = c_ed:padd(Z, Z),
+    Z2 = c_ed:padd(Z, Z2),
+    Z2 = c_ed:padd(Z2, Z2),
+    true = is_extended_zero(Z),
+    true = is_extended_zero(Z2),
+    [AZ2, AZ2] = extended2affine_batch([Z, Z]),
     true = is_on_curve(AZ2),
     AZ2b = decompress_point(compress_point(AZ2)),
     P2 = e_add(P, Z2),
@@ -482,22 +533,38 @@ test(8) ->
     P5 = e_add(P, Z),
     P6 = e_add(e_add(P, E), e_neg(E)),
     P7 = e_add(P, e_add(E, e_add(E2, e_add(e_neg(E), e_neg(E2))))),
-    P8 = e_add(e_add(P, E3), e_neg(E3)),
-    P9 = e_add(e_add(P, E4), e_neg(E4)),
+    %P8 = e_add(e_add(P, E3), e_neg(E3)),
+    P9 = e_add(e_add(P, Z), e_neg(Z)),
+    P8 = e_add(e_add(P, Z), Z),
+
+    <<Z2x:256, Z2y:256, Z2z:256, Z2t:256>> = e_neg(Z),
+
+    
 
     if
         true ->
             {
-               e_eq(Z, Z2), 
-               e_eq(P, P2), 
-               e_eq(P, P3),
-               e_eq(P, P4),
-               e_eq(P, P5),
-               e_eq(P, P6),
-               e_eq(P, P7),
-               e_eq(P, P8),
-               e_eq(P, P9)
-            };
+          Z, e_neg(Z),
+          {decode(<<Z2x:256>>),
+          decode(<<Z2y:256>>),
+          decode(<<Z2z:256>>),
+          decode(<<Z2t:256>>)},
+          P, P2,
+          %Zi, Zi2,
+          %Z2,
+          ed25519:feq(Gi, P2i),
+          ed25519:meq(Gm, P2m),
+          %e_eq(Z, Z2), 
+          e_eq(P, P2), 
+          e_eq(P, P3),
+          e_eq(P2, P3),
+          e_eq(P, P4),
+          e_eq(P, P5),
+          e_eq(P, P6),
+          e_eq(P, P7),
+          {eight, e_eq(P, P8)},
+          {nine, e_eq(P, P9)}
+         };
         true ->
     %<<_:512, PZ:256, _:256>>,
     %io:fwrite({P2}),
@@ -534,8 +601,8 @@ test(9) ->
     Z = extended_zero(),
     P8 = e_add(P1, e_add(P1, Z)),
     P9 = e_add(P1, P1),
-    {P7, P6, P5, P8, P9}.
-%success.
+    %{P7, P6, P5, P8, P9}.
+    success.
     
 
     
