@@ -1,4 +1,17 @@
-multiproof:test(7).
+looks like the order in fr needs to be 8x higher.
+The order is 8*a prime. we did it all based off that prime, instead of off 8*the prime.
+
+
+ed:test(11). multiplying by very big numbers sometimes fails.
+
+ipa:test(7). failing to generate the proof with big numbers.
+
+ipa:test(6). when we use very big numbers, it fails to generate the proof.
+
+
+multiproof2:test(7).
+
+multiproof:test(7). it is a problem with the ipa2 library. we generate a proof, and then immediately try to verify it with the same data, and it fails.
 
 get the tests to pass.
 

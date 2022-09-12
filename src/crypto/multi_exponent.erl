@@ -37,6 +37,8 @@ range(X, X) -> [X];
 range(A, B) when A < B -> 
     [A|range(A+1, B)].
 
+simple_exponent(A, B) -> 
+    simple_exponent(A, B, ed:extended_zero()).
 simple_exponent([], [], A) -> A;
 simple_exponent(
   [R|RT], %256 bit montgomery encoded numbers
@@ -56,12 +58,9 @@ doit(
     {Rs1, Gs} = 
         remove_zero_terms(Rs0, Gs0, [], []),
     if
-        %length(Rs1) < 2 ->
-        true ->
+        length(Rs1) < 2 ->
             simple_exponent(
               Rs1, Gs, ed:extended_zero());
-              %Rs1, Gs, fq:e_zero());
-              %Rs0, Gs0, fq:e_zero());
         true ->
             multi_exponent2(Rs1, Gs)
     end.
@@ -131,12 +130,7 @@ bucketify2([S|R], L, T) ->
     %T_i = S1 + 2*S2 + 3*S3 ... (this is another multi-exponent. a simpler one this time.)
     %compute starting at the end. S7 + (S7 + S6) + (S7 + S6 + S5) ...
     %todo. maybe simplify, multiply, simplify and add? something like that should be faster if there are lots of buckets.
-    %L2 = jacob_add(S, L, E),
-    %B = fq:is_zero(S),
-    %B2 = fq:is_zero(L),
-    %L2 = fq:e_add(L, S),
     L2 = ed:e_add(L, S),
-    %T2 = fq:e_add(L2, T),
     T2 = ed:e_add(L2, T),
     bucketify2(R, L2, T2).
 
@@ -207,6 +201,7 @@ me3([H|T], A, F) ->
 
 
 test(0) ->
+    success = test(7),
     G = ed:affine2extended(ed:gen_point()),
 
     %normal multiplication first
@@ -216,6 +211,8 @@ test(0) ->
     B = ed:e_add(A, G),
     B2 = ed:e_mul2(G, fr:encode(3)),
     true = ed:e_eq(B, B2),
+    Z = 8589934592,
+    B3 = ed:e_mul2(G, fr:encode(Z)),
     true = ed:e_eq(
              G, 
              multi_exponent2([fr:encode(1)], [G])),
@@ -254,6 +251,29 @@ test(0) ->
                      [fr:encode(1), fr:encode(4)], 
                      [G, G]), 
                    ed:e_mul2(G, fr:encode(5))),
+    io:fwrite("32 bytes of zero\n"),
+    %Z = basics:rlpow(10, 32, 9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999),
+    Z = basics:rlpow(2, 33, 1000000000000000000000000000000000000000),
+    Z = 8589934592,
+    true = ed:e_eq(simple_exponent(fr:encode([Z, 1, 1]),
+                        [G, G, G]),
+                   simple_exponent(fr:encode([Z+1, 1]),
+                        [G, G])),
+    true = ed:e_eq(multi_exponent2(fr:encode([Z, 1, 1]),
+                        [G, G, G]),
+                   multi_exponent2(fr:encode([Z+1, 1]),
+                        [G, G])),
+    Big = 3705093086744360691065964547167704750793463218034549685405621849768160725598,
+    true = ed:e_eq(
+             simple_exponent(fr:encode([Big, 1, 1, 1]), 
+                             [G, G, G, G]),
+             simple_exponent(fr:encode([Big+3]),
+                             [G])),
+    true = ed:e_eq(
+             multi_exponent2(fr:encode([Big, 1, 1, 1]), 
+                             [G, G, G, G]),
+             multi_exponent2(fr:encode([Big+3]),
+                             [G])),
     success;
 test(1) ->
     %testing bucketify3. (S7*7 + S6*6 + S5*5 + ...)
@@ -289,6 +309,45 @@ test(6) ->
                    simple_exponent(
                      B, [G, H], 
                      ed:extended_zero())),
+    success;
+test(7) ->
+    %test that using 32 bits of zeros doesn't break elliptic multiplication
+    G = ed:gen_point(),
+
+    
+    io:fwrite("test 31\n"),
+    Z0 = basics:rlpow(2, 31, 9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999),
+    B0 = ed:e_mul2(G, fr:encode(Z0)),
+    io:fwrite("next mul\n"),
+    Bl10 = ed:e_mul2(G, fr:encode(Z0-1)),
+    true = ed:e_eq(B0, ed:e_add(Bl10, G)),
+
+
+    io:fwrite("test 32\n"),
+    Z = basics:rlpow(2, 32, 9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999),
+    B = ed:e_mul2(G, fr:encode(Z)),
+    timer:sleep(50),
+    io:fwrite("next mul\n"),
+    Bl1 = ed:e_mul2(G, fr:encode(Z-1)),
+    timer:sleep(50),
+    true = ed:e_eq(B, ed:e_add(Bl1, G)),
+    success;
+test(8) ->
+    %elliptic multiplication doesn't break on big numbers.
+    G = ed:gen_point(),
+    Eb = 328490237808490508376962983701062532245597166313109197768658377164801760055,
+    Es = 200990237808490508376962983701062532245597166313109197768658377164801760055,
+    %Es = 127990237808490508376962983701062532245597166313109197768658377164801760055,
+
+    Gs = ed:e_mul2(G, fr:encode(Es)),
+    Gb = ed:e_mul2(G, fr:encode(Eb)),
+    Gd = ed:e_mul2(G, fr:encode(Eb - Es)),
+    
+    true = ed:e_eq(Gb, ed:e_add(Gs, Gd)),
     success.
+    
+    
+    
+
     
 

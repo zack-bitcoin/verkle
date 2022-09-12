@@ -1,6 +1,6 @@
 -module(ipa2).
 -export([make_ipa/5, verify_ipa/5,
-         commit/2, eq/2, 
+         commit/2, %eq/2, 
          gen_point/0,
          basis/1, dot/2,
          test/1]).
@@ -17,7 +17,7 @@
 %        if (C>= ?order ) -> C - ?order;
 %           true -> C end).
 
--define(sanity_checks, false).
+-define(sanity_checks, true).
 
 dot(A, B) -> dot(A, B, fr:encode(0)).
 dot([], [], Acc) -> Acc;
@@ -44,8 +44,6 @@ commit(V, G) ->
     %V1*G1 + V2*G2 + V3*G3 + ...
     %secp256k1:multi_exponent(V, G, E).
     %V is integers that fit in 256 bits.
-
-    %todo. call this with the correct inputs.
 
     multi_exponent:doit(V, G).
 
@@ -80,10 +78,6 @@ mul1(X, G) ->
 %    true = is_binary(G),
 %    true = (32*4) == size(G),
     %fq:e_mul1(G, X).
-eq(G, H) ->
-    %secp256k1:jacob_equal(G, H, E).
-    %fq:eq(G, H).
-    ed:e_eq(G, H).
 v_add(As, Bs) ->
     lists:zipwith(
       fun(A, B) ->
@@ -123,6 +117,9 @@ make_ipa(A, B, G, H, Q) ->
     %C = AG+BH+AB*Q
     AG = commit(A, G),
     AB = dot(A, B),
+    %io:fwrite("ab: "),
+    %fr_print([AB, A, B]),
+    %io:fwrite("\n"),
     %io:fwrite({size(Q), size(AB)}),%64, 32
     C1 = add(add(AG, commit(B, H)), 
              mul(AB, Q)),%AB is int, Q is e-point
@@ -136,55 +133,48 @@ make_ipa(A, B, G, H, Q) ->
     {AGf, AB, Cs, AN, BN}.
     
 make_ipa2(C1, [A], [G], [B], [H], Q, Cs, _, _) ->
-    %maybe at this point we should compress some of this data so it is smaller to send.
+    %io:fwrite("ipa make finisher\n"),
     if
         ?sanity_checks ->
             C2 = add(add(mul(A, G),
                          mul(B, H)),
                      mul(fr:mul(A, B), Q)),
-            %io:fwrite("last C1\n"),
-            %io:fwrite(base64:encode(fq:extended2affine(C1))),
-            %io:fwrite("\n"),
-            %io:fwrite("last C2\n"),
-            %io:fwrite(base64:encode(fq:extended2affine(C2))),
-            %io:fwrite("\n"),
-            io:fwrite("B is: "),
-            io:fwrite(integer_to_list(fr:decode(B))),
-            io:fwrite("\n"),
-            %Bool = fq:eq(C1, C2),
+            %C2 = add(add(commit([A], [G]),
+            %             commit([B], [H])),
+            %         mul(fr:mul(A, B), Q)),
             Bool = ed:e_eq(C1, C2),
             if
                 not(Bool) ->
-                    io:fwrite("sanity check\n"),
+                    io:fwrite("final sanity check\n"),
                     1=2;
-                true -> 
-                    ok
+                true -> ok
             end;
         true -> ok
     end,
     {Cs, A, B};
 make_ipa2(C1, A, G, B, H, Q, Cs, X, Xi)  ->
+    %io:fwrite("ipa main loop\n"),
     if
         ?sanity_checks ->
             C1b =  add(add(commit(A, G), 
                           commit(B, H)),
                       mul(dot(A, B), Q)),
-            %Bool = fq:eq(C1, C1b),
             Bool = ed:e_eq(C1, C1b),
             if
                 not(Bool) ->
-                    io:fwrite("sanity check\n"),
+                    io:fwrite(integer_to_list(length(A))),
+                    io:fwrite(" sanity check\n"),
                     io:fwrite("\n"),
                     1=2;
                 true -> 
-                    io:fwrite("B is: "),
-                    lists:map(
-                      fun(X) -> 
-                              io:fwrite(integer_to_list(fr:decode(X))),
-                              io:fwrite(" ")
-                      end,
-                      B),
-                    io:fwrite("\n"),
+%                    io:fwrite("B is: "),
+%                    lists:map(
+%                      fun(X) -> 
+%                              io:fwrite(integer_to_list(fr:decode(X))),
+%                              io:fwrite(" ")
+%                      end,
+%                      B),
+%                    io:fwrite("\n"),
                     ok
             end;
         true -> ok
@@ -193,27 +183,41 @@ make_ipa2(C1, A, G, B, H, Q, Cs, X, Xi)  ->
     S2 = length(A) div 2,
     {Al, Ar} = lists:split(S2, A),
     {Bl, Br} = lists:split(S2, B),
-    Zl = dot(Ar, Bl),
+    %todo. one of these spots is broken, but only sometimes.
+    Zl = dot(Ar, Bl),%
     Zr = dot(Al, Br),
+    %looks good.
+    %io:fwrite("z dots: "),
+    %fr_print([A, Al, Ar, B, Bl, Br, Zl, Zr]),
+    %io:fwrite("\n"),
     {Gl, Gr} = lists:split(S2, G),
     {Hl, Hr} = lists:split(S2, H),
-    Cl = add(commit(Ar, Gl),
+    %io:fwrite("Cl: "),
+    %fr_print([Ar, Bl, Zl]),%1,1,1
+    %io:fwrite("\n"),
+    Cl = add(commit(Ar, Gl),% %
              add(commit(Bl, Hr),
-                 mul(Zl, Q))),
+                 mul(Zl, Q))),%
+    %io:fwrite("Cr: "),
+    %fr_print([Al, Br, Zr]),%1,-2,-2
+    %io:fwrite("\n"),
+
+    %I feel like the problem is in calculating Cr somehow.
     Cr = add(commit(Al, Gr),
              add(commit(Br, Hl),
                  mul(Zr, Q))),
-    A2 = fv_add(Al, fv_mul(X, Ar)),
+    A2 = fv_add(Al, fv_mul(X, Ar)),% %
     B2 = fv_add(Bl, fv_mul(Xi, Br)),
+    %looks good
+    %io:fwrite("a2 b2: "),
+    %fr_print([A2, B2, X]),
+    %io:fwrite("\n"),
     C12 = add(mul(X,Cl),
              mul(Xi, Cr)),
     C2 = add(C1, C12),
-    G2 = v_add(v_mul(Xi, Gr), Gl),
+    G2 = v_add(v_mul(Xi, Gr), Gl),%%
+    %io:fwrite({fr:prime(), fr:decode([A2, B2])}),
     H2 = v_add(v_mul(X, Hr), Hl),
-    %G20 = v_add(simplify_v(v_mul(Xi, Gr)), Gl),
-    %H20 = v_add(simplify_v(v_mul(X, Hr)), Hl),
-    %G2 = fq:extended2extended_niels(G20),
-    %H2 = fq:extended2extended_niels(H20),
                
     make_ipa2(C2, A2, G2, B2, 
               H2, Q, [Cl, Cr|Cs], X, Xi).
@@ -252,7 +256,7 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
     C1 = hd(lists:reverse(Cs)),
     C1b = add(add(AG, commit(B, H)), 
              mul(AB, Q)),
-    EB = eq(C1, C1b),
+    EB = ed:e_eq(C1, C1b),
     if
         not(EB) -> 
             io:fwrite("verify ipa false 1\n"),
@@ -270,7 +274,7 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
             %T1 = erlang:timestamp(),
             CNb = fold_cs(X, Xi, Cs),
             %T2 = erlang:timestamp(),
-            B2 = eq(CNa, CNb),
+            B2 = ed:e_eq(CNa, CNb),
             if
                 B2 -> true;
                 true ->
@@ -281,16 +285,17 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
     end.
 
 gen_point() -> ed:gen_point().
+gen_point(R) -> ed:gen_point(hash:doit(<<R:256>>)).
 %    fq:affine2extended(
 %      fq:gen_point()).
 basis(S) ->
-    G = lists:map(fun(_) ->
-                           gen_point()
+    G = lists:map(fun(R) ->
+                           gen_point(R)
                    end, range(0, S)),
-    H = lists:map(fun(_) ->
-                           gen_point()
-                   end, range(0, S)),
-    Q = gen_point(),
+    H = lists:map(fun(R) ->
+                           gen_point(R)
+                   end, range(S, S*2)),
+    Q = gen_point(S*2),
     {G, H, Q}.
 
 range(X, X) -> [];
@@ -300,17 +305,46 @@ range(X, Y) when X < Y ->
 encode_list(L) ->
     lists:map(fun(X) -> fr:encode(X) end, L).
 
+
+
+fr_print([]) -> ok;
+fr_print([H]) when is_list(H) -> 
+    io:fwrite("["),
+    fr_print(H),
+    io:fwrite("]");
+fr_print([H|T]) when is_list(H) -> 
+    io:fwrite("["),
+    fr_print(H),
+    io:fwrite("],"),
+    fr_print(T);
+fr_print([H]) -> 
+    fr_print(H);
+fr_print([H|T]) -> 
+    fr_print(H),
+    io:fwrite(","),
+    fr_print(T);
+fr_print(X = <<_:256>>) -> 
+    Y = fr:decode(X),
+    P2 = fr:prime() div 2,
+    Z = if 
+        Y > P2 -> Y - fr:prime();
+        true -> Y
+        end,
+    io:fwrite(integer_to_list(Z)).
+            
+
+
 test(1) ->
 
     A0 = range(100, 108),
-    A = encode_list(A0),
+    A = encode_list(lists:reverse(A0)),
     %A = A0,
     S = length(A),
     {G, H, Q} = basis(S),
 
 
     Bv = encode_list([10,0,3,1,1,2,0,10]),%103+104 = 207
-    Bv2 = encode_list([0,0,0,0,0,0,0,1]),%100+105 = 205
+    Bv2 = encode_list([1000000000000,0,0,0,0,0,0,10000000]),%100+105 = 205
     io:fwrite("test 1 0 \n"),
     Proof = make_ipa(
               A, Bv,%103+104 = 207
@@ -324,6 +358,7 @@ test(1) ->
     Proof2 = make_ipa(
               A, Bv2,
               G, H, Q),
+%    io:fwrite({size(hd(A)), length(A), size(hd(Bv2)), length(Bv2)}),%32, 8, 32, 8
     %100 = fr:decode(element(2, Proof2)),
     io:fwrite("test 1 4 \n"),
     true = verify_ipa(Proof2, Bv2, G, H, Q),
@@ -419,14 +454,61 @@ test(5) ->
               G, H, Q),
     %{AGf, AB, Cs, AN, BN}.
     true = verify_ipa(Proof2, Bv2, G, H, Q),
+    success;
+test(6) ->
+     A0 = [6557398279811269422222260660686945123758959220525701212948355841020816233267,
+     3705093086744360691065964547167704750793463218034549685405621849768160725598],
+    A0 = fr:decode(fr:encode(A0)),
+    %A = fr:encode(A0),
+    %A0 = fr:decode(A),
+    
+    %if it has more than 74 characters, then it breaks. fr encoded has like 77 characters, so this doesn't work.
+    A0a = [%10,20,30,40,
+           %50,60,70, %10],
+           1,2,3,4,5,6,7,8,
+           %100510237808490508376962983701062532245597166313109197768658377164801760055,
+           %100510237808490508376962983701062532245597166313109197768658377164801760055,
+           100530237808490508376962983701062532245597166313109197768658377164801760055,
+
+           %200990237808490508376962983701062532245597166313109197768658377164801760055,
+           %201590237808490508376962983701062532245597166313109197768658377164801760055,
+           %201590237808490508376962983701062532245597166313109197768658377164801760055],
+           5,
+           %328490237808490508376962983701062532245597166313109197768658377164801760055,
+           6,7,
+           1,2,3,4
+],
+%900000000000000000000000000000000000000000000],
+    A0a = fr:decode(fr:encode(A0a)),
+    %if there are more than 32 digits, it breaks...
+    A = encode_list(A0a),
+    %A0a = fr:decode(A),
+    B0b = [
+           1,2,3,4,5,6,7,8,
+           8,7,6,5,
+           4,3,2, 1],
+    %31552620236409682111491181490461037455464059572158722099773680689245815623],
+    
+           %3155262023640968211149118149046103745546405957215872209977368068924581562391],
+    B0b = fr:decode(fr:encode(B0b)),
+    B = fr:encode(B0b),
+    %io:fwrite({B0b, B0}),
+    S = length(A),
+    {G, H, Q} = basis(S),
+    Proof = make_ipa(A, B, G, H, Q),
+    true = verify_ipa(Proof, B, G, H, Q),
+    success;
+test(7) ->
+    %B = fr:encode([1, fr:prime() * 8 div 17]),
+    B = fr:encode([1, fr:prime() -2]),
+    %fr_print(B),
+    %io:fwrite("\n"),
+    A = fr:encode([1, 1]),
+    %B = fr:encode([2,fr:prime() div 32, fr:prime() div 16, fr:prime() div 16]),
+    %A = fr:encode([2, 3, 1, 1]),
+    
+    S = length(A),
+    {G, H, Q} = basis(S),
+    Proof = make_ipa(A, B, G, H, Q),
+    true = verify_ipa(Proof, B, G, H, Q),
     success.
-    
-
-    
-                     
-    
-
-
-    
-    
-

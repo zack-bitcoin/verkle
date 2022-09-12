@@ -17,6 +17,7 @@ const uint64_t q[4] =
   };
 
 // inverse(2)
+//unused
 const uint64_t i2[4] =
   {
    18446744073709551607U,
@@ -50,6 +51,7 @@ const uint64_t zero[4] =
   {0U,0U,0U,0U};
 
 //16295367250680780974490674513165176452449235426866156013048779062215315747161
+//unused
 const uint64_t D2[4] =
 {
  16993941304535871833U,
@@ -513,25 +515,27 @@ static inline void e_mul_long2
   uint64_t K[4];
   uint64_t L[4];
   uint64_t M[4];
-  memcpy(x2, x, 32);
-  memcpy(y2, y, 32);
-  memcpy(z2, z, 32);
-  memcpy(t2, t, 32);
-  int all_zero = 1;
+  memcpy(x2, zero, 32);
+  memcpy(y2, one, 32);
+  memcpy(z2, one, 32);
+  memcpy(t2, zero, 32);
+  //printf("\n");
   for(int i = 3; i >= 0; i--){
+    //printf("\n");
     for(int j = 63; j >= 0; j--){
       int bool = kth_bit(b[i], j);
-      if(!(all_zero)){
+      if(1){
         e_double2(x2, y2, z2, t2,
                   x2, y2, z2, t2, J, K);
         if(bool){
           e_add2(x2, y2, z2, t2,
                  x, y, z, t,
                  x2, y2, z2, t2);
+          //printf("a");
+        } else {
+          //printf(".");
         }
       }
-      all_zero = (all_zero && (!(bool)));
-
     }
   }
 }
@@ -766,12 +770,15 @@ static ERL_NIF_TERM e_mul_long
   int checkb =
     enif_inspect_binary(env, argv[1], &B);
   if((!checka)){
+    //printf("mul error elliptic point\n");
     return(error_atom(env));
   };
   if((!(Point.size == 128))){
+    //printf("mul error elliptic point size\n");
     return(error_atom(env));
   }
   if((!checkb) || (!(B.size == 32))){
+    //printf("mul error exponent size\n");
     return(error_atom(env));
   };
   uint64_t * X2 = (uint64_t *)&(C[0]);
@@ -783,15 +790,17 @@ static ERL_NIF_TERM e_mul_long
   uint64_t * Y = (uint64_t *)&(Point.data[32]);
   uint64_t * Z = (uint64_t *)&(Point.data[64]);
   uint64_t * T = (uint64_t *)&(Point.data[96]);
-  if((B.data[0] == 0) &&
-     (B.data[1] == 0) &&
-     (B.data[2] == 0) &&
-     (B.data[3] == 0)){
+  if((B.data[0] == 0U) &&
+     (B.data[32] == 0U) &&
+     (B.data[64] == 0U) &&
+     (B.data[96] == 0U)){
+    //printf("exponent is zero\n");
     memcpy(X2, zero, 32);
     memcpy(Y2, one, 32);
     memcpy(Z2, one, 32);
     memcpy(T2, zero, 32);
   } else if(is_zero_point(X, Y, Z)) {
+    //printf("elliptic point is zero\n");
     memcpy(X2, zero, 32);
     memcpy(Y2, one, 32);
     memcpy(Z2, one, 32);

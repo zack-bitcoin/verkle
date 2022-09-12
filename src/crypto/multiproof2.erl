@@ -1,7 +1,7 @@
 -module(multiproof2).
 -export([prove/9, verify/4, test/1]).
 
--define(sanity_checks, false).
+-define(sanity_checks, true).
 
 %G is the most important calculation of the multiproof.
     %sum i: r^i * (As_i(t)-Y_i)/(t-z_i)
@@ -188,15 +188,20 @@ prove(As, %committed data
     io:fwrite("multiprove create ipa opening to G-E\n"), % 2%
     benchmark:now(),
     %spend a little time here.
-    IPA = ipa2:make_ipa(NG2, EV, 
-                       Gs, Hs, Q),
+%    io:fwrite({size(hd(NG2)), length(NG2),
+%               size(hd(EV)), length(EV), NG2, EV}),%{32, 256, 32, 256}
+    IPA = ipa2:make_ipa(NG2, EV, Gs, Hs, Q),
     if
         ?sanity_checks ->
             {_RIDs, G2b} = 
                 calc_G2_2(R, T, Ys, Zs),
             true = (fr:encode(0) 
                     == fr:add(G2b, element(
-                                     2, IPA)));
+                                     2, IPA))),
+            true = ipa2:verify_ipa(
+                     IPA, EV, 
+                     Gs, Hs, Q),
+            ok;
         true -> ok
     end,
     io:fwrite("multiprove finished\n"),
@@ -272,7 +277,8 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     T8 = erlang:timestamp(),
     io:fwrite("multiproof verify ipa eq\n"),
     benchmark:now(),
-    true = ipa2:eq(CommitG_sub_E, 
+    %true = ipa2:eq(CommitG_sub_E, 
+    true = ed:e_eq(CommitG_sub_E, 
                    element(1, Open_G_E)),
     T9 = erlang:timestamp(),
     NegE = timer:now_diff(T7, T6),
@@ -301,8 +307,8 @@ many(X, N) when N > 0 ->
     [X|many(X, N-1)].
     
 test(1) ->
-    %calc_G
-    %sum from i=0 to m-1 of r^i f_i(X)/(t-z_i)
+                                                %calc_G
+                                                %sum from i=0 to m-1 of r^i f_i(X)/(t-z_i)
     Domain = parameters2:domain(),
     Many = 2,
     %As are vectors that contain elements Y at locations Z.

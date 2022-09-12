@@ -460,7 +460,6 @@ static ERL_NIF_TERM power
        (uint64_t *)C);
   enif_release_binary(&A);
   enif_release_binary(&B);
-  memcpy(C, one, 32);
   return Result;
 };
 static ERL_NIF_TERM short_power

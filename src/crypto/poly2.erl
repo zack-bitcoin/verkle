@@ -392,7 +392,7 @@ test(1) ->
     EP2 = eval_outside(Z, Ps2, Domain, A, DA),
     %EP3 = fr:mul(EP, Inv),
     EP3 = fr:mul(EP2, fr:encode(DZ - DM)),
-    {symetric_view(fr:decode([EP, EP2, EP3]), fr:prime())};
+    {symetric_view(fr:decode([EP, EP2, EP3]), fr:order())};
 test(2) -> 
     Domain = fr:encode([1,2,3,4]),
     A = calc_A(Domain),
@@ -424,7 +424,7 @@ test(4) ->
            fr:decode(
              calc_A(
                fr:encode(Domain))), 
-           fr:prime()),
+           fr:order()),
     E = secp256k1:make(),
     V2 = symetric_view(
            poly:calc_A(Domain, 
@@ -438,7 +438,7 @@ test(5) ->
     V1 = symetric_view(
            fr:decode(
              calc_DA(fr:encode(Domain))),
-           fr:prime()),
+           fr:order()),
     E = secp256k1:make(),
     V2 = symetric_view(
            poly:calc_DA(Domain, E), 

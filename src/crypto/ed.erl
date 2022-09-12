@@ -15,7 +15,7 @@
          affine2extended/1,
          extended2affine_batch/1,
          a_neg/1, e_neg/1, normalize/1, 
-         a_eq/2, e_eq/2,
+         e_eq/2,
          e_add/2, e_mul/2, e_mul2/2,
          encode/1, decode/1,
          affine_zero/0, extended_zero/0,
@@ -80,7 +80,13 @@ e_mul(X = <<_:1024>>, Y = <<_:256>>) ->
 %    if
 %        B -> ?extended_zero;
 %        true ->
-            c_ed:pmul_long(X, Y).
+    <<Xp:256, Yp:256, Zp:256, _:256>> = X,
+    if
+        (Xp == 0) and (Yp == Zp) ->
+            extended_zero();
+        true ->
+            c_ed:pmul_long(X, Y)
+    end.
 %    end.
 %e_mul2(X = <<_:256>>, Y) ->
 %    e_mul2(decompress_point(X), Y);
@@ -183,15 +189,16 @@ decompress_point2(U, S, T, B) ->
                     error
             end
     end.
-            
-    
+           
 gen_point() ->
     <<X:256>> = crypto:strong_rand_bytes(32),
     gen_point(<<X:256>>).
 gen_point(<<X:256>>) ->
-    case decompress_point(<<X:256>>) of
-        error -> gen_point(<<(X+1):256>>);
-        P -> P
+    P = decompress_point(<<X:256>>),
+    case P of
+        error -> 
+            gen_point(<<(X+1):256>>);
+        _ -> P
     end.
 is_positive(Y) ->
     (Y band ?max255) == 0.
@@ -201,14 +208,14 @@ affine2extended(P = <<_:256>>) ->
     io:fwrite("compressed to extended instead \n"),
     affine2extended(decompress_point(P));
 affine2extended(P = <<X0:256, Y0:256>>) ->
-    B = a_eq(P, ?affine_zero),
-    if
-        B -> ?extended_zero;
-        true ->
-            T = mul(<<X0:256>>, <<Y0:256>>),
-            <<X0:256, Y0:256, 
-              ?one/binary, T/binary>>
-    end;
+%    B = a_eq(P, ?affine_zero),
+%    if
+%        B -> ?extended_zero;
+%        true ->
+    T = mul(<<X0:256>>, <<Y0:256>>),
+    <<X0:256, Y0:256, 
+      ?one/binary, T/binary>>;
+%    end;
 affine2extended([]) -> [];
 affine2extended([H|T]) ->
     [affine2extended(H)|
@@ -271,16 +278,20 @@ is_extended_zero(<<0:256, Y:256, Y:256, _:256>>) ->
 is_extended_zero(<<_:1024>>) -> false.
          
     
-e_eq(<<X1:256, Y1:256, Z1:256, _:256>>, 
+e_eq(P1, P2) ->
+    TZ = e_add(P1, e_neg(P2)),
+    TZ2 = e_mul(TZ, <<8:256/little>>),
+    e_eq2(extended_zero(), TZ2).
+e_eq2(<<X1:256, Y1:256, Z1:256, _:256>>, 
      <<X2:256, Y2:256, Z2:256, _:256>>) ->
     (mul(<<X1:256>>, <<Z2:256>>) 
      == mul(<<X2:256>>, <<Z1:256>>)) 
         and (mul(<<Y1:256>>, <<Z2:256>>) 
              == mul(<<Y2:256>>, <<Z1:256>>)).
-a_eq(<<X:512>>, <<X:512>>) ->
-    true;
-a_eq(<<_:512>>, <<_:512>>) ->
-    false.
+%a_eq(<<X:512>>, <<X:512>>) ->
+%    true;
+%a_eq(<<_:512>>, <<_:512>>) ->
+%    false.
 
 %encode(0) -> <<0:256>>;
 %encode(1) -> <<38:256/little>>;
@@ -577,6 +588,10 @@ test(8) ->
             true = e_eq(P, P7),
             true = e_eq(P, P8),
             true = e_eq(P, P9),
+
+            true = e_eq(extended_zero(),
+                        e_add(P, e_neg(P))),
+
             success
     end;
 test(9) ->
@@ -609,7 +624,100 @@ test(9) ->
     P8 = e_add(P1, e_add(P1, Z)),
     P9 = e_add(P1, P1),
     %{P7, P6, P5, P8, P9}.
-    success.
+    success;
+test(10) ->
+    %testing that multiplying by zero works correctly.
+    <<B0:256>> = crypto:strong_rand_bytes(32),
+    B = B0 rem ?q,
+    G = gen_point(),
+    Z0 = e_mul2(G, fr:encode(0)),
+    Z1 = extended_zero(),
+    Z2 = e_mul(extended_zero(), fr:encode(B)),
+    true = ed:e_eq(Z0, Z1),
+    true = ed:e_eq(Z2, Z1),
+    Big = 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,
+    false = ed:e_eq(Z1, e_mul2(G, fr:encode(basics:rlpow(2, 1, Big)))),
+    false = ed:e_eq(Z1, e_mul2(G, fr:encode(basics:rlpow(2, 2, Big)))),
+    false = ed:e_eq(Z1, e_mul2(G, fr:encode(basics:rlpow(2, 4, Big)))),
+    false = ed:e_eq(Z1, e_mul2(G, fr:encode(basics:rlpow(2, 7, Big)))),
+    false = ed:e_eq(Z1, e_mul2(G, fr:encode(basics:rlpow(2, 8, Big)))),
+    false = ed:e_eq(Z1, e_mul2(G, fr:encode(basics:rlpow(2, 66, Big)))),
+    false = ed:e_eq(Z1, e_mul2(G, fr:encode(basics:rlpow(2, 127, Big)))),
+    false = ed:e_eq(Z1, e_mul2(G, fr:encode(basics:rlpow(2, 128, Big)))),
+    false = ed:e_eq(Z1, e_mul2(G, fr:encode(basics:rlpow(2, 255, Big)))),
+
+    true = e_eq(Z1, e_mul2(G, fr:encode(fr:prime()))),
+    true = e_eq(Z1, e_add(G, e_mul2(G, fr:encode(fr:prime()-1)))),
+
+    success;
+test(11) ->
+    G = affine2extended(gen_point()),
+    %G = base_point(),
+    %G2 = e_mul(G, <<2:256/little>>),
+    %G2b = c_ed:double(G),
+    %true = e_eq(G2, G2b),
+    Z = extended_zero(),
+    P = fr:prime(),
+    %true = e_eq(Z, e_add(e_neg(G), e_mul2(G, fr:encode(P+1)))),
+    %true = e_eq(Z, e_add(e_neg(G), G)),
+    %true = e_eq(Z, e_add(e_neg(G), G)),
+    io:fwrite("neg add\n"),
+    %true = e_eq(Z, e_add(e_neg(G), e_mul(G, <<(P+1):256/little>>))),
+    io:fwrite("just circle\n"),
+    NG = e_mul(G, <<(P+1):256/little>>),
+    Z2 = e_add(NG, e_neg(G)),
+    Z2b = e_mul(Z2, <<8:256/little>>),
+    true = e_eq(Z, Z2b),
+    %io:fwrite({G}),
+%    true = e_eq(Z, e_add(G, e_mul2(G, fr:encode(P-1)))),
+
+    %success.
+    G;
+test(12) ->
+    WorkingPoint = 
+<<48,224,74,190,145,127,2,130,46,94,157,8,11,203,
+  61,171,78,222,166,110,128,11,103,246,223,105,
+  255,72,254,34,15,95,15,117,9,24,22,166,155,225,
+  193,196,170,17,75,191,228,96,182,26,113,125,197,
+  244,91,59,14,202,207,188,83,251,50,60,38,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,224,207,0,7,228,116,91,73,153,117,107,
+  141,84,199,52,80,177,189,121,70,11,211,198,49,
+  200,110,183,84,41,16,127,75>>,
+    BrokenPoint = 
+<<223,241,198,92,127,189,75,7,1,58,95,114,167,153,
+  21,22,222,132,135,93,16,122,141,207,124,147,140,
+  58,37,195,8,60,172,86,154,5,179,37,130,207,138,
+  203,194,67,16,167,78,252,208,241,176,82,152,136,
+  207,246,48,27,72,112,93,8,135,61,38,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,113,11,47,28,23,33,244,4,252,139,113,68,46,
+  235,200,32,104,199,71,3,46,236,56,5,67,189,74,
+  60,166,85,153,65>>,
+    %[A, B] = [WorkingPoint, BrokenPoint],
+    [A, B] = [WorkingPoint, affine2extended(gen_point())],
+    [AW, AB] = extended2affine_batch([A, B]),
+    B2 = affine2extended(AB),
+    true = is_on_curve(AW),
+    true = is_on_curve(AB),
+    P = fr:prime(),
+    true = e_eq(A, e_mul(A, <<(P+1):256/little>>)),
+    true = e_eq(extended_zero(), c_ed:double(c_ed:double(c_ed:double(e_mul(B2, <<(P):256/little>>))))),
+    true = e_eq(extended_zero(), c_ed:double(c_ed:double(e_mul(B2, <<(P):256/little>>)))),
+    true = e_eq(extended_zero(), e_mul(B2, <<(P*4):256/little>>)),
+    true = e_eq(extended_zero(), c_ed:double(e_mul(B2, <<(P):256/little>>))),
+    true = e_eq(extended_zero(), e_mul(B2, <<(P):256/little>>)),
+    true = e_eq(B, e_mul(B, <<(P+1):256/little>>)),
+    %try doing the identical multiplication, but with the erlang version.
+    %is the point on the curve?
+    
+    ok.
+    
+
+
+
+    
+
     
 
     
