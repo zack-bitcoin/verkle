@@ -10,6 +10,7 @@ test/1]).
 -include("constants.hrl").
 
 -define(pipe, false).
+-define(sanity, true).
 
 keys2paths(Keys, CFG) ->
     Paths0 = lists:map(
@@ -100,10 +101,54 @@ batch(Keys, Root, CFG) ->
     io:fwrite("Fas done\n"),% 8%
     FZs = fr:encode(Zs),
     io:fwrite("Fzs done\n"),% 8%
+    %io:fwrite({length(hd(FAs)), length(FAs), length(FZs), length(Commits), hd(FAs), hd(FZs), hd(Commits)}),
+    %256,1,1,1
+    %FAs is list of binaries. FZs is binaries. commits is binaries
+
+    if
+        ?sanity -> 
+            lists:map(
+              fun(Z) ->
+                      B = is_in(Z, Domain),
+                      if
+                          B -> ok;
+                          true -> io:fwrite({Z, Domain})
+                      end
+              end, FZs),
+            true = (length(Commits)) == (length(As)),
+            lists:zipwith(
+              fun(Old, A) ->
+    %verify that the commits are over FAs.
+                      New = ipa2:commit(A, Gs),
+                      B = ed:e_eq(Old, New),
+                      if
+                          B -> ok;
+                          true -> 1=2
+                      end
+              end, Commits, As),
+            ok;
+        true -> ok
+    end,
+
     {CommitG, Opening} = 
         multiproof2:prove(
           FAs, FZs, Commits,
          Gs, Hs, Q, DA, PA, Domain),
+
+    if
+        ?sanity ->
+            Ys = lists:zipwith(
+                    fun(F, Z) ->
+                            poly2:eval_e(Z, F, Domain)
+                    end, FAs, FZs),
+            true = multiproof2:verify(
+                     {CommitG, Opening}, 
+                   %Commits, Zs, fr:decode(Ys)),
+                     Commits, FZs, Ys);
+        true -> ok
+    end,
+
+
     io:fwrite("get done\n"),
     benchmark:now(),
 
@@ -134,24 +179,24 @@ batch(Keys, Root, CFG) ->
         fill_points(Spoints, Listed, []),
     {Tree5, CommitG2, list_to_tuple(Opening2)}.
     %{Tree4, CommitG, Opening}.
-%points_list([<<E:1280>>|T]) ->%1280 bits in an extended bit.
-%    [<<E:1280>>|points_list(T)];
-tree_leaves(X = {<<_:256>>, Value}) 
-  when is_binary(Value) -> [X];
-tree_leaves([]) -> [];
-tree_leaves([H|T]) -> 
-    tree_leaves(H) ++ tree_leaves(T);
-tree_leaves(T) when is_tuple(T) -> 
-    tree_leaves(tuple_to_list(T));
-tree_leaves(_) ->  [].
+%points_list([<<E:1024>>|T]) ->%1024 bits in an extended bit.
+%    [<<E:1024>>|points_list(T)];
+%tree_leaves(X = {<<_:256>>, Value}) 
+%  when is_binary(Value) -> [X];
+%tree_leaves([]) -> [];
+%tree_leaves([H|T]) -> 
+%    tree_leaves(H) ++ tree_leaves(T);
+%tree_leaves(T) when is_tuple(T) -> 
+%    tree_leaves(tuple_to_list(T));
+%tree_leaves(_) ->  [].
 
-points_list(<<E:1280>>) -> [<<E:1280>>];
-points_list({I, <<E:1280>>}) when is_integer(I) ->
-    [<<E:1280>>];
+points_list(<<E:1024>>) -> [<<E:1024>>];
+points_list({I, <<E:1024>>}) when is_integer(I) ->
+    [<<E:1024>>];
 points_list([H|T]) ->% when is_list(H) ->
     points_list(H) ++ points_list(T);
-points_list([_|T]) ->
-    points_list(T);
+%points_list([_|T]) ->
+%    points_list(T);
 points_list([]) -> [];
 points_list(_) -> [].
 
@@ -184,10 +229,10 @@ fill_points(Points, [], Result) ->
 fill_points(Ps, [T|R], Result) when is_list(T) ->
     {T2, Ps2} = fill_points(Ps, T, []),
     fill_points(Ps2, R, [T2|Result]);
-fill_points([P|PT], [{I, <<_:1280>>}|R], Result) 
+fill_points([P|PT], [{I, <<_:1024>>}|R], Result) 
   when is_integer(I) ->
     fill_points(PT, R, [{I, P}|Result]);
-fill_points([P|PT], [<<_:1280>>|R], Result) ->
+fill_points([P|PT], [<<_:1024>>|R], Result) ->
     fill_points(PT, R, [P|Result]);
 fill_points(Ps, [T|R], Result) ->
     fill_points(Ps, R, [T|Result]).
@@ -368,6 +413,13 @@ same_end(LPath, Path, _CFG) ->
 tl_times(N, L) when N < 1 -> L;
 tl_times(N, L) ->
     tl_times(N-1, tl(L)).
+
+is_in(X, [X|_]) -> true;
+is_in(X, []) -> false;
+is_in(X, [_|T]) -> 
+    is_in(X, T).
+
+
 
 test(1) ->
     CFG = trie:cfg(trie01),

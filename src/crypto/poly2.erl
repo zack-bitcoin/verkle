@@ -424,7 +424,7 @@ test(4) ->
            fr:decode(
              calc_A(
                fr:encode(Domain))), 
-           fr:order()),
+           fr:prime()),
     E = secp256k1:make(),
     V2 = symetric_view(
            poly:calc_A(Domain, 
@@ -438,7 +438,7 @@ test(5) ->
     V1 = symetric_view(
            fr:decode(
              calc_DA(fr:encode(Domain))),
-           fr:order()),
+           fr:prime()),
     E = secp256k1:make(),
     V2 = symetric_view(
            poly:calc_DA(Domain, E), 

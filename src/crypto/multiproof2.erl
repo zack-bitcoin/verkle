@@ -98,7 +98,9 @@ calc_R([<<C1:256, C2:256>>|CT],
            Y:256, 
            C1:256, 
            C2:256>>,
-    calc_R(CT, ZT, YT, B2).
+    calc_R(CT, ZT, YT, B2);
+calc_R(A, B, C, D) -> 
+    io:fwrite({A, B, C, D}).
 
 calc_T(<<C1:256, C2:256>>, <<R:256>>) ->
     %deterministically generated random number. 
@@ -129,10 +131,6 @@ prove(As, %committed data
     benchmark:now(),
     Ys0 = lists:zipwith(
            fun(F, Z) ->
-                   %io:fwrite({size(Z), 
-                   %           length(F), 
-                   %           size(hd(Domain)), 
-                   %           Z, F, hd(Domain)}),
                    poly2:eval_e(Z, F, Domain)
            end, As, Zs),%this should be streamed with calculating the As.
     %io:fwrite({fr:decode([Ys0, As, Zs])}),
@@ -193,14 +191,33 @@ prove(As, %committed data
     IPA = ipa2:make_ipa(NG2, EV, Gs, Hs, Q),
     if
         ?sanity_checks ->
-            {_RIDs, G2b} = 
+            {RIDs, G2b} = 
                 calc_G2_2(R, T, Ys, Zs),
-            true = (fr:encode(0) 
-                    == fr:add(G2b, element(
-                                     2, IPA))),
             true = ipa2:verify_ipa(
                      IPA, EV, 
                      Gs, Hs, Q),
+
+            %checking that neg G2b is equal to NG2 dot EV
+            Sanity = ipa2:dot(NG2, EV),
+            true = (Sanity == element(2, IPA)),
+            true = (Sanity == fr:neg(G2b)),
+            true = (fr:encode(0) 
+                    == fr:add(G2b, element(
+                                     2, IPA))),
+            CommitE = 
+                multi_exponent:doit(
+                  RIDs, Commits_e),
+            G_sub_E = 
+                ed:e_add(
+                  CommitG_e, ed:e_neg(CommitE)),
+            Bool = ed:e_eq(G_sub_E,
+                           element(1, IPA)),
+            if
+                Bool -> ok;
+                true ->
+                    io:fwrite("sanity failure"),
+                    1=2
+            end,
             ok;
         true -> ok
     end,
@@ -275,9 +292,8 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
         %fq:e_add(CommitG, CommitNegE),
         ed:e_add(CommitG, CommitNegE),
     T8 = erlang:timestamp(),
-    io:fwrite("multiproof verify ipa eq\n"),
+    io:fwrite("multiproof verify eq\n"),
     benchmark:now(),
-    %true = ipa2:eq(CommitG_sub_E, 
     true = ed:e_eq(CommitG_sub_E, 
                    element(1, Open_G_E)),
     T9 = erlang:timestamp(),
@@ -391,7 +407,7 @@ test(3) ->
     success;
     
 test(7) ->
-    Many = 5,
+    Many = 10,
     io:fwrite("many is "),
     io:fwrite(integer_to_list(Many)),
     io:fwrite("\n"),
@@ -416,22 +432,60 @@ test(7) ->
     DA = parameters2:da(),
     PA = parameters2:a(),
     Domain = parameters2:domain(),
+    %io:fwrite({length(hd(As)), length(As), length(Zs), length(Commits)}),
+    %256,1,1,1
     Proof = prove(As, Zs, Commits, Gs, Hs, 
                   Q, DA, PA, Domain),
     T2 = erlang:timestamp(),
-    io:fwrite("verify proof\n"),
-    %true = verify(Proof2, Commits, Zs, Ys, P),
+    %io:fwrite("verify proof\n"),
+    %io:fwrite({Ys}),
     Verified = verify(Proof, Commits, Zs, Ys),
     if
         Verified -> ok;
         true ->
             io:fwrite({Proof, hd(Zs), hd(Ys)}),
             io:fwrite("here\n"),
+            1=2,
             ok
     end,
     T3 = erlang:timestamp(),
     {prove, timer:now_diff(T2, T1),
-      verify, timer:now_diff(T3, T2)}.
+     verify, timer:now_diff(T3, T2)};
+test(8) ->
+    Domain = parameters2:domain(),
+    {Gs, Hs, Q} = parameters2:read(),
+    DA = parameters2:da(),
+    PA = parameters2:a(),
+
+    Many = 3,
+    As = lists:map(
+          fun(Y) ->
+                  lists:map(
+                    fun(X) ->
+                            fr:add(fr:mul(X, X),
+                                   fr:encode(
+                                     fr:prime()-
+                                         (10000*Y)))
+                    end, Domain)
+          end, range(0, Many)),
+    Zs = many(hd(tl(tl(Domain))), Many),
+    Ys = lists:zipwith(
+           fun(F, Z) ->
+                   poly2:eval_e(Z, F, Domain)
+           end, As, Zs),
+    Commits0 = lists:map(
+                 fun(A) ->
+                         ipa2:commit(A, Gs)
+                 end, As),
+    Commits = ed:normalize(Commits0),
+
+    
+    Proof = prove(As, Zs, Commits, Gs, Hs, 
+                  Q, DA, PA, Domain),
+    true = verify(Proof, Commits, Zs, Ys),
+    success.
+                          
+
     
                           
     

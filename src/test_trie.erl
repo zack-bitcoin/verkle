@@ -13,9 +13,9 @@ test() ->
     %V = [101, 17],
     V = [
          %23,
-         20,
-         21,
-         22
+         20
+         %21,
+         %22
         ],
     test_helper(V, CFG).
 test_helper([], _) -> success;
@@ -576,7 +576,7 @@ test(19, CFG) ->
     ok;
 test(20, CFG) ->
     Loc = 1,
-    Times = 2,
+    Times = 10,
     Leaves = 
         lists:map(
           fun(N) -> 
@@ -596,9 +596,9 @@ test(20, CFG) ->
         store2:batch(Leaves, Loc, CFG),
     T2 = erlang:timestamp(),
     io:fwrite("make proof\n"),
-    Keys = [<<5:256>>|Many],
-    %Keys = [5],
-    %io:fwrite(Keys),
+    %Keys = [<<5:256>>|Many],
+    %Keys = [<<5:256>>],
+    Keys = [hd(Many)],
     Proof = 
         get2:batch(Keys, NewLoc, CFG),
     %{K1, _} = element(2, hd(hd(tl(hd(tl(element(1, Proof))))))),

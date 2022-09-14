@@ -201,6 +201,7 @@ test(6) ->
     S = (A1 * B1) rem ?q,
     success;
 test(7) ->
+    io:fwrite("multiply speed test \n"),
     <<A0:256>> = crypto:strong_rand_bytes(32),
     <<B0:256>> = crypto:strong_rand_bytes(32),
     A1 = (A0 div 1) rem ?q,
@@ -220,7 +221,6 @@ test(7) ->
                       C0 = (A0 * I) rem ?q
               end, R),
     T3 = erlang:timestamp(),
-    io:fwrite("multiply speed test \n"),
     {{c, timer:now_diff(T2, T1)/Many},
      {erl, timer:now_diff(T3, T2)/Many}};
 test(8) ->

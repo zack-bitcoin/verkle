@@ -398,7 +398,8 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
             benchmark:now(),
             B2 = multiproof2:verify(
                    {CommitG, Open}, 
-                   Commits, Zs, fr:decode(Ys)),
+                   %Commits, Zs, fr:decode(Ys)),
+                   Commits, Zs, Ys),
 
             %sanity check
             %element(2, Open) = -G2

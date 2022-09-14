@@ -3,8 +3,11 @@
 
 doit(0) ->
     S = success,
+    io:fwrite("leaf\n"),
     S = leaf:test(1),
+    io:fwrite("stem\n"),
     S = stem2:test(1),
+    io:fwrite("get\n"),
     S = get2:test(1),
     lists:map(fun(N) ->
                       io:fwrite("fr "),
@@ -17,7 +20,7 @@ doit(0) ->
                       io:fwrite(integer_to_list(N)),
                       io:fwrite("\n"),
                       S = ed:test(N)
-              end, [1,2,3,4,5,7,8,9]),
+              end, [1,2,3,4,5,7,8,9,10,11,12]),
     lists:map(fun(N) ->
                       io:fwrite("poly "),
                       io:fwrite(integer_to_list(N)),
@@ -27,13 +30,13 @@ doit(0) ->
     lists:map(fun(N) ->
                       S = 
                           multi_exponent:test(N)
-              end, [0,1,5,6]),
+              end, [0,1,5,6,7,8]),
     S = store2:test(1),
     lists:map(fun(N) ->
                       S = ipa2:test(N)
-              end, [1,3,5]),
+              end, [1,3,5,7]),
     S = verify2:test(),
-    S = multiproof2:test(7),
+    {prove, _, verify, _} = multiproof2:test(7),
     S.
     
     

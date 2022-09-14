@@ -281,13 +281,14 @@ is_extended_zero(<<_:1024>>) -> false.
 e_eq(P1, P2) ->
     TZ = e_add(P1, e_neg(P2)),
     TZ2 = e_mul(TZ, <<8:256/little>>),
-    e_eq2(extended_zero(), TZ2).
-e_eq2(<<X1:256, Y1:256, Z1:256, _:256>>, 
-     <<X2:256, Y2:256, Z2:256, _:256>>) ->
-    (mul(<<X1:256>>, <<Z2:256>>) 
-     == mul(<<X2:256>>, <<Z1:256>>)) 
-        and (mul(<<Y1:256>>, <<Z2:256>>) 
-             == mul(<<Y2:256>>, <<Z1:256>>)).
+    is_extended_zero(TZ2).
+%    e_eq2(extended_zero(), TZ2).
+%e_eq2(<<X1:256, Y1:256, Z1:256, _:256>>, 
+%     <<X2:256, Y2:256, Z2:256, _:256>>) ->
+%    (mul(<<X1:256>>, <<Z2:256>>) 
+%     == mul(<<X2:256>>, <<Z1:256>>)) 
+%        and (mul(<<Y1:256>>, <<Z2:256>>) 
+%             == mul(<<Y2:256>>, <<Z1:256>>)).
 %a_eq(<<X:512>>, <<X:512>>) ->
 %    true;
 %a_eq(<<_:512>>, <<_:512>>) ->
@@ -671,8 +672,7 @@ test(11) ->
     %io:fwrite({G}),
 %    true = e_eq(Z, e_add(G, e_mul2(G, fr:encode(P-1)))),
 
-    %success.
-    G;
+    success;
 test(12) ->
     WorkingPoint = 
 <<48,224,74,190,145,127,2,130,46,94,157,8,11,203,
@@ -708,10 +708,10 @@ test(12) ->
     true = e_eq(extended_zero(), c_ed:double(e_mul(B2, <<(P):256/little>>))),
     true = e_eq(extended_zero(), e_mul(B2, <<(P):256/little>>)),
     true = e_eq(B, e_mul(B, <<(P+1):256/little>>)),
-    %try doing the identical multiplication, but with the erlang version.
-    %is the point on the curve?
-    
-    ok.
+    Factor = <<333:256/little>>,
+    true = e_eq(e_mul(e_neg(B), Factor),
+                e_neg(e_mul(B, Factor))),
+    success.
     
 
 

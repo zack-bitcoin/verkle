@@ -11,6 +11,7 @@
          verified/3
         ]).
 -include("constants.hrl").
+-define(sanity, true).
 %-define(nindex, 8).
 %-record(stem, { root
 %                , types
@@ -106,6 +107,8 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     % 51%
     %io:fwrite(Rs), [<<0,0,0,0...>>,...]
     EllDiff = precomputed_multi_exponent(Rs, MEP),
+    %{Gs, _, _} = parameters2:read(),
+    %EllDiff = multi_exponent:doit(Rs, Gs),
 
     % 3.6%
     NewRoot = ed:e_add(EllDiff, Root),
@@ -262,14 +265,14 @@ unused(L, CFG) ->
 multi_exponent_parameters2(_, X, 0) -> [X];
 multi_exponent_parameters2(Base, X, Times) ->
     N = ed:e_add(X, Base),
-    <<Xp:256, Y:256, Z:256, T:256>> = N,
-    <<_:256, _:256, Zbase:256, _:256>> = Base,
-    B = (Z == 0),
-    if
-        B ->
-            io:fwrite({Xp, Y, Z, T, X, Base});
-        true -> ok
-    end,
+    %<<Xp:256, Y:256, Z:256, T:256>> = N,
+    %<<_:256, _:256, Zbase:256, _:256>> = Base,
+    %B = (Z == 0),
+    %if
+    %    B ->
+    %        io:fwrite({Xp, Y, Z, T, X, Base});
+    %    true -> ok
+    %end,
     [X|multi_exponent_parameters2(
          Base, 
          %fq:e_add(X, Base),
@@ -341,7 +344,12 @@ get_domain([D|DT], [<<0:256>>|RT], [_M|MT],
 get_domain([D|DT], [R|RT], [M|MT], Ds, Rs, Ms) ->
     get_domain(DT, RT, MT, [D|Ds], [R|Rs], [M|Ms]).
 
+precomputed_multi_exponent_new(Rs0, _MEP) ->
+    {Gs, _, _} = parameters2:read(),
+    multi_exponent:doit(Rs0, Gs).
+    
 precomputed_multi_exponent(Rs0, MEP) ->
+    %Rs0 is a list of fr encoded values.
     %we want to do part of the bucket algorithm, but since the generator points are all known ahead of time, we want to use precalculated values where possible.
     %n = 2, C = 10 -> 128*2/8 -> 32.
     Domain0 = parameters2:domain(),
@@ -375,13 +383,6 @@ precomputed_multi_exponent(Rs0, MEP) ->
     %256 = length(Rs),
     %true = (length(Domain) == length(Rs)),
     %256 = length(Mepl),
-    lists:map(fun(X) -> 
-                      if
-                          (length(Rs) == 
-                               length(X)) -> ok;
-                          true -> io:fwrite({X})
-                      end
-              end, Ts),
     %  4.5% of storage
     %EZero = fq:e_zero(),
     EZero = ed:extended_zero(),
@@ -399,7 +400,8 @@ precomputed_multi_exponent(Rs0, MEP) ->
     Result = multi_exponent:me3(
                lists:reverse(Ss), 
                EZero, 
-               fr:encode(F)),%  5%
+               %fr:encode(F)),%  5%
+               <<F:256/little>>),%  5%
     if
         (Result == error) ->
             io:fwrite({Ss, EZero, F});
@@ -437,20 +439,27 @@ test(1) ->
     R2 = ([0,1|many(0, 254)]),
     R3 = ([2|many(0, 255)]),
     R4 = ([0,2|many(0, 254)]),
-    R = R4,
+    %R5 = many(fr:prime()-1, 256),
+    R5 = ([fr:prime()-1|many(0, 255)]),
+    R = R5,
     {Gs, _, _} = parameters2:read(),
     Old = multi_exponent:doit(fr:encode(R), Gs),
     MEP = parameters2:multi_exp(),
     New = precomputed_multi_exponent(
             fr:encode(R), MEP), 
+    G = hd(Gs),
+    Other = ed:e_mul2(G, fr:encode(fr:prime()-1)),
     %Saved0 = element(2, element(1, MEP)),
 %    Saved0 = element(2, element(2, MEP)),
 %    Saved = secp256k1:to_affine(secp256k1:jacob_add(Saved0, Saved0, ?p#p.e)),
     %Saved1 = element(2, element(2, MEP)),
     %io:fwrite({Old, New, Saved0}),
     %fq:eq(Old, New);
-    true = ed:e_eq(Old, New),
-    success;
+    {ed:e_eq(Old, New),
+     ed:e_eq(Old, Other),
+     ed:e_eq(New, Other)};
+%    true = ed:e_eq(Old, New),
+%    success;
 test(2) ->
     io:fwrite("ftrace of precomputed multi exponent\n"),
     %multi exponent precompute speed comparison.

@@ -1,19 +1,14 @@
-looks like the order in fr needs to be 8x higher.
-The order is 8*a prime. we did it all based off that prime, instead of off 8*the prime.
+store2 should use precomputed multi exponent.
 
 
-ed:test(11). multiplying by very big numbers sometimes fails.
+store2:test(1).
 
-ipa:test(7). failing to generate the proof with big numbers.
-
-ipa:test(6). when we use very big numbers, it fails to generate the proof.
-
-
-multiproof2:test(7).
-
-multiproof:test(7). it is a problem with the ipa2 library. we generate a proof, and then immediately try to verify it with the same data, and it fails.
+store2 shoudl use the precomputed version of multi exponent.
 
 get the tests to pass.
+test_trie:test(20).
+it is failing in multiproof2:prove during a sanity check. but it is weird, because in multiproof2:test(7). I am running that same function.
+
 
 in stem2:serialize, we could batch this to make it faster.
 %look into serialize_stems, there is some commented out code that should be a faster version.

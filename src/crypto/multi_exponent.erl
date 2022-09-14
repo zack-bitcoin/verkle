@@ -58,7 +58,7 @@ doit(
     {Rs1, Gs} = 
         remove_zero_terms(Rs0, Gs0, [], []),
     if
-        length(Rs1) < 2 ->
+        (length(Rs1) < 2) ->
             simple_exponent(
               Rs1, Gs, ed:extended_zero());
         true ->
@@ -304,7 +304,7 @@ test(5) ->
 test(6) ->
     G = ed:gen_point(),
     H = ed:gen_point(),
-    B = [fr:encode(4), fr:encode(5)],
+    B = [fr:encode(400), fr:encode(555)],
     true = ed:e_eq(multi_exponent2(B, [G, H]),
                    simple_exponent(
                      B, [G, H], 

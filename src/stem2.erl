@@ -14,6 +14,7 @@
 	 empty_trie/2]).
 %-include("constants.hrl").
 %-export_type([stem/0,types/0,empty_t/0,stem_t/0,leaf_t/0,pointers/0,empty_p/0,hashes/0,hash/0,empty_hash/0,stem_p/0,nibble/0]).
+-define(sanity, true).
 -record(stem, { root = ed:extended_zero()
                 , types
                 , pointers
@@ -78,6 +79,11 @@ type(N, R) ->
     T = types(R),
     element(N, T).
 serialize(S, CompressedRoot, CFG) ->
+    if
+        ?sanity ->
+            check_root_integrity(S);
+        true -> ok
+    end,
     #stem{
            pointers = P,
            hashes = H,
@@ -157,17 +163,23 @@ hash(S) ->
 hash_point(P) ->
     %fq:hash_point(P).
     [P2] = ed:extended2affine_batch([P]),
-    ed:compress_point(P2).
+    <<X:256>> = ed:compress_point(P2),
+    fr:encode(X).
 
 update(Location, Stem, CFG) ->
     dump:update(Location, serialize(Stem, CFG), ids:stem(CFG)).
+
 check_root_integrity(Stem) ->
     MEP = parameters2:multi_exp(),
+    Hashes = tuple_to_list(Stem#stem.hashes),
     R = store2:precomputed_multi_exponent(
-          tuple_to_list(Stem#stem.hashes),
-          MEP),%C1 has an incorrect stem
+          Hashes,MEP),
+    {Gs, Hs, Q} = parameters2:read(),
+    R2 = multi_exponent:doit(Hashes, Gs),
+    %R2 = ipa2:commit(tuple_to_list(Stem#stem.hashes), Gs),
     %true = fq:eq(R, Stem#stem.root).
-    true = ed:e_eq(R, Stem#stem.root).
+    true = ed:e_eq(R, Stem#stem.root),
+    true = ed:e_eq(R2, Stem#stem.root).
 put(Stem, CompressedRoot, CFG) ->
     %compressed root is in affine format. 64 bytes.
     S = serialize(Stem, CompressedRoot, CFG),
@@ -193,9 +205,14 @@ serialize_stems(L, CFG) when false ->
           end, L),
     Roots = ed:extended2affine_batch(ERoots),
     Bins = lists:zipwith(
-             fun({_, #stem{pointers = P, 
+             fun({_, Stem = #stem{pointers = P, 
                            hashes = H, 
                            types = T}}, R) ->
+                     if
+                         ?sanity ->
+                             check_root_integrity(Stem);
+                         true -> ok
+                     end,
                      B = serialize2(
                            tuple_to_list(P), 
                            tuple_to_list(H), 
@@ -239,6 +256,7 @@ test(1) ->
     %P = {6,5,4,3,7,8,9,4,5,3,2,6,7,8,3,4},
     %T = {0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
     %CFG = cfg:new(1, 9, 2, trie), %path value id meta hash_size
+    io:fwrite("before start\n"),
     verkle_app:start(normal, []),
     CFG = trie:cfg(trie01),
 %{cfg,5,2,trie01,2,32} path, value, id, meta, hash_size
@@ -251,6 +269,7 @@ test(1) ->
     %io:fwrite({S#stem.root, Sb#stem.root}),
     true = equal(S, Sb),
     %true = fq:eq(S#stem.root, Sb#stem.root),
+    io:fwrite("before equal\n"),
     true = ed:e_eq(S#stem.root, Sb#stem.root),
     Hash = hash:doit(<<>>),
     %Stem2 = unused_add(S, 3, 1, 5, Hash),
@@ -258,6 +277,7 @@ test(1) ->
     %testing reading and writing to the hard drive.
     Pointer = stem2:put(S, CFG),
     Stem2b = get(Pointer, CFG),
+    io:fwrite("next equal\n"),
     true = equal(Stem2b, S),
     success;
 test(2) ->

@@ -101,8 +101,9 @@ simplify_v(X) ->
 
 points_to_entropy(L) ->
     %lists:map(fun(X) -> fq:hash_point(X) end,
-    lists:map(fun(X) -> ed:compress_point(X) end,
-              L).
+    ed:compress_points(L).
+%    lists:map(fun(X) -> ed:compress_point(X) end,
+%              L).
 
 %    L2 = simplify_v(L),
     %io:fwrite({size(hd(L2)), L2}),
@@ -123,8 +124,8 @@ make_ipa(A, B, G, H, Q) ->
     %io:fwrite({size(Q), size(AB)}),%64, 32
     C1 = add(add(AG, commit(B, H)), 
              mul(AB, Q)),%AB is int, Q is e-point
-    %[X] = points_to_entropy([C1]),
-    X = fr:encode(1),
+    [X] = points_to_entropy([C1]),
+    %X = fr:encode(1),
     Xi = fr:inv(X),
     {Cs0, AN, BN} = 
         make_ipa2(C1, A, G, B, H, 
@@ -263,8 +264,8 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
             false;
         true ->
     
-            %[X] = points_to_entropy([C1]),
-            X = fr:encode(1),
+            [X] = points_to_entropy([C1]),
+            %X = fr:encode(1),
             Xi = fr:inv(X),
             GN = get_gn(Xi, G),
             HN = get_gn(X, H),
