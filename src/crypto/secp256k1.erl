@@ -132,6 +132,7 @@ make() ->
         det_pow(2, 6) -
         det_pow(2, 4) -
         1,
+    P = hex_to_int("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F"),
     A = 0,
     B = 7,
     X = hex_to_int("79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798"),
@@ -1020,6 +1021,17 @@ test(16) ->
     jacob_equal(
       multi_exponent2(B, Gs, E),
       simple_exponent(B, Gs, E, jacob_zero()),
-     E).
+      E);
+test(17) ->
+    %checking that the group wraps around at the right spot.
+    E = make(),
+    P = to_jacob(gen_point(E)),
+    Z = jacob_mul(P, order(E), E),
+    P2 = jacob_mul(P, order(E)+1, E),
     
-
+    true = jacob_equal(
+             jacob_zero(), Z, E),
+    true = jacob_equal(
+             P, P2, E),
+    success.
+    
