@@ -14,6 +14,8 @@ gcc -O2 -march=native -funroll-loops -fomit-frame-pointer -flto -fPIC -shared -o
 
 gcc -O2 -march=native -funroll-loops -fomit-frame-pointer -flto -fPIC -shared -o ebin/fn.so src/crypto/fn.c -I $ERL_ROOT/user/include/
 
+gcc -O2 -march=native -funroll-loops -fomit-frame-pointer -flto -fPIC -shared -o ebin/c_secp.so src/crypto/c_secp.c -I $ERL_ROOT/user/include/
+
 # fast compile version
 #gcc -fPIC -shared -o ebin/fq2.so src/crypto/fq2.c -I $ERL_ROOT/usr/include/
 #gcc -fPIC -shared -o ebin/fr.so src/crypto/fr.c -I $ERL_ROOT/usr/include/
