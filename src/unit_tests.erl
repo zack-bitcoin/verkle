@@ -26,8 +26,11 @@ doit(0) ->
                       io:fwrite(integer_to_list(N)),
                       io:fwrite("\n"),
                       S = poly2:test(N)
-              end, [2,3,4,5]),
+              end, [2,3]),
     lists:map(fun(N) ->
+                      io:fwrite("multi exponent "),
+                      io:fwrite(integer_to_list(N)),
+                      io:fwrite("\n"),
                       S = 
                           multi_exponent:test(N)
               end, [0,1,5,6,7,8]),

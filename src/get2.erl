@@ -51,7 +51,28 @@ batch(Keys, Root, CFG) ->
     io:fwrite("get lookup stems and leaves\n"),% 25%
     benchmark:now(),
     Tree2 = points_values(Tree, RootStem, CFG),
-    %io:fwrite({Tree2}),
+
+    if
+        true ->
+            GoodPoint = element(2, element(2, hd(tl(hd(Tree2))))),
+            128 = size(GoodPoint),
+            C = ed:compress_point(GoodPoint),
+            Good2 = ed:affine2extended(ed:decompress_point(C)),
+            C = ed:compress_point(Good2),
+            ed:e_eq(GoodPoint, Good2),
+            Hash1 = stem2:hash_point(GoodPoint),
+            Hash2 = stem2:hash_point(Good2),
+            Hash1 = Hash2,
+            
+            
+
+
+                %fr:decode(hd(element(5, element(2, hd(hd(Tree2))))))},%good
+               %fr:decode(ed:compress_point(element(2, element(2, hd(tl(hd(Tree2))))))),%bad
+               %fr:decode(stem2:hash_point(ed:decompress_point(ed:compress_point(element(2, element(2, hd(tl(hd(Tree2))))))))),%good
+            ok;
+        true -> ok
+    end,
     %obtains the stems and leaves by reading from the database.
     %[stem, {I, stem}, [{I, leaf}], [{I, stem}, {I, leaf}], [{I, stem}, [{I, leaf}], [{I, leaf}]]]
     %list of things is AND, list of lists is OR.
@@ -63,7 +84,7 @@ batch(Keys, Root, CFG) ->
     benchmark:now(),
     Tree4 = remove_hashes(Tree3),%the hashes in each stem aren't needed to verify the verkle proof, so they are removed.
     %[El, {I, El}, [{I, leaf}], [{I, El}, {I, El}], [{I, El}, [{I, El}], [{I, El}]]]
-    
+    %io:fwrite(fr:decode(ed:compress_point(element(2, hd(hd(tl(Tree4))))))),%bad point!
 
 
     io:fwrite("get flatten\n"),
@@ -72,7 +93,14 @@ batch(Keys, Root, CFG) ->
     Lookups = flatten(Tree2, []),
     io:fwrite("get split3\n"),
     benchmark:now(),
-    {Zs0, Commits, As0} = split3parts(Lookups, [], [], []),
+    {Zs0, Commits, As0} = 
+        split3parts(Lookups, [], [], []),
+    ToPrint4 = fr:decode(hd(hd(tl(As0)))),
+    <<_:256>> = hd(hd(tl(As0))),
+    %confirmed that As are not points, they are hashes.
+    io:fwrite(integer_to_list(ToPrint4)), %This is the version being used when generating the proof. 
+    io:fwrite("\n"),
+    %io:fwrite(integer_to_list(PHash)), 
     io:fwrite("get lookup parameters\n"),
     benchmark:now(),
     Domain = parameters2:domain(),
@@ -174,7 +202,12 @@ batch(Keys, Root, CFG) ->
     PointsList = 
         points_list(Listed),
     %Spoints = fq:compress(PointsList),
-    Spoints = ed:compress_points(PointsList),
+    %Spoints = ed:compress_points(PointsList),
+    %TODO this can be batched!!!!!
+    Spoints = lists:map(fun(X) ->
+                                %stem2:hash_point(X)
+                                ed:compress_point(X)
+                        end, PointsList),
     {[Tree5, CommitG2, Opening2], []} =
         fill_points(Spoints, Listed, []),
     {Tree5, CommitG2, list_to_tuple(Opening2)}.
@@ -192,27 +225,44 @@ batch(Keys, Root, CFG) ->
 
 points_list(<<E:1024>>) -> [<<E:1024>>];
 points_list({I, <<E:1024>>}) when is_integer(I) ->
+    %[<<E:1024>>];
     [<<E:1024>>];
 points_list([H|T]) ->% when is_list(H) ->
     points_list(H) ++ points_list(T);
 %points_list([_|T]) ->
 %    points_list(T);
-points_list([]) -> [];
-points_list(_) -> [].
+points_list({I, {_Key, _Value}}) 
+  when is_integer(I) -> 
+    %a leaf.
+    [];
+points_list(<<_:256>>) -> [];
+points_list([]) -> [].
+%points_list(_) -> [].
 
-compressed_points_list(X = <<_:256>>) -> [X];
+compressed_points_list(X = <<_:256>>) -> 
+%    1=2,
+    [X];
 compressed_points_list(X = <<_:512>>) -> 
+    1=2,
     [ed:compress_point(X)];
 compressed_points_list(X = <<_:1024>>) -> 
+    1=2,
     ed:compress_points([X]);
 compressed_points_list({I, X = <<_:256>>}) 
-  when is_integer(I) -> [X];
+  when is_integer(I) -> 
+    %1=2,
+    [X];
 compressed_points_list({I, X = <<_:512>>}) 
   when is_integer(I) -> 
+    1=2,
     [ed:compress_point(X)];
 compressed_points_list({I, X = <<_:1024>>}) 
   when is_integer(I) -> 
-    ed:compress_points([X]);
+    %[stem2:hash_point(X)];
+    1=2,
+    P2 = ed:e_mul2(X, <<8:256/little>>),
+    ed:compress_points([P2]);
+%ed:compress_points([X]);
 compressed_points_list([H|T]) -> 
     compressed_points_list(H) ++
         compressed_points_list(T);
@@ -305,6 +355,7 @@ withdraw_points3([]) -> [].
 remove_hashes({-1, X = #stem{}}) -> X#stem.root;
 remove_hashes({Index, X = #stem{}}) -> 
     {Index, X#stem.root};
+    %{Index, stem2:hash_point(X#stem.root)};
 remove_hashes({Index, X = #leaf{}}) -> 
     %{Index, {leaf:key(X), leaf:value(X)}};
     {Index, {leaf:raw_key(X), leaf:value(X)}};

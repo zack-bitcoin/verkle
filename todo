@@ -1,3 +1,14 @@
+
+looks like e_mul is producing an invalid point sometimes.
+ed:test(14).
+
+
+stem2:hash_point is not deterministic for sister points.
+
+
+`zs ys` the error message. it shows that in our proofs, the hashes of stems aren't being recorded correctly.
+
+
 store2 should use precomputed multi exponent.
 
 

@@ -15,12 +15,14 @@
          affine2extended/1,
          extended2affine_batch/1,
          a_neg/1, e_neg/1, normalize/1, 
-         e_eq/2,
+         e_eq/2, a_eq/2,
          e_add/2, e_mul/2, e_mul2/2,
          encode/1, decode/1,
          affine_zero/0, extended_zero/0,
          test/1
         ]).
+
+-define(sanity, true).
 
 % 2^255 - 19
 -define(q, 
@@ -30,14 +32,37 @@
 -define(zero, <<0:256/little>>).
 -define(affine_zero, <<0:256, ?one/binary>>).
 -define(extended_zero, <<0:256, ?one/binary, ?one/binary, 0:256>>).
--define(D, 
+
+% -(121665/121666)
+-define(D, 37095705934669439343138083508754565189542113879843219016388785533085940283555).
+%and in montgomery format.
+-define(mD, 
 <<20131754669644349956395353228418582963360511446355554149282842162308175096314:256/little>>
 ).
+
 %2^(256*256) rem ?q in montgomery format
 -define(r2, <<1444:256/little>>).
 
 % 2^255
--define(max255, 57896044618658097711785492504343953926634992332820282019728792003956564819968).
+-define(max255, 1).
+        %57896044618658097711785492504343953926634992332820282019728792003956564819968).% 2^255
+%28948022309329048855892746252171976963317496166410141009864396001978282409984).%2^254
+
+%// √(-1) aka √(a) aka 2^((p-1)/4)
+-define(sqrt_m1, 19681161376707505956807079304988542015446066515923890162744021073123829784752).
+
+%// 1-d²
+-define(one_minus_d_sq,
+  1159843021668779879193775521855586647937357759715417654439879720876111806838).
+
+%// (d-1)²
+-define(d_minus_one_sq,
+  40440834346308536858101042469323190826248399146238708352240133220865137265952).
+
+%// √(ad - 1)
+-define(sqrt_ad_minus_one,
+  25063068953384623474111414158702152701244531502492656460079210482610430750235).
+
 
 %encode(X) ->
 %    Y = ed25519:encode(X),
@@ -121,19 +146,27 @@ is_on_curve(<<X0:256, Y0:256>>) ->
     XX = mul(X, X),
     YY = mul(Y, Y),
     XY = mul(XX, YY),
-    sub(YY, XX) == add(?one, mul(?D, XY)).
+    sub(YY, XX) == add(?one, mul(?mD, XY)).
 compress_points(Es) -> %<<P:1024/little>>) ->
     %from list of 128 byte extended to list of 32-byte compressed.
     As = extended2affine_batch(Es), 
     lists:map(fun(A) ->
                       compress_point(A)
               end, As).
+compress_point(error) -> error;
+compress_point(P = <<_:1024>>) ->
+    [A] = extended2affine_batch([P]),
+    compress_point(A);
 compress_point(<<X0:256/little, Y0:256/little>>) ->
     %from 64 byte affine to 32 byte compressed
     %Y = decode(<<Y0:256>>),
-    S = case is_positive(Y0) of
-            true -> 0;
-            false -> 1
+    S = case is_positive(<<Y0:256/little>>) of
+            true -> 
+                %io:fwrite("compress positive\n"),
+                1;
+            false -> 
+                %io:fwrite("compress negative\n"),
+                0
         end,
     <<S:1, X0:255>>.
 decompress_points(L) when is_list(L) ->
@@ -141,7 +174,7 @@ decompress_points(L) when is_list(L) ->
                       true = P < ?q,
                       U = <<P:256/little>>,
                       UU = mul(U, U),
-                      DUU = sub(?one, mul(?D, UU)),
+                      DUU = sub(?one, mul(?mD, UU)),
                       T = add(?one, UU),
                       {DUU, U, S, T}
                    end, L),
@@ -153,16 +186,15 @@ decompress_points(L) when is_list(L) ->
       fun(B, {_, U, S, T}) ->
               decompress_point2(U, S, T, B)
       end, IDUUs, L2).
-decompress_point(<<S:1, P:255>>) ->
+decompress_point(Start = <<S:1, P:255>>) ->
     true = P < ?q,
     if
         (P < ?q) ->
             U = <<P:256/little>>,
             UU = mul(U, U),
-            DUU = sub(?one, mul(?D, UU)),
+            DUU = sub(?one, mul(?mD, UU)),
             T = add(?one, UU),
             B = inv(DUU),
-
             decompress_point2(U, S, T, B);
         true -> error
     end.
@@ -172,20 +204,31 @@ decompress_point2(U, S, T, B) ->
     VV = mul(T, B),
     case sqrt(VV) of
         error ->
-            %io:fwrite("invalid, no square root\n"),
+            io:fwrite("invalid, no square root\n"),
             error;
-        {V1 = <<V1n:256>>, V2} ->
-            S2 = is_positive(V1n),
+        {V1 = <<V1n:256/little>>, V2} ->
+            SB = S == 1,
+            S2 = is_positive(V1),
             V = if
-                    (S == S2) -> V1;
+                    (SB == S2) -> V1;
                     true -> V2
                 end,
             Point = <<U/binary, V/binary>>,
             Bool = is_on_curve(Point),
             if
-                Bool -> Point;
+                Bool -> 
+            if
+                ?sanity ->
+                    V1 = neg(V2),
+                    V2 = neg(V1),
+                    true = (not(S2)) == 
+                        is_positive(V2),
+                    ok;
+                true -> ok
+            end,
+                    Point;
                 true -> 
-                    %io:fwrite("invalid, not on curve\n"),
+                    io:fwrite("invalid, not on curve\n"),
                     error
             end
     end.
@@ -198,9 +241,11 @@ gen_point(<<X:256>>) ->
     case P of
         error -> 
             gen_point(<<(X+1):256>>);
-        _ -> P
+        _ -> 
+            %P = decompress_point(compress_point(P)),
+            P
     end.
-is_positive(Y) ->
+is_positive(<<Y:256>>) ->
     (Y band ?max255) == 0.
 
 affine2extended(P = <<_:1024>>) -> P;%already in extended format.
@@ -282,13 +327,16 @@ e_eq(P1, P2) ->
     TZ = e_add(P1, e_neg(P2)),
     TZ2 = e_mul(TZ, <<8:256/little>>),
     is_extended_zero(TZ2).
-%    e_eq2(extended_zero(), TZ2).
-%e_eq2(<<X1:256, Y1:256, Z1:256, _:256>>, 
-%     <<X2:256, Y2:256, Z2:256, _:256>>) ->
-%    (mul(<<X1:256>>, <<Z2:256>>) 
-%     == mul(<<X2:256>>, <<Z1:256>>)) 
-%        and (mul(<<Y1:256>>, <<Z2:256>>) 
-%             == mul(<<Y2:256>>, <<Z1:256>>)).
+    %e_eq2(extended_zero(), TZ2).
+e_eq2(<<X1:256, Y1:256, Z1:256, _:256>>, 
+     <<X2:256, Y2:256, Z2:256, _:256>>) ->
+    (mul(<<X1:256>>, <<Z2:256>>) 
+     == mul(<<X2:256>>, <<Z1:256>>)) 
+        and (mul(<<Y1:256>>, <<Z2:256>>) 
+             == mul(<<Y2:256>>, <<Z1:256>>)).
+a_eq(A, B) ->
+    [C, D] = affine2extended([A, B]),
+    e_eq(C, D).
 %a_eq(<<X:512>>, <<X:512>>) ->
 %    true;
 %a_eq(<<_:512>>, <<_:512>>) ->
@@ -296,11 +344,107 @@ e_eq(P1, P2) ->
 
 %encode(0) -> <<0:256>>;
 %encode(1) -> <<38:256/little>>;
+encode([]) -> [];
+encode([H|T]) -> [encode(H)|encode(T)];
 encode(A) -> mul(<<A:256/little>>, ?r2).
 decode(C = <<_:256>>) ->
     X = mul(C, <<1:256/little>>),
     <<Y:256/little>> = X,
     Y.
+
+% X * 2^Power.
+pow2(X, 0) -> X;
+pow2(X, Power) ->
+    X2 = X*X rem ?q,
+    pow2(X2, Power-1).
+
+pow_2_252_3(X) ->
+    %263 multiplications.
+    X2 = X*X rem ?q,
+    B2 = X2*X rem ?q,% X^3
+    B4 = pow2(B2, 2) * B2 rem ?q,% x^15
+    B5 = pow2(B4, 1) * X rem ?q,% x^31
+    B10 = pow2(B5, 5) * B5 rem ?q,% 
+    B20 = pow2(B10, 10) * B10 rem ?q,% 
+    B40 = pow2(B20, 20) * B20 rem ?q,% 45
+    B80 = pow2(B40, 40) * B40 rem ?q,% 86
+    B160 = pow2(B80, 80) * B80 rem ?q,% 167
+    B240 = pow2(B160, 80) * B80 rem ?q,% 248
+    B250 = pow2(B240, 10) * B10 rem ?q,% 259
+    Pow_p_5_8 = pow2(B250, 2) * X rem ?q,% 263
+    % ^ To pow to (p+3)/8, multiply it by x.
+    {Pow_p_5_8, B2}.
+
+%// Little-endian check for first LE bit (last BE bit);
+edIsNegative(N) ->
+%  return (mod(num) & _1n) === _1n;
+    N2 = N rem ?q,
+    (N2 rem 2 == 1).
+
+uvRatio(U, V) ->
+    %274 multiplications
+    %combines inversion with sqrt.
+    V3 = (V*V*V) rem ?q,
+    V7 = (V3 * V3 * V) rem ?q,
+    {Pow, _} = pow_2_252_3(U * V7),
+    X = U*V3*Pow rem ?q,% (uv^3)(uv^7)^(p-5)/8
+    VX2 = V*X*X rem ?q,
+    Root = X, %first root candidate.
+    Root2 = X * ?sqrt_m1 rem ?q,%second root candidate.
+    UseRoot1 = (VX2 == U), %if true, it is a square root.
+    UseRoot2 = (VX2 == ((?q - U) rem ?q)), %if true, set x = x* 2^((p-1)/4)
+    NoRoot = (VX2 == (((?q - U) * ?sqrt_m1) rem ?q)), %there is no vaid root. vxx = -u*sqrt(-1)
+    X2 = if
+             UseRoot1 -> Root;
+             (UseRoot2 or NoRoot) -> Root2;%return root2 anyway, for constant-time.
+             true ->
+                 io:fwrite("unexepcted\n"),
+                 X
+         end,
+    B = edIsNegative(X2),
+    X3 = if
+             B -> (?q - X2) rem ?q;
+             true -> X2
+         end,
+    {{isValid, UseRoot1 or UseRoot2},
+     {value, X3}}.
+
+calcElligatorRistrettoMap(
+  R0) when is_integer(R0) and R0 > 0->
+    %293 multiplications
+
+    R = (?sqrt_m1 * R0 * R0) rem ?q,
+    Ns = ((R + 1) * ?one_minus_d_sq) rem ?q,
+    %c is -1
+    D = (-1 - (?D*R)) * ((R + ?D) rem ?q) rem ?q,
+    {{isValid, Ns_D_is_sq}, {value, S}} = 
+        uvRatio(Ns, D),
+    S_ = S * R0 rem ?q,
+    B = edIsNegative(S_),
+    S_2 = if
+              B -> S_;
+              true -> (?q - S_) rem ?q
+          end,
+    {S2, C2} = 
+        if
+            Ns_D_is_sq -> {S, -1};
+            true ->{S_, R}
+        end,
+    Nt = (C2 * (R - 1) * ?d_minus_one_sq - D) rem ?q,
+    S4 = S2 * S2,
+    W0 = ((S2 + S2) * D) rem ?q,
+    W1 = Nt * ?sqrt_ad_minus_one rem ?q,
+    W2 = (1 - S4 + ?q) rem ?q,
+    W3 = (1 + S4) rem ?q,
+    P1 = W0 * W3 rem ?q,
+    P2 = W2 * W1 rem ?q,
+    P3 = W1 * W3 rem ?q,
+    P4 = W0 * W2 rem ?q,
+    
+    B1 = encode(P1),
+    [B1, B2, B3, B4] = encode([P1, P2, P3, P4]),
+    <<B1/binary, B2/binary, B3/binary, B4/binary>>.
+    
 
 %2 montgomery
 c2m(<<X:256/little, Y:256/little>>) ->
@@ -711,10 +855,41 @@ test(12) ->
     Factor = <<333:256/little>>,
     true = e_eq(e_mul(e_neg(B), Factor),
                 e_neg(e_mul(B, Factor))),
-    success.
-    
-
-
+    success;
+test(13) ->
+    As = [gen_point(), gen_point()],
+    io:fwrite("points generated."),
+    Es0 = affine2extended(As),
+    Cs = compress_points(Es0),
+    As = decompress_points(Cs),
+    Es = affine2extended(decompress_points(Cs)),
+    As = extended2affine_batch(Es),
+    As = extended2affine_batch(Es0),
+    Hs = lists:map(fun(X) -> stem2:hash_point(X) end,
+                   Es),
+    Hs = lists:map(fun(X) -> stem2:hash_point(X) end,
+                   Es0),
+    success;
+test(14) ->
+    io:fwrite(""),
+    G = affine2extended(gen_point()),
+    P = e_mul(G, <<254:256/little>>),
+    %P = affine2extended(gen_point()),
+    CD = affine2extended(decompress_point(compress_point(P))),
+    false = (P == CD),
+    %P2 = ed:e_mul(P, <<8:256/little>>),
+    %P2b = ed:e_mul(CD, <<8:256/little>>),
+  
+    {
+      e_eq(P, CD),
+      %is_on_curve(G),
+      is_on_curve(hd(extended2affine_batch([P]))),
+      is_on_curve(hd(extended2affine_batch([CD]))),
+%      compress_point(P2) == 
+%          compress_point(P2b),
+      fr:decode([compress_point(P), 
+                 compress_point(CD)])}.
+%success.
 
     
 

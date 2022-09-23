@@ -161,9 +161,10 @@ hash(S) ->
     P = S#stem.root,
     hash_point(P).
 hash_point(P) ->
-    %fq:hash_point(P).
-    [P2] = ed:extended2affine_batch([P]),
-    <<X:256>> = ed:compress_point(P2),
+    %todo, this should be batched.
+    P2 = ed:e_mul2(P, <<8:256/little>>),
+    %[P2] = ed:extended2affine_batch([P]),
+    [<<X:256>>] = ed:compress_points([P2]),
     fr:encode(X).
 
 update(Location, Stem, CFG) ->

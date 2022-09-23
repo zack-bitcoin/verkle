@@ -336,23 +336,27 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
 %               size(hd(OpenL))
                %size(hd(get2:compressed_points_list(Tree0)))
 %              }),
+    CheckHash = (element(2, hd(hd(tl(Tree0))))),
+    io:fwrite("verify2:proof, earlier case of incorrect Y value\n"),
+    io:fwrite(integer_to_list(fr:decode(CheckHash))),
+    io:fwrite("\n"),
     CPL = get2:compressed_points_list(Tree0),
+    %io:fwrite({size(hd(CPL)), size(hd(tl(CPL)))}),%32, 32
     false = CPL == [],
 %    io:fwrite(
     List = [CommitG0, Open1] ++ 
         OpenL ++ CPL,
-    lists:map(fun(X) ->
-                      false = (X == error)
-              end, List),
+    %io:fwrite({size(CommitG0), size(Open1), size(hd(CPL))}),%32, 32, 32
     [CommitG, Open1b |Decompressed2] = 
 %          [CommitG0, Open1] ++ 
 %              OpenL ++
 %              get2:compressed_points_list(Tree0),
             
-        %fq:decompress(
         ed:affine2extended(
+          ed:decompress_points(
           [CommitG0, Open1] ++ 
-              OpenL ++ CPL),
+              OpenL ++ CPL)),
+    %io:fwrite([CommitG, Open1b|Decompressed2]),
     {OpenLb, Decompressed} = 
         lists:split(length(OpenL), Decompressed2),
     {Tree, _} = fill_points(
@@ -371,9 +375,11 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
     Domain = parameters2:domain(),
     Root1 = hd(Decompressed),
     %B = fq:eq(Root1, Root),
-    B = ed:e_eq(Root1, Root),
+    B = ed:a_eq(Root1, Root),
     if
-        not(B) -> false;
+        not(B) -> 
+            io:fwrite("verify2 fail, unequal roots\n"),
+            false;
         true ->
             io:fwrite("verify2 unfold \n"),
             benchmark:now(),
@@ -396,6 +402,13 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
             %should be [17,88,10,88,35,35,88]
             io:fwrite("verify multiproof \n"),
             benchmark:now(),
+%            io:fwrite({size(CommitG), size(Open),
+%                       length(Commits), size(hd(Commits))}),
+            io:fwrite("verify2 last ys is: \n"),
+            io:fwrite(integer_to_list(fr:decode(hd(tl(Ys))))),
+            io:fwrite("\n"),
+            %io:fwrite(integer_to_list(fr:decode(stem2:hash_point(ed:decompress_point(hd(tl(Ys))))))),
+            %io:fwrite("\n"),
             B2 = multiproof2:verify(
                    {CommitG, Open}, 
                    %Commits, Zs, fr:decode(Ys)),
@@ -408,7 +421,9 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
             benchmark:now(),
             if
                 not(B) -> false;
-                not(B2) -> false;
+                not(B2) -> 
+                    io:fwrite("verify2 fail, multiproof verify\n"),
+                    false;
                 true ->
                     %io:fwrite({Rest}),
                     {true, leaves(Rest), Tree}
@@ -443,19 +458,35 @@ unfold(Root, {Index, 0}, T, CFG) ->%empty case
 unfold(Root, {Index, {Key, B}}, T, CFG) %leaf case
   when is_binary(B) ->
     %Leaf = #leaf{key = Key, value = B},
+    io:fwrite("verify2 unfold leaf\n"),
     Leaf = leaf:new(Key, B, 0, CFG),
     <<L:256>> = store2:leaf_hash(Leaf, CFG),
     lists:reverse([{Root, Index, <<L:256>>}|T]);
 unfold(Root, [{Index, X}|R], T, CFG) %stem case
-  when (is_binary(X) and (size(X) == (32*5)))
+  when (is_binary(X) and (size(X) == (32*2))) 
+       ->
+    io:fwrite("verify2 unfold affine point\n"),
+    <<H:256>> = stem2:hash_point(
+                  ed:affine2extended(X)),
+    unfold(X, R, [{Root, Index, <<H:256>>}|T], CFG);
+unfold(Root, [{Index, X}|R], T, CFG) %stem case
+  when (is_binary(X) and (size(X) == (32*4)))
    ->
+    io:fwrite("verify2 extended point\n"),
     %<<H:256>> = fq:hash_point(X),
-    <<H:256>> = ed:compress_point(X),
+    %<<H:256>> = ed:compress_point(X),
+    <<H:256>> = stem2:hash_point(X),
+    %<<H:256>> = stem2:hash_point(X),
+    io:fwrite("verify2 unfold hash point to fr is \n"),
+    io:fwrite(integer_to_list(fr:decode(<<H:256>>))),
+    io:fwrite("\n"),
     unfold(X, R, [{Root, Index, <<H:256>>}|T], CFG);
 unfold(Root, [H|J], T, CFG) ->
     unfold(Root, H, T, CFG)
         ++ unfold(Root, J, [], CFG);
-unfold(_, [], _, _) -> [].
+unfold(_, [], _, _) -> [];
+unfold(_, {0, X}, _, _) -> 
+    io:fwrite({size(X), X}).
 
 
 
