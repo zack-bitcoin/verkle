@@ -13,9 +13,9 @@ test() ->
     %V = [101, 17],
     V = [
          %23,
-         20
-         %21
-         %22
+         20,
+         21,
+         22
         ],
     test_helper(V, CFG).
 test_helper([], _) -> success;

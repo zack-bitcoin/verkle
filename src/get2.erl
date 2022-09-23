@@ -52,27 +52,6 @@ batch(Keys, Root, CFG) ->
     benchmark:now(),
     Tree2 = points_values(Tree, RootStem, CFG),
 
-    if
-        true ->
-            GoodPoint = element(2, element(2, hd(tl(hd(Tree2))))),
-            128 = size(GoodPoint),
-            C = ed:compress_point(GoodPoint),
-            Good2 = ed:affine2extended(ed:decompress_point(C)),
-            C = ed:compress_point(Good2),
-            ed:e_eq(GoodPoint, Good2),
-            Hash1 = stem2:hash_point(GoodPoint),
-            Hash2 = stem2:hash_point(Good2),
-            Hash1 = Hash2,
-            
-            
-
-
-                %fr:decode(hd(element(5, element(2, hd(hd(Tree2))))))},%good
-               %fr:decode(ed:compress_point(element(2, element(2, hd(tl(hd(Tree2))))))),%bad
-               %fr:decode(stem2:hash_point(ed:decompress_point(ed:compress_point(element(2, element(2, hd(tl(hd(Tree2))))))))),%good
-            ok;
-        true -> ok
-    end,
     %obtains the stems and leaves by reading from the database.
     %[stem, {I, stem}, [{I, leaf}], [{I, stem}, {I, leaf}], [{I, stem}, [{I, leaf}], [{I, leaf}]]]
     %list of things is AND, list of lists is OR.
@@ -95,11 +74,11 @@ batch(Keys, Root, CFG) ->
     benchmark:now(),
     {Zs0, Commits, As0} = 
         split3parts(Lookups, [], [], []),
-    ToPrint4 = fr:decode(hd(hd(tl(As0)))),
-    <<_:256>> = hd(hd(tl(As0))),
+    %ToPrint4 = fr:decode(hd(hd(tl(As0)))),
+    %<<_:256>> = hd(hd(tl(As0))),
     %confirmed that As are not points, they are hashes.
-    io:fwrite(integer_to_list(ToPrint4)), %This is the version being used when generating the proof. 
-    io:fwrite("\n"),
+    %io:fwrite(integer_to_list(ToPrint4)), %This is the version being used when generating the proof. 
+    %io:fwrite("\n"),
     %io:fwrite(integer_to_list(PHash)), 
     io:fwrite("get lookup parameters\n"),
     benchmark:now(),
@@ -224,6 +203,7 @@ batch(Keys, Root, CFG) ->
 %tree_leaves(_) ->  [].
 
 points_list(<<E:1024>>) -> [<<E:1024>>];
+points_list({I, 0}) when is_integer(I) -> [];
 points_list({I, <<E:1024>>}) when is_integer(I) ->
     %[<<E:1024>>];
     [<<E:1024>>];

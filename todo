@@ -1,6 +1,8 @@
 
-looks like e_mul is producing an invalid point sometimes.
-ed:test(14).
+in a couple places we multiply by 8 to clear the cofactors.
+There is a better algorithm for this.
+https://loup-vaillant.fr/tutorials/cofactor
+search "performance tricks"
 
 
 stem2:hash_point is not deterministic for sister points.
