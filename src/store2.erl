@@ -143,7 +143,11 @@ verified(Loc, ProofTree, CFG) ->
     RootStem2 = verified2(tl(ProofTree), RootStem, CFG),
     RootStem3 = 
         RootStem2#stem{root = hd(ProofTree)},
-    %stem2:check_root_integrity(RootStem3),
+    if
+        ?sanity ->
+            stem2:check_root_integrity(RootStem3);
+        true -> ok
+    end,
     Loc2 = stem2:put(RootStem3, CFG),
     Loc2.
     
@@ -166,13 +170,18 @@ verified2([[{N, {Key, Value}}]|T], Stem, CFG) ->
     verified2(T, Stem2, CFG);
 verified2([[{N, B = <<_:1024>>}|T1]|T2], Stem, CFG) ->
     Hash = stem2:hash_point(B),
+    %Hash = ed:compress_point(B),
     verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG);
 verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG) 
   when is_binary(B) -> 
     1 = element(N+1, Stem#stem.types),
     ChildStem0 = verified2(T1, stem2:get(element(N+1, Stem#stem.pointers), CFG), CFG),
     ChildStem = ChildStem0#stem{root = B},
-    %stem2:check_root_integrity(ChildStem),
+    if
+        ?sanity ->
+            stem2:check_root_integrity(ChildStem);
+        true -> ok
+    end,
     %io:fwrite(size(ChildStem#stem.root)),
     Loc = stem2:put(ChildStem, CFG),
     false = (Hash == uncalculated),

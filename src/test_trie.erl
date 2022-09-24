@@ -13,9 +13,10 @@ test() ->
     %V = [101, 17],
     V = [
          %23,
-         %20,
-         21
-         %22
+         20,
+         21,
+         22,
+         24
         ],
     test_helper(V, CFG).
 test_helper([], _) -> success;
@@ -678,21 +679,28 @@ test(21, CFG) ->
     %Leaf3 = leaf:new(5, <<0,0>>, 0, CFG),%writing to the previously empty location.
     %io:fwrite({Leaf0, Leaf1}),
     %NewRoot0 = hd(ProofTree),
-    Leaves2 = [Leaf2|Leaves],
-    %Leaves2 = [Leaf1, Leaf2|tl(tl(Leaves))],
+    %Leaves2 = [Leaf2|Leaves],
+    %Leaves2 = [Leaf2, hd(Leaves)|tl(tl((Leaves)))],
+    Leaves2 = [Leaf1, Leaf2|tl(tl(Leaves))],
     %io:fwrite(Leaves2),
+    io:fwrite("test trie to store.\n"),
     {Loc3, _, _} = 
         store2:batch(Leaves2, 1, CFG),
+    io:fwrite("test trie stored\n"),
     RootStem = stem2:get(Loc3, CFG),
     ProofTree2 = 
         verify2:update(
           %DecompressedTree, [Leaf1, Leaf2, Leaf3],
-          DecompressedTree, [Leaf2],
+          DecompressedTree, [Leaf1, Leaf2, Leaf3],
           CFG),
     NewRoot2 = hd(ProofTree2),
     Loc2 = store2:verified(
                   NewLoc, ProofTree2, CFG),
     RootStem4 = stem2:get(Loc2, CFG),
+
+    HP3 = stem2:hash(stem2:get(Loc2, CFG)),
+    HP4 = stem2:hash(stem2:get(Loc3, CFG)),
+    HP3 = HP4,
    
     %5 is the new leaf.
     {Proof1, Commit1, Opening1} = 
@@ -713,6 +721,10 @@ test(21, CFG) ->
           hd(Proof2),
           %Root2,
           {Proof2, Commit2, Opening2}, CFG),
+    HP1 = stem2:hash_point(ed:decompress_point(hd(Proof1))),
+    HP2 = stem2:hash_point(ed:decompress_point(hd(Proof2))),
+    HP1 = HP2,
+
     %this is for the leaf being edited.
     {Proof3, _, _} = 
         get2:batch([leaf:raw_key(Leaf1)], 
@@ -730,8 +742,11 @@ test(21, CFG) ->
     %io:fwrite(Proof5),
     HP1 = stem2:hash_point(ed:decompress_point(hd(Proof1))),
     HP2 = stem2:hash_point(ed:decompress_point(hd(Proof2))),
+    Case2  = not(ed:a_eq(ed:decompress_point(hd(Proof3)), ed:decompress_point(hd(Proof4)))),
+    Case3  = not(ed:a_eq(ed:decompress_point(hd(Proof5)), ed:decompress_point(hd(Proof6)))),
     if
         (not(HP1 == HP2)) ->
+        %(not(Proof1 == Proof2)) ->
             io:fwrite("failed to create element\n"),
             io:fwrite(
               {Proof1, Proof2, 
@@ -741,11 +756,12 @@ test(21, CFG) ->
                %size(Root2), size(NewRoot2), 
                %ed:e_eq(Root2, NewRoot2), 
                ed:e_eq(ed:decompress_point(hd(Proof2)), NewRoot2), 
-               ed:e_eq(ed:decompress_point(hd(Proof1)), NewRoot2)});
-        (not(Proof3 == Proof4)) ->
+               ed:e_eq(ed:decompress_point(hd(Proof1)), NewRoot2), 
+               (HP1 == HP2)});
+        Case2 ->
             io:fwrite("failed to edit element\n"),
             io:fwrite({Proof3, Proof4});
-        (not(Proof5 == Proof6)) ->
+        Case3 ->
             io:fwrite("failed to delete element\n"),
             io:fwrite({Proof5, Proof6});
         true -> ok
@@ -883,7 +899,34 @@ test(23, CFG) ->
     
     %io:fwrite(get2:batch(Keys, Loc3, CFG)),
     
+    success;
+test(24, CFG) ->
+    %test of updating a point.
+    Loc = 1,
+    Key = 27,
+    UnusedKey = 11,
+    Leaf1 = leaf:new(Key, <<27:16>>, 0, CFG),
+    Leaf2 = leaf:new(Key, <<29:16>>, 0, CFG),
+    {Loc2, stem, _} = store2:batch([Leaf1], Loc, CFG),
+    {ProofTree, Commit, Opening} = 
+        get2:batch([<<Key:256>>],
+                   Loc2, CFG),
+    {true, _, DecompressedTree} = 
+        verify2:proof(
+          hd(ProofTree), 
+          {ProofTree, Commit, Opening}, CFG),
+    ProofTree2 = 
+        verify2:update(DecompressedTree, [Leaf2], CFG),
+    RootHash2 = stem2:hash_point(hd(ProofTree2)),
+
+    {Loc4, stem, _} = store2:batch([Leaf2], Loc, CFG),
+    RootHash1 = stem2:hash(stem2:get(Loc4, CFG)),
+
+    RootHash2 = RootHash1,
+
     success.
+    
+
 
 
     

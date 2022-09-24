@@ -178,7 +178,7 @@ check_root_integrity(Stem) ->
     {Gs, Hs, Q} = parameters2:read(),
     R2 = multi_exponent:doit(Hashes, Gs),
     %R2 = ipa2:commit(tuple_to_list(Stem#stem.hashes), Gs),
-    %true = fq:eq(R, Stem#stem.root).
+    true = ed:e_eq(R, R2),
     true = ed:e_eq(R, Stem#stem.root),
     true = ed:e_eq(R2, Stem#stem.root).
 put(Stem, CompressedRoot, CFG) ->
