@@ -183,9 +183,9 @@ prove(As, %committed data
     %T = calc_T(fq:extended2affine(CommitG_e), R),
     T = calc_T(hd(ed:extended2affine_batch(
                     [CommitG_e])), R),
-    io:fwrite("prove RT: "),
-    RT = fr:decode([R, T]),
-    lists:map(fun(X) -> io:fwrite(integer_to_list(X)), io:fwrite("\n") end, RT),
+    %io:fwrite("prove RT: "),
+    %RT = fr:decode([R, T]),
+    %lists:map(fun(X) -> io:fwrite(integer_to_list(X)), io:fwrite("\n") end, RT),
     %T = fr:encode(5),%todo!!!
     %io:fwrite("multiprove 6\n"),
     %spend very little time here.
@@ -275,9 +275,9 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     benchmark:now(),
     T3 = erlang:timestamp(),
     T = calc_T(ACG, R),
-    io:fwrite("verify RT: "),
-    RT = fr:decode([R, T]),
-    lists:map(fun(X) -> io:fwrite(integer_to_list(X)), io:fwrite("\n") end, RT),
+    %io:fwrite("verify RT: "),
+    %RT = fr:decode([R, T]),
+    %lists:map(fun(X) -> io:fwrite(integer_to_list(X)), io:fwrite("\n") end, RT),
 
     io:fwrite("multiproof verify eval outside v\n"),
     benchmark:now(),

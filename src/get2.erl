@@ -130,7 +130,9 @@ batch(Keys, Root, CFG) ->
                       B = ed:e_eq(Old, New),
                       if
                           B -> ok;
-                          true -> 1=2
+                          true -> 
+                              io:fwrite([ed:extended2affine_batch([Old, New]), A]),
+                              1=2
                       end
               end, Commits, As),
             ok;

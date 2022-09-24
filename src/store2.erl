@@ -164,6 +164,9 @@ verified2([[{N, {Key, Value}}]|T], Stem, CFG) ->
               N, Stem, 2, Loc, 
               leaf_hash(Leaf, CFG)),
     verified2(T, Stem2, CFG);
+verified2([[{N, B = <<_:1024>>}|T1]|T2], Stem, CFG) ->
+    Hash = stem2:hash_point(B),
+    verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG);
 verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG) 
   when is_binary(B) -> 
     1 = element(N+1, Stem#stem.types),

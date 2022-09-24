@@ -13,9 +13,9 @@ test() ->
     %V = [101, 17],
     V = [
          %23,
-         20,
-         21,
-         22
+         %20,
+         21
+         %22
         ],
     test_helper(V, CFG).
 test_helper([], _) -> success;
@@ -678,15 +678,16 @@ test(21, CFG) ->
     %Leaf3 = leaf:new(5, <<0,0>>, 0, CFG),%writing to the previously empty location.
     %io:fwrite({Leaf0, Leaf1}),
     %NewRoot0 = hd(ProofTree),
-    %Leaves2 = [Leaf1,Leaf2|tl(Leaves)],
-    Leaves2 = [Leaf1, Leaf2|tl(tl(Leaves))],
+    Leaves2 = [Leaf2|Leaves],
+    %Leaves2 = [Leaf1, Leaf2|tl(tl(Leaves))],
     %io:fwrite(Leaves2),
     {Loc3, _, _} = 
         store2:batch(Leaves2, 1, CFG),
     RootStem = stem2:get(Loc3, CFG),
     ProofTree2 = 
         verify2:update(
-          DecompressedTree, [Leaf1, Leaf2, Leaf3],
+          %DecompressedTree, [Leaf1, Leaf2, Leaf3],
+          DecompressedTree, [Leaf2],
           CFG),
     NewRoot2 = hd(ProofTree2),
     Loc2 = store2:verified(
@@ -694,11 +695,24 @@ test(21, CFG) ->
     RootStem4 = stem2:get(Loc2, CFG),
    
     %5 is the new leaf.
-    {Proof1, _, _} = 
+    {Proof1, Commit1, Opening1} = 
         get2:batch([<<5:256>>], Loc3, CFG),
-    {Proof2, _, _} = 
+    Root1 = stem2:root(stem2:get(Loc3, CFG)),
+    %io:fwrite({size(Root1), size(hd(Proof1))}),
+    {true, _, _} = 
+        verify2:proof(
+          %Root1,
+          hd(Proof1),
+          {Proof1, Commit1, Opening1}, CFG),
+                                 
+    {Proof2, Commit2, Opening2} = 
         get2:batch([<<5:256>>], Loc2, CFG),
-
+    Root2 = stem2:root(stem2:get(Loc2, CFG)),
+    {true, _, _} = 
+        verify2:proof(
+          hd(Proof2),
+          %Root2,
+          {Proof2, Commit2, Opening2}, CFG),
     %this is for the leaf being edited.
     {Proof3, _, _} = 
         get2:batch([leaf:raw_key(Leaf1)], 
@@ -714,11 +728,20 @@ test(21, CFG) ->
         get2:batch([DeleteKey], Loc2, CFG),
 
     %io:fwrite(Proof5),
-    
+    HP1 = stem2:hash_point(ed:decompress_point(hd(Proof1))),
+    HP2 = stem2:hash_point(ed:decompress_point(hd(Proof2))),
     if
-        (not(Proof1 == Proof2)) ->
+        (not(HP1 == HP2)) ->
             io:fwrite("failed to create element\n"),
-            io:fwrite({Proof1, Proof2});
+            io:fwrite(
+              {Proof1, Proof2, 
+               hd(tl(Proof1)) == hd(tl(Proof2)), 
+               size(hd(Proof1)), size(hd(Proof2)), 
+               %Root2, NewRoot2, 
+               %size(Root2), size(NewRoot2), 
+               %ed:e_eq(Root2, NewRoot2), 
+               ed:e_eq(ed:decompress_point(hd(Proof2)), NewRoot2), 
+               ed:e_eq(ed:decompress_point(hd(Proof1)), NewRoot2)});
         (not(Proof3 == Proof4)) ->
             io:fwrite("failed to edit element\n"),
             io:fwrite({Proof3, Proof4});

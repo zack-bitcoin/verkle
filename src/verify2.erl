@@ -67,6 +67,8 @@ update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
                    SubPoints),
     %Cs = fq:compress(Es),
     Cs = ed:compress_points(Es),
+%    Cs = lists:map(fun(E) -> stem2:hash_point(E)
+%                   end, Es),
     ECs = lists:zipwith(fun(A, B) -> {A, B} end,
                         Es, Cs),
     ECdict = 
@@ -87,6 +89,18 @@ insert_stem_hashes2([], Tree, Result) ->
     {[], lists:reverse(Result) ++ Tree};
 insert_stem_hashes2(ECs, [], Result) ->
     {ECs, lists:reverse(Result)};
+insert_stem_hashes2(
+  ECs, [{I, P = <<_:1024>>}|T], 
+  Result) ->
+    D = case dict:find(P, ECs) of
+            {ok, C} -> 
+                io:fwrite("insert stem update point\n"),
+                C;
+            _ -> P
+        end,
+    insert_stem_hashes2(
+      ECs, T, [{I, D}|Result]);
+    
 insert_stem_hashes2(
   ECs, [{I, {mstem, uncalculated, E}}|T], 
   Result) ->
@@ -337,10 +351,10 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
 %               size(hd(OpenL))
                %size(hd(get2:compressed_points_list(Tree0)))
 %              }),
-    CheckHash = (element(2, hd(hd(tl(Tree0))))),
-    io:fwrite("verify2:proof, earlier case of incorrect Y value\n"),
-    io:fwrite(integer_to_list(fr:decode(CheckHash))),
-    io:fwrite("\n"),
+    %CheckHash = (element(2, hd(hd(tl(Tree0))))),
+    %io:fwrite("verify2:proof, earlier case of incorrect Y value\n"),
+    %io:fwrite(integer_to_list(fr:decode(CheckHash))),
+    %io:fwrite("\n"),
     CPL = get2:compressed_points_list(Tree0),
     %io:fwrite({size(hd(CPL)), size(hd(tl(CPL)))}),%32, 32
     false = CPL == [],
@@ -405,9 +419,9 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
             benchmark:now(),
 %            io:fwrite({size(CommitG), size(Open),
 %                       length(Commits), size(hd(Commits))}),
-            io:fwrite("verify2 last ys is: \n"),
-            io:fwrite(integer_to_list(fr:decode(hd(tl(Ys))))),
-            io:fwrite("\n"),
+            %io:fwrite("verify2 last ys is: \n"),
+            %io:fwrite(integer_to_list(fr:decode(hd(tl(Ys))))),
+            %io:fwrite("\n"),
             %io:fwrite(integer_to_list(fr:decode(stem2:hash_point(ed:decompress_point(hd(tl(Ys))))))),
             %io:fwrite("\n"),
             B2 = multiproof2:verify(
