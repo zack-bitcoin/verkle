@@ -13,10 +13,10 @@ test() ->
     %V = [101, 17],
     V = [
          %23,
-         20,
-         21,
-         22,
-         24
+         %20,
+         21
+         %22,
+         %24
         ],
     test_helper(V, CFG).
 test_helper([], _) -> success;
@@ -700,6 +700,9 @@ test(21, CFG) ->
 
     HP3 = stem2:hash(stem2:get(Loc2, CFG)),
     HP4 = stem2:hash(stem2:get(Loc3, CFG)),
+    io:fwrite({HP3 == HP4, 
+               stem2:get(Loc2, CFG), 
+               stem2:get(Loc3, CFG)}),
     HP3 = HP4,
    
     %5 is the new leaf.

@@ -20,7 +20,7 @@ doit(0) ->
                       io:fwrite(integer_to_list(N)),
                       io:fwrite("\n"),
                       S = ed:test(N)
-              end, [1,2,3,4,5,7,8,9,10,11,12]),
+              end, [1,2,4,5,7,8,9,10,11,12]),
     lists:map(fun(N) ->
                       io:fwrite("poly "),
                       io:fwrite(integer_to_list(N)),

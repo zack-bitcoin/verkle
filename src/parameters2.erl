@@ -3,7 +3,8 @@
 -export([start_link/0,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2]).
 -export([read/0, div_e/1, div_e/0,
          multi_exp/0, multi_exp/1, multi_exp/2,
-         domain/0, a/0, da/0]).
+         domain/0, a/0, da/0,
+         det_point/1]).
 
 
 read_or_gen(File, Fun) ->
@@ -125,8 +126,8 @@ range(X, Y) when X < Y ->
 det_point(X) ->
     %deterministicly generated point.
     <<Y:256>> = hash:doit(<<X:256>>),
-    Z = Y rem ed:prime(),
-    ed:gen_point(<<Z:256>>).
+    %Z = Y rem fr:prime(),
+    ed:gen_point(<<Y:256>>).
 %    Z = Y rem fr:prime(),
 %    fq:extended2extended_niels(
 %      fq:gen_point(Z)).

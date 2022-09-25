@@ -217,18 +217,18 @@ decompress_point2(U, S, T, B) ->
             Bool = is_on_curve(Point),
             if
                 Bool -> 
-            if
-                ?sanity ->
-                    V1 = neg(V2),
-                    V2 = neg(V1),
-                    true = (not(S2)) == 
-                        is_positive(V2),
-                    ok;
-                true -> ok
-            end,
+                    if
+                        ?sanity ->
+                            V1 = neg(V2),
+                            V2 = neg(V1),
+                            true = (not(S2)) == 
+                                is_positive(V2),
+                            ok;
+                        true -> ok
+                    end,
                     Point;
                 true -> 
-                    io:fwrite("invalid, not on curve\n"),
+                    %io:fwrite("invalid, not on curve\n"),
                     error
             end
     end.
