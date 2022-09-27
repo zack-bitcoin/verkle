@@ -424,7 +424,7 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
             %io:fwrite("\n"),
             %io:fwrite(integer_to_list(fr:decode(stem2:hash_point(ed:decompress_point(hd(tl(Ys))))))),
             %io:fwrite("\n"),
-            B2 = multiproof2:verify(
+            B2 = multiproof:verify(
                    {CommitG, Open}, 
                    %Commits, Zs, fr:decode(Ys)),
                    Commits, Zs, Ys),
@@ -487,14 +487,7 @@ unfold(Root, [{Index, X}|R], T, CFG) %stem case
 unfold(Root, [{Index, X}|R], T, CFG) %stem case
   when (is_binary(X) and (size(X) == (32*4)))
    ->
-    %io:fwrite("verify2 extended point\n"),
-    %<<H:256>> = fq:hash_point(X),
-    %<<H:256>> = ed:compress_point(X),
     <<H:256>> = stem2:hash_point(X),
-    %<<H:256>> = stem2:hash_point(X),
-    io:fwrite("verify2 unfold hash point to fr is \n"),
-    io:fwrite(integer_to_list(fr:decode(<<H:256>>))),
-    io:fwrite("\n"),
     unfold(X, R, [{Root, Index, <<H:256>>}|T], CFG);
 unfold(Root, [H|J], T, CFG) ->
     unfold(Root, H, T, CFG)

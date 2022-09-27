@@ -87,7 +87,10 @@ setup(_) ->
 -define(max256, 115792089237316195423570985008687907853269984665640564039457584007913129639936).
 
 % 2^255
--define(max255, 57896044618658097711785492504343953926634992332820282019728792003956564819968).
+%-define(max255 57896044618658097711785492504343953926634992332820282019728792003956564819968).
+
+-define(max255, 1).
+%57896044618658097711785492504343953926634992332820282019728792003956564819968).
 
 %montgomery encoded 1
 -define(m_one, 38).
@@ -263,6 +266,7 @@ fdecode_point(<<S:1, P0:255>>) ->
             error;
         {V1, V2} ->
             S2 = fis_positive(V1),
+                
             V = if
                     (S == S2) -> V1;
                     true -> V2
@@ -282,6 +286,7 @@ fdecode_point(<<S:1, P0:255>>) ->
             end
     end.
 fis_positive(Y) ->
+    %returns true if Y is even.
     (Y band ?max255) == 0.
 fencode_point(#affine{x = X, y = Y}) ->
     S = case not(fis_positive(Y)) of
@@ -484,11 +489,23 @@ mdecode_point(<<S:1, P:255>>) ->
             io:fwrite("invalid, no square root\n"),
             error;
         {V1, V2} ->
+            SB = (S == 0),
             S2 = fis_positive(V1),
             V = if
-                    (S == S2) -> V1;
+                    (SB == S2) -> V1;
                     true -> V2
                 end,
+            SB = ((V rem 2) == 0),
+            if
+                SB -> 
+                    io:fwrite("in ed25519, v is even\n");
+                true ->
+                    io:fwrite("in ed25519, v is odd\n")
+            end,
+            %s==1 means it should be even.
+%            io:fwrite({{s, S}, {v_should_be_even, SB}, 
+%                       {v1_even, S2, 0 == (V1 rem 2)},
+%                       {v1_same_as_v, V1 == V}}),
             Point = #affine{x = P, y = V},
             Bool = mis_on_curve(Point),
             if

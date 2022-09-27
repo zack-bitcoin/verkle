@@ -11,7 +11,7 @@
          verified/3
         ]).
 -include("constants.hrl").
--define(sanity, true).
+-define(sanity, false).
 %-define(nindex, 8).
 %-record(stem, { root
 %                , types

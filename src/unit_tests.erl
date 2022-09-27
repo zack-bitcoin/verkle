@@ -25,7 +25,7 @@ doit(0) ->
                       io:fwrite("poly "),
                       io:fwrite(integer_to_list(N)),
                       io:fwrite("\n"),
-                      S = poly2:test(N)
+                      S = poly:test(N)
               end, [2,3]),
     lists:map(fun(N) ->
                       io:fwrite("multi exponent "),
@@ -36,10 +36,10 @@ doit(0) ->
               end, [0,1,5,6,7,8]),
     S = store2:test(1),
     lists:map(fun(N) ->
-                      S = ipa2:test(N)
+                      S = ipa:test(N)
               end, [1,3,5,7]),
     S = verify2:test(),
-    {prove, _, verify, _} = multiproof2:test(7),
+    {prove, _, verify, _} = multiproof:test(7),
     S.
     
     

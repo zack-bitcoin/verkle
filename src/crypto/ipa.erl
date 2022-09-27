@@ -1,4 +1,4 @@
--module(ipa2).
+-module(ipa).
 -export([make_ipa/5, verify_ipa/5,
          commit/2, %eq/2, 
          gen_point/0,
@@ -17,7 +17,7 @@
 %        if (C>= ?order ) -> C - ?order;
 %           true -> C end).
 
--define(sanity_checks, true).
+-define(sanity_checks, false).
 
 dot(A, B) -> dot(A, B, fr:encode(0)).
 dot([], [], Acc) -> Acc;

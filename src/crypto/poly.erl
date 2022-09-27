@@ -1,4 +1,4 @@
--module(poly2).
+-module(poly).
 
 -export(
    [calc_DA/1, calc_A/1, 
@@ -12,7 +12,7 @@
    ]).
 
 %library for dealing with polynomials over integers mod a prime.
-%Built over the jubjub curve
+%Built over the ed25519 curve
 
 %finite field operations
 %-define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
@@ -406,7 +406,6 @@ test(2) ->
     Result2 = eval_outside(Z, E, Domain, A, DA),
     Result3 = eval_outside_v(Z, Domain, A, DA),
 
-    %io:fwrite({symetric_view(fr:decode([ipa2:dot(Result3, E), Result, Result2, E]), fr:prime())}),
     success;
 test(3) -> 
     %testing mul_c_all

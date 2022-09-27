@@ -8,7 +8,6 @@
 #gcc -Ofast -march=native -funroll-loops -fomit-frame-pointer -flto -fPIC -shared -o ebin/fq.so src/crypto/fq.c -I $ERL_ROOT/user/include/
 
 # balanced version
-gcc -O2 -march=native -funroll-loops -fomit-frame-pointer -flto -fPIC -shared -o ebin/fq.so src/crypto/fq.c -I $ERL_ROOT/user/include/
 
 gcc -O2 -march=native -funroll-loops -fomit-frame-pointer -flto -fPIC -shared -o ebin/fr.so src/crypto/fr.c -I $ERL_ROOT/user/include/
 

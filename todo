@@ -1,26 +1,5 @@
 
-in a couple places we multiply by 8 to clear the cofactors.
-There is a better algorithm for this.
-https://loup-vaillant.fr/tutorials/cofactor
-search "performance tricks"
-
-
-stem2:hash_point is not deterministic for sister points.
-
-
-`zs ys` the error message. it shows that in our proofs, the hashes of stems aren't being recorded correctly.
-
-
-store2 should use precomputed multi exponent.
-
-
-store2:test(1).
-
-store2 shoudl use the precomputed version of multi exponent.
-
-get the tests to pass.
-test_trie:test(20).
-it is failing in multiproof2:prove during a sanity check. but it is weird, because in multiproof2:test(7). I am running that same function.
+javascript version of the code.
 
 
 in stem2:serialize, we could batch this to make it faster.
@@ -28,13 +7,7 @@ in stem2:serialize, we could batch this to make it faster.
 
 in stem2:hash_point, we could batch this to make it faster.
 
-switch everything to ed25519.
 
-
-javascript version of the code.
-
-
-use random values for keys in the tests.
 
 
 12% (or 24%?) speedup.

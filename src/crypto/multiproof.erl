@@ -1,7 +1,7 @@
--module(multiproof2).
+-module(multiproof).
 -export([prove/9, verify/4, test/1]).
 
--define(sanity_checks, true).
+-define(sanity_checks, false).
 
 %G is the most important calculation of the multiproof.
     %sum i: r^i * (As_i(t)-Y_i)/(t-z_i)
@@ -27,7 +27,7 @@ calc_G(R, As, Ys, Zs, Domain, DA) ->
     DivEAll = case L of
                   256 -> 
                       parameters2:div_e();
-                  _ -> poly2:all_div_e_parameters(
+                  _ -> poly:all_div_e_parameters(
                          Domain, DA)
               end,
     DivEAll2 = 0,
@@ -38,10 +38,10 @@ calc_Gb(_, _, [], [], [], _, _, _, _ ,
 calc_Gb(RA, R, [A|AT], [Y|YT], [Z|ZT], Domain,
           DA, DivEAll, DivEAll2, Accumulator) ->
     X1 = lists:map(fun(C) -> fr:sub(C, Y) end, A),
-    P = poly2:div_e(X1, Domain, DA, 
+    P = poly:div_e(X1, Domain, DA, 
                     Z, DivEAll, DivEAll2),
-    X = poly2:mul_scalar(RA, P),
-    A2 = poly2:add(X, Accumulator), 
+    X = poly:mul_scalar(RA, P),
+    A2 = poly:add(X, Accumulator), 
     calc_Gb(fr:mul(RA, R), R, AT, YT, ZT, Domain,
               DA, DivEAll, DivEAll2, A2).
 
@@ -83,8 +83,8 @@ calc_H(R, T, As, Zs) ->
     calc_H2(RIDs, As, []).
 calc_H2([], [], Accumulator) -> Accumulator;
 calc_H2([H|T], [A|AT], Acc) -> 
-    X = poly2:mul_scalar(H, A),
-    Acc2 = poly2:add(X, Acc),
+    X = poly:mul_scalar(H, A),
+    Acc2 = poly:add(X, Acc),
     calc_H2(T, AT, Acc2).
 
 calc_R([], [], [], B) -> 
@@ -131,7 +131,7 @@ prove(As, %committed data
     benchmark:now(),
     Ys0 = lists:zipwith(
            fun(F, Z) ->
-                   poly2:eval_e(Z, F, Domain)
+                   poly:eval_e(Z, F, Domain)
            end, As, Zs),%this should be streamed with calculating the As.
     %io:fwrite({fr:decode([Ys0, As, Zs])}),
     %Ys [3,3,3,3]
@@ -177,7 +177,7 @@ prove(As, %committed data
     io:fwrite("multiprove commit to G\n"),
     benchmark:now(),
     %io:fwrite({length(G), length(Gs)}),
-    CommitG_e = ipa2:commit(G, Gs),
+    CommitG_e = ipa:commit(G, Gs),
     io:fwrite("multiprove calc random T\n"),
     benchmark:now(),
     %T = calc_T(fq:extended2affine(CommitG_e), R),
@@ -196,19 +196,19 @@ prove(As, %committed data
     %io:fwrite("multiprove 7\n"),
     io:fwrite("multiprove calc commit to G-E\n"),
     benchmark:now(),
-    NG2 = poly2:sub(G, He),
+    NG2 = poly:sub(G, He),
     io:fwrite("multiprove evaluate G-E outside the domain\n"),
     benchmark:now(),
     %io:fwrite({fr:decode([T, Domain, PA, DA])}),
     %[1, [1,2,3,4], poly, [poly, poly...]]
-    EV = poly2:eval_outside_v(T, Domain, PA, DA),
+    EV = poly:eval_outside_v(T, Domain, PA, DA),
     %io:fwrite("multiprove 9\n"),
     io:fwrite("multiprove create ipa opening to G-E\n"), % 2%
     benchmark:now(),
     %spend a little time here.
 %    io:fwrite({size(hd(NG2)), length(NG2),
 %               size(hd(EV)), length(EV), NG2, EV}),%{32, 256, 32, 256}
-    IPA = ipa2:make_ipa(NG2, EV, Gs, Hs, Q),
+    IPA = ipa:make_ipa(NG2, EV, Gs, Hs, Q),
     if
         ?sanity_checks ->
             {RIDs, G2b} = 
@@ -222,12 +222,12 @@ prove(As, %committed data
     io:fwrite(integer_to_list(EVB)),
             %lists:map(fun(X) -> io:fwrite(integer_to_list(X)), io:fwrite("\n") end, EVi),
             io:fwrite("\n"),
-            true = ipa2:verify_ipa(
+            true = ipa:verify_ipa(
                      IPA, EV, 
                      Gs, Hs, Q),
 
             %checking that neg G2b is equal to NG2 dot EV
-            Sanity = ipa2:dot(NG2, EV),
+            Sanity = ipa:dot(NG2, EV),
             true = (Sanity == element(2, IPA)),
             true = (Sanity == fr:neg(G2b)),
             true = (fr:encode(0) 
@@ -281,7 +281,7 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
 
     io:fwrite("multiproof verify eval outside v\n"),
     benchmark:now(),
-    EV = poly2:eval_outside_v(
+    EV = poly:eval_outside_v(
            T, Domain, PA, DA),
     T4 = erlang:timestamp(),
 
@@ -300,7 +300,7 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     io:fwrite(integer_to_list(EVB)),
     io:fwrite("\n"),
     %lists:map(fun(X) -> io:fwrite(integer_to_list(X)), io:fwrite("\n") end, EVi),
-    true = ipa2:verify_ipa(
+    true = ipa:verify_ipa(
              Open_G_E, EV, Gs, Hs, Q),
     T5 = erlang:timestamp(),
 
@@ -376,10 +376,10 @@ test(1) ->
     Zs = many(hd(tl(Domain)), Many),
     Ys = lists:zipwith(
            fun(F, Z) ->
-                   poly2:eval_e(Z, F, Domain)
+                   poly:eval_e(Z, F, Domain)
            end, As, Zs),
 
-    DA = poly2:c2e(parameters2:da(), Domain),
+    DA = poly:c2e(parameters2:da(), Domain),
     R = fr:encode(1),
     G2 = calc_G(R, As, Ys, Zs, Domain, DA),
     {G2};
@@ -419,8 +419,8 @@ test(3) ->
     {Hs, _} = lists:split(4, Hs0),
     Domain = fr:encode([1,2,3,4]),
     Many = length(Domain),
-    DA = poly2:c2e(poly2:calc_DA(Domain), Domain),
-    PA = poly2:calc_A(Domain),
+    DA = poly:c2e(poly:calc_DA(Domain), Domain),
+    PA = poly:calc_A(Domain),
     A = lists:map(fun(X) -> 
                           fr:add(X, fr:encode(0)) 
                   end,
@@ -430,9 +430,9 @@ test(3) ->
     Zs = many(hd(tl(Domain)), Many),
     Ys = lists:zipwith(
            fun(F, Z) ->
-                   poly2:eval_e(Z, F, Domain)
+                   poly:eval_e(Z, F, Domain)
            end, As, Zs),
-    Commit1 = ipa2:commit(hd(As), Gs),
+    Commit1 = ipa:commit(hd(As), Gs),
     Commits0 = lists:map(
       fun(A) ->
               Commit1
@@ -441,7 +441,7 @@ test(3) ->
     Commits = ed:normalize(Commits0),
     %io:fwrite({fr:decode(A)}),
     io:fwrite("location 5 "),
-    io:fwrite(integer_to_list(fr:decode(poly2:eval_outside(fr:encode(5), A, Domain, PA, DA)))),
+    io:fwrite(integer_to_list(fr:decode(poly:eval_outside(fr:encode(5), A, Domain, PA, DA)))),
     io:fwrite("\n"),
     Proof = prove(As, Zs, Commits, Gs, Hs, 
                   Q, DA, PA, Domain),
@@ -460,10 +460,10 @@ test(7) ->
     Zs = many(hd(tl(Domain)), Many),
     Ys = lists:zipwith(
            fun(F, Z) ->
-                   poly2:eval_e(Z, F, Domain)
+                   poly:eval_e(Z, F, Domain)
            end, As, Zs),
     {Gs, Hs, Q} = parameters2:read(),
-    Commit1 = ipa2:commit(hd(As), Gs),
+    Commit1 = ipa:commit(hd(As), Gs),
     Commits0 = lists:map(fun(A) -> Commit1 end, 
                          As),
     Commits = ed:normalize(Commits0),
@@ -512,11 +512,11 @@ test(8) ->
     Zs = many(hd(tl(tl(Domain))), Many),
     Ys = lists:zipwith(
            fun(F, Z) ->
-                   poly2:eval_e(Z, F, Domain)
+                   poly:eval_e(Z, F, Domain)
            end, As, Zs),
     Commits0 = lists:map(
                  fun(A) ->
-                         ipa2:commit(A, Gs)
+                         ipa:commit(A, Gs)
                  end, As),
     Commits = ed:normalize(Commits0),
 

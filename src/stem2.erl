@@ -14,7 +14,7 @@
 	 empty_trie/2]).
 %-include("constants.hrl").
 %-export_type([stem/0,types/0,empty_t/0,stem_t/0,leaf_t/0,pointers/0,empty_p/0,hashes/0,hash/0,empty_hash/0,stem_p/0,nibble/0]).
--define(sanity, true).
+-define(sanity, false).
 -record(stem, { root = ed:extended_zero()
                 , types
                 , pointers
@@ -97,12 +97,18 @@ serialize(S, CompressedRoot, CFG) ->
                    []),
     <<R1:512, X/binary>>.
 serialize(S, CFG) ->
+    if
+        ?sanity ->
+            check_root_integrity(S);
+        true -> ok
+    end,
     #stem{
            pointers = P,
            hashes = H,
            types = T,
            root = Root
          } = S,
+    %TODO. this is slow and could be batched.
     [<<R1:512>>] = 
         ed:extended2affine_batch([Root]),% 2%
     X = serialize2(tuple_to_list(P), 
@@ -128,7 +134,13 @@ deserialize(<<R1:512, B/binary>>, CFG) ->
     R = ed:affine2extended(<<R1:512>>),
     %R = <<R1:(256*5)>>,
             
-    Y#stem{root = R}.
+    Result = Y#stem{root = R},
+    if
+        ?sanity ->
+            check_root_integrity(Result);
+        true -> ok
+    end,
+    Result.
 deserialize(?nwidth + 1, T,P,H, <<>>) -> 
     #stem{types = T, pointers = P, hashes = H};
 deserialize(N, T0,P0,H0,X) when N < (?nwidth + 1) ->
@@ -158,12 +170,17 @@ empty_hashes(CFG) ->
     list_to_tuple(Y).
 
 hash(S) ->
+    if
+        ?sanity ->
+            check_root_integrity(S);
+        true -> ok
+    end,
     P = S#stem.root,
     hash_point(P).
 hash_point(P) ->
     %todo, this should be batched.
-    P2 = ed:e_mul2(P, <<8:256/little>>),
-    %[P2] = ed:extended2affine_batch([P]),
+    P2 = ed:e_mul(P, <<8:256/little>>),
+    %P2 = ed:affine2extended(P),
     [<<X:256>>] = ed:compress_points([P2]),
     fr:encode(X).
 
@@ -177,7 +194,6 @@ check_root_integrity(Stem) ->
           Hashes,MEP),
     {Gs, Hs, Q} = parameters2:read(),
     R2 = multi_exponent:doit(Hashes, Gs),
-    %R2 = ipa2:commit(tuple_to_list(Stem#stem.hashes), Gs),
     true = ed:e_eq(R, R2),
     true = ed:e_eq(R, Stem#stem.root),
     true = ed:e_eq(R2, Stem#stem.root).

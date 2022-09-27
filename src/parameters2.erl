@@ -23,7 +23,7 @@ read_or_gen(File, Fun) ->
           a,%polynomial A(X) from this paper: https://dankradfeist.de/ethereum/2021/06/18/pcs-multiproofs.html
           da,%polynomial A'(X) from the same paper.
           domain,%domain over which we store values in the polynomial.
-          dive,%precompute to make poly2:div_e faster.
+          dive,%precompute to make poly:div_e faster.
           me%precompute so that pedersen commits using g/h are faster. these are the commitments connecting stems of the verkle tree.
          }).
 
@@ -38,17 +38,17 @@ init(ok) ->
     Domain = calc_domain(Many),
     A = read_or_gen(
           "precomputes/A.db",
-          fun() -> poly2:calc_A(Domain) end),
+          fun() -> poly:calc_A(Domain) end),
     DA = read_or_gen(
           "precomputes/DA.db",
-          fun() -> poly2:c2e(
-                     poly2:calc_DA(Domain), 
+          fun() -> poly:c2e(
+                     poly:calc_DA(Domain), 
                      Domain) 
           end),
     DivE = 
         read_or_gen(
           "precomputes/DivE.db",
-          fun() -> poly2:all_div_e_parameters(
+          fun() -> poly:all_div_e_parameters(
                      Domain, DA) 
           end),
 

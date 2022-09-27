@@ -10,7 +10,7 @@ test/1]).
 -include("constants.hrl").
 
 -define(pipe, false).
--define(sanity, true).
+-define(sanity, false).
 
 keys2paths(Keys, CFG) ->
     Paths0 = lists:map(
@@ -126,7 +126,7 @@ batch(Keys, Root, CFG) ->
             lists:zipwith(
               fun(Old, A) ->
     %verify that the commits are over FAs.
-                      New = ipa2:commit(A, Gs),
+                      New = ipa:commit(A, Gs),
                       B = ed:e_eq(Old, New),
                       if
                           B -> ok;
@@ -140,7 +140,7 @@ batch(Keys, Root, CFG) ->
     end,
 
     {CommitG, Opening} = 
-        multiproof2:prove(
+        multiproof:prove(
           FAs, FZs, Commits,
          Gs, Hs, Q, DA, PA, Domain),
 
@@ -150,7 +150,7 @@ batch(Keys, Root, CFG) ->
                     fun(F, Z) ->
                             poly2:eval_e(Z, F, Domain)
                     end, FAs, FZs),
-            true = multiproof2:verify(
+            true = multiproof:verify(
                      {CommitG, Opening}, 
                    %Commits, Zs, fr:decode(Ys)),
                      Commits, FZs, Ys);

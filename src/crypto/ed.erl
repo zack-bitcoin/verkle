@@ -22,7 +22,7 @@
          test/1
         ]).
 
--define(sanity, true).
+-define(sanity, false).
 
 % 2^255 - 19
 -define(q, 
@@ -163,10 +163,10 @@ compress_point(<<X0:256/little, Y0:256/little>>) ->
     S = case is_positive(<<Y0:256/little>>) of
             true -> 
                 %io:fwrite("compress positive\n"),
-                1;
+                0;
             false -> 
                 %io:fwrite("compress negative\n"),
-                0
+                1
         end,
     <<S:1, X0:255>>.
 decompress_points(L) when is_list(L) ->
@@ -187,7 +187,6 @@ decompress_points(L) when is_list(L) ->
               decompress_point2(U, S, T, B)
       end, IDUUs, L2).
 decompress_point(Start = <<S:1, P:255>>) ->
-    true = P < ?q,
     if
         (P < ?q) ->
             U = <<P:256/little>>,
@@ -206,8 +205,11 @@ decompress_point2(U, S, T, B) ->
         error ->
             io:fwrite("invalid, no square root\n"),
             error;
+        {<<0:256>>, <<0:256>>} ->
+            io:fwrite("couldn't sqrt\m"),
+            error;
         {V1 = <<V1n:256/little>>, V2} ->
-            SB = S == 1,
+            SB = (S == 0),
             S2 = is_positive(V1),
             V = if
                     (SB == S2) -> V1;
@@ -215,6 +217,20 @@ decompress_point2(U, S, T, B) ->
                 end,
             Point = <<U/binary, V/binary>>,
             Bool = is_on_curve(Point),
+
+            <<VN:256/little>> = V,
+            SB = ((VN rem 2) == 0),
+            if
+                SB -> 
+                    io:fwrite("in ed, v is even\n");
+                true ->
+                    io:fwrite("in ed, v is odd\n")
+            end,
+%            io:fwrite({{s, S},
+%                       {v_should_be_even, SB},
+%                       {v1_even, S2},
+%                       {v1_same_as_v, V1 == V}
+%                      }),
             if
                 Bool -> 
                     if
@@ -234,6 +250,7 @@ decompress_point2(U, S, T, B) ->
     end.
            
 gen_point() ->
+    %generates points in a prime ordered subgroup.
     <<X:256>> = crypto:strong_rand_bytes(32),
     gen_point(<<X:256>>).
 gen_point(<<X:256>>) ->
@@ -243,9 +260,11 @@ gen_point(<<X:256>>) ->
             gen_point(<<(X+1):256>>);
         _ -> 
             %P = decompress_point(compress_point(P)),
+            %P = hd(extended2affine_batch([affine2extended(P)])),
+            %e_mul(P, <<8:256/little>>)
             P
     end.
-is_positive(<<Y:256>>) ->
+is_positive(<<Y:256/little>>) ->
     (Y band ?max255) == 0.
 
 affine2extended(P = <<_:1024>>) -> P;%already in extended format.
@@ -472,12 +491,16 @@ test(3) ->
 
     %check compression is the same between versions.
     Compressed = compress_point(Affine),
+    <<S:1, _:255>> = Compressed,
     Affine = decompress_point(Compressed),
 
     Maffine = ed25519:mdecode_point(Compressed),
+    Maffine2 = c2m(Affine),
+    %io:fwrite({S, {c, Maffine}, {erl, Maffine2}}),
+    
+    Maffine = Maffine2,
     Compressed = ed25519:mencode_point(Maffine),
 
-    Maffine = c2m(Affine),
 
     %check that converting to extended coordinates and back doesn't introduce any inconsistencies.
     
@@ -888,7 +911,18 @@ test(14) ->
 %      compress_point(P2) == 
 %          compress_point(P2b),
       fr:decode([compress_point(P), 
-                 compress_point(CD)])}.
+                 compress_point(CD)])};
+test(15) ->
+    io:fwrite(""),
+    G = affine2extended(gen_point()),
+    P = e_mul(G, <<254:256/little>>),
+    A = hd(extended2affine_batch([P])),
+    C = compress_point(P),
+    A = decompress_point(C),
+    P2 = affine2extended(decompress_point(C)),
+    true = e_eq(P, P2),
+    success.
+
 %success.
 
     

@@ -14,8 +14,8 @@ test() ->
     V = [
          %23,
          %20,
-         21
-         %22,
+         21,
+         22
          %24
         ],
     test_helper(V, CFG).
@@ -700,9 +700,15 @@ test(21, CFG) ->
 
     HP3 = stem2:hash(stem2:get(Loc2, CFG)),
     HP4 = stem2:hash(stem2:get(Loc3, CFG)),
-    io:fwrite({HP3 == HP4, 
-               stem2:get(Loc2, CFG), 
-               stem2:get(Loc3, CFG)}),
+    CheckStem2 = stem2:get(Loc2, CFG),
+    CheckStem3 = stem2:get(Loc3, CFG),
+    true = element(5, CheckStem3) == element(5, CheckStem2),
+    true = ed:e_eq(element(2, CheckStem2), element(2, CheckStem3)),
+%    io:fwrite({HP3 == HP4, 
+%               lists:reverse(tuple_to_list(element(5, CheckStem2))),
+%               lists:reverse(tuple_to_list(element(5, CheckStem3))),
+%               stem2:get(Loc2, CFG), 
+%               stem2:get(Loc3, CFG)}),
     HP3 = HP4,
    
     %5 is the new leaf.
@@ -775,8 +781,8 @@ test(21, CFG) ->
     success;
 test(22, CFG) ->
     Loc = 1,
-    StartingElements = 100,
-    UpdateElements = 10,
+    StartingElements = 6000,
+    UpdateElements = 6000,
     Leaves = 
         lists:map(
           fun(N) -> 

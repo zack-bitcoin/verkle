@@ -1,12 +1,9 @@
 Verkle Tree
 ===========
 
-Pedersen-commitment based verkle trees using the jubjub elliptic curve.
+Pedersen-commitment based verkle trees using the ed25519 elliptic curve.
 
-This software seems to basically work, but it still has some inefficiencies.
-See the todo list for what needs to be done still.
-
-a verkle tree database based on pedersen commitments over the jubjub elliptic curve.
+This software is still being built.
 
 learn about verkle trees here:
 https://vitalik.ca/general/2021/06/18/verkle.html
@@ -21,6 +18,8 @@ Installation
 You need to install erlang first to use this database.
 
 To run the software: ```sh start.sh```
+
+It will take a while to build the generator points and precomputes, but once it is computed once, you don't have to re-compute it the next time you turn the software on.
 
 to turn off the software, and save everything
 ```verkle_sup:stop(ID).```
@@ -76,15 +75,14 @@ Ed25519 https://en.wikipedia.org/wiki/EdDSA#Ed25519
 It is defined like this.
 The prime for the finite field: `q = 2^255 - 19`
 Curve equation: `-x^2 + y^2 = 1 - ((121665/121666) * x^2 * y^2 )`
-So, these are the algorithms we can use for operations on the elliptic curve: http://hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html
+These are the algorithms we can use for operations on the elliptic curve: http://hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html
 
 finite field in q.
 finite field in r.
-elliptic curve operations.
-multi exponentiation library.
+[algorithms for elliptic curve operations. in C.](/src/crypto/ed25519.c)
+[elliptic curve library](src/crypto/ed.erl)
 pedersen commitments library.
-inner product library.
-precomputed bucket algorithm.
-polynomials in evaluation format library.
-bulletproofs for inner product arguments.
+[bulletproofs inner product library.](src/crypto/ipa.erl)
+[precomputed multi exponentiation with bucket algorithm.](src/crypto/multi_exponent.erl)
+[polynomials in evaluation format library.](poly.erl)
 
