@@ -19,6 +19,7 @@
          e_add/2, e_mul/2, e_mul2/2,
          encode/1, decode/1,
          affine_zero/0, extended_zero/0,
+         affine_base/0,
          test/1
         ]).
 
@@ -32,6 +33,12 @@
 -define(zero, <<0:256/little>>).
 -define(affine_zero, <<0:256, ?one/binary>>).
 -define(extended_zero, <<0:256, ?one/binary, ?one/binary, 0:256>>).
+-define(affine_base, 
+<<135,162,157,63,85,188,202,226,137,228,150,35,86,152,165,
+  156,183,181,228,173,107,147,121,152,208,119,96,126,112,
+  35,158,117,74,51,51,51,51,51,51,51,51,51,51,51,51,51,51,
+  51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51>>
+).
 
 % -(121665/121666)
 -define(D, 37095705934669439343138083508754565189542113879843219016388785533085940283555).
@@ -73,6 +80,7 @@
 prime() -> ?q.
 affine_zero() -> ?affine_zero.
 extended_zero() -> ?extended_zero.
+affine_base() -> ?affine_base.
 inv(X) -> encode(ff:inverse(decode(X), ?q)).
 pow(X, Y) when is_integer(Y) ->
     c_ed:pow(X, <<Y:256/little>>).
@@ -220,17 +228,6 @@ decompress_point2(U, S, T, B) ->
 
             <<VN:256/little>> = V,
             SB = ((VN rem 2) == 0),
-            if
-                SB -> 
-                    io:fwrite("in ed, v is even\n");
-                true ->
-                    io:fwrite("in ed, v is odd\n")
-            end,
-%            io:fwrite({{s, S},
-%                       {v_should_be_even, SB},
-%                       {v1_even, S2},
-%                       {v1_same_as_v, V1 == V}
-%                      }),
             if
                 Bool -> 
                     if
@@ -921,7 +918,26 @@ test(15) ->
     A = decompress_point(C),
     P2 = affine2extended(decompress_point(C)),
     true = e_eq(P, P2),
-    success.
+    success;
+test(16) ->
+    %adding and doubling the base point, to check that this version of ed25519 is doing the same thing as other implementations.
+    P = {affine, 15112221349535400772501151409588531511454012693041857206046113283949847762202, 46316835694926478169428394003475163141307993866256225615783033603165251855960},
+    C = ed25519:fencode_point(P),
+    A = decompress_point(C),
+    A = affine_base(),
+    E = affine2extended(decompress_point(C)),
+    true = is_on_curve(A),
+
+    E2 = c_ed:double(E),
+    E3 = e_add(E, E2),
+
+    [C, C2, C3] = compress_points([E, E2, E3]),
+
+    [P, P2, P3] = lists:map(
+                    fun(X) -> ed25519:fdecode_point(X)
+                    end, [C, C2, C3]),
+    {P, P2, P3}.
+
 
 %success.
 

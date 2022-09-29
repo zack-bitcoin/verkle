@@ -1,5 +1,20 @@
+ed25519:test(3).
+one of the encodings isn't the same as the other.
+
+
 
 javascript version of the code.
+* set up cowboy, so we can have an api for testing out how proofs are sent out.
+* decoding compressed points.
+* point hashing
+* equality of points
+* ipa:verify_ipa, div_e, mul_scalar, add, eval_e
+* multi_exponent:doit
+* poly:eval outside v
+* multiproof:verify
+* verify2.erl
+
+
 
 
 in stem2:serialize, we could batch this to make it faster.

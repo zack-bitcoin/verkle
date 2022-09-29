@@ -131,14 +131,18 @@ fmul(X, Y) ->
 finv(X) ->
     ff:inverse(X, ?q).
 
+
+
 faffine2extended(P = #affine{x = X, y = Y}) ->
-    B = feq(P, ?faffine_zero),
-    if
-        B -> ?fzero_point;
-        true ->
+    io:fwrite("f affine 2 extended\n"),
+    %B = feq(P, ?faffine_zero),
+    %B = fis_affine_zero(P),
+    %if
+    %    B -> ?fzero_point;
+    %    true ->
             #extended{x = X, y = Y, z = 1, 
-                      t = fmul(X, Y)}
-    end;
+                      t = fmul(X, Y)};
+    %end;
 faffine2extended(L) when is_list(L) ->
     lists:map(fun(X) ->
                       faffine2extended(X)
@@ -157,16 +161,36 @@ fextended2affine(
 
 fnormalize(L) ->
     faffine2extended(fextended2affine_batch(L)).
-   
-feq(#extended{x = X1, y = Y1, z = Z1}, 
+
+fis_affine_zero(#affine{x = 0, y = 1}) -> true;
+fis_affine_zero(A = #affine{}) -> 
+    io:fwrite("f is affine zero\n"),
+    E = faffine2extended(A),
+    fis_extended_zero(E).
+    
+fis_extended_zero(E3) -> 
+    io:fwrite("f is extended zero\n"),
+    ZT = fextended_double(
+           fextended_double(
+             fextended_double(E3))),
+    feq2(ZT, ?fzero_point).
+feq(A1 = #affine{}, A2) -> 
+    feq(faffine2extended(A1),
+        faffine2extended(A2));
+feq(E1 = #extended{}, E2 = #extended{}) ->
+    E3 = fextended_sub(E1, E2),
+    fis_extended_zero(E3).
+feq2(#extended{x = X1, y = Y1, z = Z1}, 
     #extended{x = X2, y = Y2, z = Z2}) -> 
+    io:fwrite("f eq 2\n"),
     (fmul(X1, Z2) == fmul(X2, Z1)) 
-        and (fmul(Y1, Z2) == fmul(Y2, Z1));
-feq(#affine{x = X, y = Y},
-           #affine{x = X, y = Y}) ->
-    true;
-feq(#affine{}, #affine{}) ->
-    false.
+        and (fmul(Y1, Z2) == fmul(Y2, Z1)).
+    
+%feq(#affine{x = X, y = Y},
+%           #affine{x = X, y = Y}) ->
+%    true;
+%feq(#affine{}, #affine{}) ->
+%    false.
 
 fneg(E = #extended{x = X, t = T}) ->
     E#extended{x = fneg(X), t = fneg(T)};
@@ -285,9 +309,12 @@ fdecode_point(<<S:1, P0:255>>) ->
                     error
             end
     end.
-fis_positive(Y) ->
+mis_positive(Y) ->
     %returns true if Y is even.
     (Y band ?max255) == 0.
+fis_positive(Y) ->
+    Y2 = encode(Y),
+    mis_positive(Y2).
 fencode_point(#affine{x = X, y = Y}) ->
     S = case not(fis_positive(Y)) of
             true -> 1;
@@ -296,7 +323,7 @@ fencode_point(#affine{x = X, y = Y}) ->
     X2 = encode(X),
     <<S:1, X2:255>>.
 mencode_point(#affine{x = X, y = Y}) ->
-    S = case not(fis_positive(Y)) of
+    S = case not(mis_positive(Y)) of
             true -> 1;
             false -> 0
         end,
@@ -490,12 +517,15 @@ mdecode_point(<<S:1, P:255>>) ->
             error;
         {V1, V2} ->
             SB = (S == 0),
-            S2 = fis_positive(V1),
+            S2 = mis_positive(V1),
             V = if
                     (SB == S2) -> V1;
                     true -> V2
                 end,
-            SB = ((V rem 2) == 0),
+            if
+                not(SB == ((V rem 2) == 0)) -> error;
+                true ->
+                    %SB = ((V rem 2) == 0),
             if
                 SB -> 
                     io:fwrite("in ed25519, v is even\n");
@@ -514,6 +544,7 @@ mdecode_point(<<S:1, P:255>>) ->
                     %invalid point
                     %io:fwrite("invalid, not on curve\n"),
                     error
+            end
             end
     end.
     
@@ -659,11 +690,35 @@ test(3) ->
 
     %io:fwrite(mgen_point()),
 
+    io:fwrite("before gen point\n"),
     Pf = fgen_point(),
 
     E = fencode_point(Pf),
     Pf = fdecode_point(E),
+    io:fwrite("before affine 2 extended\n"),
+    EPf = faffine2extended(Pf),
+    io:fwrite("before extended double\n"),
+    Pf2 = fextended_double(fextended_double(EPf)),
+    io:fwrite("before mdecode\n"),
     Pm = mdecode_point(E),
+    E = mencode_point(Pm),
+    io:fwrite("before second extended double\n"),
+    EPm = maffine2extended(Pm),
+    Pm2 = mextended_double(mextended_double(EPm)),
+    io:fwrite("before m2f\n"),
+    Pf22 = m2f(Pm2),
+    io:fwrite("before feq\n"),
+   
+    true = feq(m2f(mdecode_point(E)), fdecode_point(E)),
+ 
+    Pf1 = m2f(Pm),
+    true = feq(Pf1, Pf),
+    SameBool = feq(Pf2, Pf22),
+    if
+        SameBool -> ok;
+        true -> io:fwrite({fextended2affine_batch([Pf2, Pf22])})
+    end,
+    io:fwrite("after feq\n"),
     %io:fwrite({E, Pm, Pf}),
     E = mencode_point(Pm),
 
