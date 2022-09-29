@@ -21,4 +21,12 @@ function array_to_int(l) {
     return x;
 }
 
-
+function integer_to_array(i, size) {
+    var a = [];
+    for ( var b = 0; b < size ; b++ ) {
+        a.push(((i % 256) + 256) % 256);
+        i = Math.floor(i/256);
+    }
+    return(a);//in little endian.
+    //return a.reverse();
+}

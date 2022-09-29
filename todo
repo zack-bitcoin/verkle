@@ -1,13 +1,7 @@
-ed25519:test(3).
-one of the encodings isn't the same as the other.
-
-
 
 javascript version of the code.
-* set up cowboy, so we can have an api for testing out how proofs are sent out.
-* decoding compressed points.
-* point hashing
-* equality of points
+* point hashing. needs a test.
+* equality of points. needs a test.
 * ipa:verify_ipa, div_e, mul_scalar, add, eval_e
 * multi_exponent:doit
 * poly:eval outside v

@@ -44,11 +44,9 @@
         };
     };
     function finv(a){
-        console.log("finv");
         return(inverse(a, Order));
     };
     function inverse(A, N){
-        console.log("inverse");
         var EEA = eea(A, N);
         if(EEA == "error"){
             return(["error", "inverse does not exist"]);
@@ -68,28 +66,6 @@
         };
         return(eea_helper(A, 1n, 0n, B, 0n, 1n));
     };
-    function new_eea_helper(G0, S0, T0, G1, S1, T1){
-        console.log("eea_helper");
-        var Q;
-        while(true){
-            console.log(G1);
-            if(G1 == 0){
-                console.log("done");
-                return([G0, S0, T0]);
-            };
-            Q = G0 / G1;
-            G2 = G0;
-            S2 = S0;
-            T2 = T0;
-            G0 = G1;
-            S0 = S1;
-            T0 = T1;
-            G1 = G2 - (Q*G1);
-            S1 = S2 - (Q*S1);
-            T1 = T2 - (Q*T1);
-        };
-    };
-
     function eea_helper(G0, S0, T0, G1, S1, T1){
         if(G1 == 0n){
             return([G0, S0, T0]);
@@ -103,9 +79,7 @@
     };
     
     function compressed2affine(X0){
-        console.log("compressed 2 affine");
-        X = string_to_array(X0);
-        console.log(X);
+        var X = string_to_array(atob(X0));
         var B1 = X[0];
         var P = JSON.parse(JSON.stringify(X));
         var S;
@@ -117,21 +91,11 @@
         };
         var U0 = array_to_int(P);
         var U = fq.decode(U0);
-        console.log(U);
         var UU = fmul(U, U);
         var DUU = fsub(1n, fmul(D, UU));
         var T = fadd(1n, UU);
-        //console.log([P, U, UU, DUU, T]);
         var B = finv(DUU);
         return(decompress_point2(U, S, T, B));
-       /* 
-            U = <<P:256/little>>,
-            UU = mul(U, U),
-            DUU = sub(?one, mul(?mD, UU)),
-            T = add(?one, UU),
-            B = inv(DUU),
-            decompress_point2(U, S, T, B);
-       */
     };
     function powmod(X, P) {
         if(P == 0){ return(1n);}
@@ -187,10 +151,47 @@
             else{return(["error", "not on curve"])};
         };
     };
+    function affine2compressed(p) {
+        var x = p.x;
+        var y = p.y;
+        //var s;
+        //if(!(is_positive(y))){
+        //    s = 1;
+        //} else {
+        //    s = 0;
+        //}
+        var x2 = fq.encode(x);
+        var arr = integer_to_array(x2, 32);
+        if(!(is_positive(y))){
+            arr[0] = arr[0] + 128;
+        };
+        var result = array_to_string(arr);
+        return(btoa(result));
+    };
+    function decompress_base_test(){
+        var r = compressed2affine(compressed_base_64);
+        console.log(r);
+        return(r);
+    };
 
-    var r = compressed2affine(compressed_base);
-    console.log(r);
-    //console.log("hello world");
-    
-    //ExtendedPoint {x: 0n, y: 1n, z: 1n, t: 0n}t: 0nx: 0ny: 1nz: 1n[[Prototype]]: Object
+    function point_hash(p){
+        if(p instanceof Extended){
+            var p2 = p.double().double().double();
+            var p3 = affine2compressed(p2);//in base64
+            var bin = atob(p3);
+            var n = array_to_int(string_to_array(bin));
+            return(n % Order);
+        } else {
+            console.log(p);
+            return({"error", "hash of this is not implemented"});
+        };
+    };
+    function point_eq(a, b){
+        var c = a.subtract(b);
+        var c2 = c.double().double().double();
+        return(is_extended_zero(c2));
+    };
+    function is_extended_zero(e){
+        return((e.x == 0) && (e.y == e.z));
+    };
 })();
