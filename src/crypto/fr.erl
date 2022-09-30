@@ -24,7 +24,7 @@ init() ->
     erlang:load_nif("./ebin/fr", 0).
 
 
-%This is the finite field on top of jubjub.
+%This is the finite field on top of the elliptic curve.
 
 %uses montgomery notation for faster modular multiplication.
 

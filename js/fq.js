@@ -1,4 +1,8 @@
 var fq = (function(){
+
+    //we only need montgomery encoding stuff to be able to decode the points in the proof.
+    //all the math tools we export are over integers mod the group size. It is not using montgomery encoding.
+
     const IN = 21330121701610878104342023554231983025602365596302209165163239159352418617883n;
     const N = 57896044618658097711785492504343953926634992332820282019728792003956564819949n;//order of group used to define ed25519. (2^255) - 19
     const R = 115792089237316195423570985008687907853269984665640564039457584007913129639936n;
@@ -14,9 +18,9 @@ var fq = (function(){
     function decode(x){
         return(redc(x));
     };
-    function mul(x, y){
-        return(redc(x*y));
-    };
+    //function mul(x, y){
+    //    return(redc(x*y));
+    //};
     function encode(x){
         if((x > N)||(x < 0)){
             return(["error", "can't montgomery encode outside of bounds"]);
@@ -24,10 +28,101 @@ var fq = (function(){
             return(redc(R2 * x));
         };
     };
+    function order(){
+        var x = N;
+        return(x);
+    };
+    function mul(a, b){
+        var c = a * b % Order;
+        return(c);
+    };
+    function sub(a, b) {
+        var c = a - b;
+        if(c > 0){
+            return(c);
+        } else {
+            return(Order + c);
+        };
+    };
+    function neg(a) {
+        return(Order - a);
+    };
+    function add(a, b){
+        var c = a + b;
+        if(c < Order) {
+            return(c);
+        } else {
+            return(c - Order);
+        };
+    };
+    function inv(a){
+        return(inverse(a, Order));
+    };
+    function inverse(A, N){
+        var EEA = eea(A, N);
+        if(EEA == "error"){
+            return(["error", "inverse does not exist"]);
+        } else {
+            var [G, S, T] = EEA;
+            if(G == 1){
+                return((S + N) % N);
+            } else {
+                return(["error", "inverse does not exist"]);
+            };
+        };
+    };
+    function eea(A, B){
+        console.log("eea");
+        if((A < 1n)||(B<1n)){
+            return("undefined");
+        };
+        return(eea_helper(A, 1n, 0n, B, 0n, 1n));
+    };
+    function eea_helper(G0, S0, T0, G1, S1, T1){
+        if(G1 == 0n){
+            return([G0, S0, T0]);
+        } else {
+            var Q = G0 / G1;
+            return(eea_helper(G1, S1, T1,
+                              G0 - (Q*G1),
+                              S0 - (Q*S1),
+                              T0 - (Q*T1)));
+        }
+    };
+    function pow(X, P) {
+        if(P == 0){ return(1n);}
+        else if(P == 1){ return(X);}
+        else if((P % 2n) == 0){
+            return(pow(mul(X, X), P / 2n));
+        } else {
+            return(mul(X, pow(mul(X, X), P / 2n)));
+        };
+    };
+    function sqrt(A){
+        //var V = (A * 2n) ** ((Order - 5n) / 8n);
+        var V = powmod(A*2n, ((Order - 5n) / 8n));
+        var AV = mul(A, V);
+        var I = mul(mul(2n, AV), V);
+        var R = mul(AV, fsub(I, 1n));
+        return([R, fneg(R)]);
+    };
+    function is_positive(N){
+        var M = encode(N);
+        return((M % 2n) == 0);
+    };
+
 
     return({
         decode: decode,
         encode:encode,
-        mul: mul
+        order: order,
+        mul: mul,
+        sub: sub,
+        neg: neg,
+        add: add,
+        inv: inv,
+        pow: pow,
+        sqrt: sqrt,
+        is_positive: is_positive
     });
 })();
