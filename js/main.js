@@ -1,5 +1,6 @@
 (function(){
     var Order = 57896044618658097711785492504343953926634992332820282019728792003956564819949n;
+    var Group = 7237005577332262213973186563042994240857116359379907606001950938285454250989n;//for the prime order subgroup inside the elliptic points group.
     var Extended = nobleEd25519.ExtendedPoint;
     var Point = nobleEd25519.Point;
 
@@ -152,6 +153,9 @@
         };
     };
     function affine2compressed(p) {
+        if(!(p instanceof Point)){
+            return(["error", "wrong type into affine2compressed"]);
+        };
         var x = p.x;
         var y = p.y;
         //var s;
@@ -173,25 +177,52 @@
         console.log(r);
         return(r);
     };
-
+    function clear_torsion(p) {
+        var p2 = p.double().double().double();
+        return(p2);
+    }
     function point_hash(p){
         if(p instanceof Extended){
-            var p2 = p.double().double().double();
-            var p3 = affine2compressed(p2);//in base64
-            var bin = atob(p3);
-            var n = array_to_int(string_to_array(bin));
-            return(n % Order);
+            var p2 = clear_torsion(p);
+            var p3 = p2.toAffine();
+            var p4 = affine2compressed(p3);//in base64
+//{affine,2793830060533752296806626604049142002033748643093954566166930985533546218208,
+//        14965922676440863736402520029949845971569118710460272262133433159916864471701}
+            var bin = atob(p4);
+            var n = array_to_int(string_to_array(bin).reverse());
+            var result = (n % Group);
+            console.log([//p3.x, p3.y, p4,
+                         n, result]);
+            return(result);
         } else {
             console.log(p);
-            return({"error", "hash of this is not implemented"});
+            return(["error", "hash of this is not implemented"]);
         };
     };
     function point_eq(a, b){
         var c = a.subtract(b);
-        var c2 = c.double().double().double();
+        var c2 = clear_torsion(c);
         return(is_extended_zero(c2));
     };
     function is_extended_zero(e){
         return((e.x == 0) && (e.y == e.z));
     };
+
+    function test_eq(){
+        var base = Extended.fromAffine(Point.BASE);
+        var base4 = base.double().double();
+        var base4b = base.add(base).add(base).add(base);
+        if(!(point_eq(base4, base4b))){
+            return(["error", "unequal"]);
+        };
+        return("success");
+    };
+    function test_hash(){
+        var base = Extended.fromAffine(Point.BASE);
+        var h = point_hash(base);
+        console.log(h);
+        return(h);
+    };
+    console.log(test_hash());
+
 })();

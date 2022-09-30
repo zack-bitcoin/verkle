@@ -1,7 +1,5 @@
 
 javascript version of the code.
-* point hashing. needs a test.
-* equality of points. needs a test.
 * ipa:verify_ipa, div_e, mul_scalar, add, eval_e
 * multi_exponent:doit
 * poly:eval outside v

@@ -16,6 +16,7 @@
          fextended_add/2,
          fnormalize/1,
          feq/2,
+         fhash_point/1,
 
          %montgomery encoded version
          encode/1,
@@ -36,6 +37,8 @@
          mencode_point/1,
          mdecode_point/1,
          mgen_point/0,
+
+         fbase_point/0,
 
          test/1
         ]).
@@ -107,6 +110,9 @@ setup(_) ->
         #extended{x = ?basex, y = ?basey,
                   z = 1, 
                   t = ?basex_basey}).
+fbase_point() ->
+    ?fbase_point.
+
 -define(mbase_point,
         #extended{x = ?mbasex, y = ?mbasey,
                   z = ?m_one, t = ?mbasex_basey}).
@@ -328,7 +334,15 @@ mencode_point(#affine{x = X, y = Y}) ->
             false -> 0
         end,
     <<S:1, X:255>>.
-   
+  
+fhash_point(P = #extended{}) ->
+    P2 = fextended_mul(P, 8),
+    [P3] = fextended2affine_batch([P2]),
+    <<E:256>> = fencode_point(P3),
+    R = E rem fr:prime(),
+    %io:fwrite({P3, E, R}),
+    R.
+ 
 
 %2^256
 -define(r, 115792089237316195423570985008687907853269984665640564039457584007913129639936).

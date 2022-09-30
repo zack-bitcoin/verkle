@@ -311,7 +311,17 @@ test(2) ->
                 end, 0, R),
     T3 = erlang:timestamp(),
     {timer:now_diff(T2, T1),
-     timer:now_diff(T3, T2)}.
+     timer:now_diff(T3, T2)};
+test(3) ->
+    %stem hash is the same as the finite field version.
+    AB = ed:affine_base(),
+    B = ed:affine2extended(AB),
+    H = hash_point(B),
+
+    H2 = ed25519:fhash_point(ed25519:fbase_point()),
+
+    {H, fr:decode(H), H2}.
+
 
     
 
