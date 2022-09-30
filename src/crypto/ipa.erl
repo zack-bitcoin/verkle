@@ -8,15 +8,6 @@
 
 %learn more about inner product arguments here https://dankradfeist.de/ethereum/2021/07/27/inner-product-arguments.html
 
-%uses secp256k1 the library.
-
-%-define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
-
-%-define(mul(A, B), ((A * B) rem ?order)).
-%-define(add_mod(C), %assumes C is positive and less than ?prime
-%        if (C>= ?order ) -> C - ?order;
-%           true -> C end).
-
 -define(sanity_checks, false).
 
 dot(A, B) -> dot(A, B, fr:encode(0)).
@@ -29,7 +20,6 @@ dot([A|AT], [B|BT], Acc) ->
 fv_add(As, Bs) ->
     %adding 2 scalar vectors by adding each component.
     lists:zipwith(
-      %fun(A, B) -> C = A+B, ?add_mod(C) end,
       fun(A, B) -> fr:add(A, B) end,
       As, Bs).
 fv_mul(S, Bs) ->
@@ -39,45 +29,19 @@ fv_mul(S, Bs) ->
 
 commit(V, G) ->
     %pedersen commitment
-    %G is a list of extended niels encoded points.
-    %returns a single jacob encoded point.
     %V1*G1 + V2*G2 + V3*G3 + ...
-    %secp256k1:multi_exponent(V, G, E).
-    %V is integers that fit in 256 bits.
+    %V is montgomery encoded integers, g is elliptic curve points.
 
     multi_exponent:doit(V, G).
-
 add(A, B) ->
-    %fq:e_add(A, B).
     ed:e_add(A, B).
-
-mul(X, G) ->
-    mul2(X, G).
+mul(X, G) -> mul2(X, G).
 mul2(X, G) ->
     %multiply point G by scalar X.
     %X is a montgomery encoded binary.
-%    true = is_binary(X),
-%    true = 32 == size(X),
-%    true = is_binary(G),
-%    true = (((32*4) == size(G)) or
-%            ((32*5) == size(G))),
-    %fq:e_mul2(G, X).
-    %ed:e_mul(G, X).
     ed:e_mul2(G, X).
-%    case ed:decode(X) of
-%        0 -> ed:extended_zero();
-%        R -> ed:e_mul(G, <<R:256/little>>)
-%    end.
 mul1(X, G) ->
-    %mul2(X, G).
     ed:e_mul(G, X).
-    %multiply point G by scalar X.
-    %X is a little endian integer.
-%    true = is_binary(X),
-%    true = 32 == size(X),
-%    true = is_binary(G),
-%    true = (32*4) == size(G),
-    %fq:e_mul1(G, X).
 v_add(As, Bs) ->
     lists:zipwith(
       fun(A, B) ->
@@ -89,43 +53,19 @@ v_mul(A, Bs) ->
           fun(B) ->
                   mul(A, B)
           end, Bs),
-    %simplify_v(R).
     R.
 
-simplify_v(X) ->
-    %simplifies jacobian points to make the denomenator of the projective points Z = 1.
-    %secp256k1:simplify_Zs_batch(X).
-    %fq:e_simplify_batch(X).
-    %fq:e_simplify_batch(X).
-    ed:normalize(X).
-
-points_to_entropy(L) ->
-    %lists:map(fun(X) -> fq:hash_point(X) end,
-    ed:compress_points(L).
-%    lists:map(fun(X) -> ed:compress_point(X) end,
-%              L).
-
-%    L2 = simplify_v(L),
-    %io:fwrite({size(hd(L2)), L2}),
-%    lists:map(fun(<<X:512, _/binary>>) ->
-%                      fr:encode(X rem fr:prime())
-%              end, L2).
-   
-%todo. update below here to not use secp256k1. 
+simplify_v(X) -> ed:normalize(X).
+points_to_entropy(L) -> ed:compress_points(L).
 
 make_ipa(A, B, G, H, Q) ->
     %proving a statement of the form
     %C = AG+BH+AB*Q
     AG = commit(A, G),
     AB = dot(A, B),
-    %io:fwrite("ab: "),
-    %fr_print([AB, A, B]),
-    %io:fwrite("\n"),
-    %io:fwrite({size(Q), size(AB)}),%64, 32
     C1 = add(add(AG, commit(B, H)), 
              mul(AB, Q)),%AB is int, Q is e-point
     [X] = points_to_entropy([C1]),
-    %X = fr:encode(1),
     Xi = fr:inv(X),
     {Cs0, AN, BN} = 
         make_ipa2(C1, A, G, B, H, 
@@ -134,15 +74,11 @@ make_ipa(A, B, G, H, Q) ->
     {AGf, AB, Cs, AN, BN}.
     
 make_ipa2(C1, [A], [G], [B], [H], Q, Cs, _, _) ->
-    %io:fwrite("ipa make finisher\n"),
     if
         ?sanity_checks ->
             C2 = add(add(mul(A, G),
                          mul(B, H)),
                      mul(fr:mul(A, B), Q)),
-            %C2 = add(add(commit([A], [G]),
-            %             commit([B], [H])),
-            %         mul(fr:mul(A, B), Q)),
             Bool = ed:e_eq(C1, C2),
             if
                 not(Bool) ->
@@ -154,7 +90,6 @@ make_ipa2(C1, [A], [G], [B], [H], Q, Cs, _, _) ->
     end,
     {Cs, A, B};
 make_ipa2(C1, A, G, B, H, Q, Cs, X, Xi)  ->
-    %io:fwrite("ipa main loop\n"),
     if
         ?sanity_checks ->
             C1b =  add(add(commit(A, G), 
@@ -167,16 +102,7 @@ make_ipa2(C1, A, G, B, H, Q, Cs, X, Xi)  ->
                     io:fwrite(" sanity check\n"),
                     io:fwrite("\n"),
                     1=2;
-                true -> 
-%                    io:fwrite("B is: "),
-%                    lists:map(
-%                      fun(X) -> 
-%                              io:fwrite(integer_to_list(fr:decode(X))),
-%                              io:fwrite(" ")
-%                      end,
-%                      B),
-%                    io:fwrite("\n"),
-                    ok
+                true -> ok
             end;
         true -> ok
     end,
@@ -184,40 +110,21 @@ make_ipa2(C1, A, G, B, H, Q, Cs, X, Xi)  ->
     S2 = length(A) div 2,
     {Al, Ar} = lists:split(S2, A),
     {Bl, Br} = lists:split(S2, B),
-    %todo. one of these spots is broken, but only sometimes.
-    Zl = dot(Ar, Bl),%
+    Zl = dot(Ar, Bl),
     Zr = dot(Al, Br),
-    %looks good.
-    %io:fwrite("z dots: "),
-    %fr_print([A, Al, Ar, B, Bl, Br, Zl, Zr]),
-    %io:fwrite("\n"),
     {Gl, Gr} = lists:split(S2, G),
     {Hl, Hr} = lists:split(S2, H),
-    %io:fwrite("Cl: "),
-    %fr_print([Ar, Bl, Zl]),%1,1,1
-    %io:fwrite("\n"),
-    Cl = add(commit(Ar, Gl),% %
+    Cl = add(commit(Ar, Gl),
              add(commit(Bl, Hr),
-                 mul(Zl, Q))),%
-    %io:fwrite("Cr: "),
-    %fr_print([Al, Br, Zr]),%1,-2,-2
-    %io:fwrite("\n"),
-
-    %I feel like the problem is in calculating Cr somehow.
+                 mul(Zl, Q))),
     Cr = add(commit(Al, Gr),
              add(commit(Br, Hl),
                  mul(Zr, Q))),
-    A2 = fv_add(Al, fv_mul(X, Ar)),% %
+    A2 = fv_add(Al, fv_mul(X, Ar)),
     B2 = fv_add(Bl, fv_mul(Xi, Br)),
-    %looks good
-    %io:fwrite("a2 b2: "),
-    %fr_print([A2, B2, X]),
-    %io:fwrite("\n"),
-    C12 = add(mul(X,Cl),
-             mul(Xi, Cr)),
+    C12 = add(mul(X,Cl), mul(Xi, Cr)),
     C2 = add(C1, C12),
-    G2 = v_add(v_mul(Xi, Gr), Gl),%%
-    %io:fwrite({fr:prime(), fr:decode([A2, B2])}),
+    G2 = v_add(v_mul(Xi, Gr), Gl),
     H2 = v_add(v_mul(X, Hr), Hl),
                
     make_ipa2(C2, A2, G2, B2, 
@@ -229,8 +136,6 @@ get_gn(X, G) ->
     S2 = S div 2,
     {Gl, Gr} = lists:split(S2, G),
     Gr2 = v_mul(X, Gr),
-    %Gr3 = simplify_v(Gr2),
-    %G2 = v_add(Gl, Gr3),
     G2 = v_add(Gr2, Gl),
     get_gn(X, G2).
 
@@ -243,16 +148,11 @@ fold_cs(X, Xi, Cs) ->
     Cs3 = foldh_mul(X, Xi, Cs),
     lists:foldl(fun(A, B) ->
                         add(A, B)
-                %end, fq:e_zero(), 
                 end, ed:extended_zero(), 
                 Cs3).
 
-%-define(comp(X), secp256k1:compress(X)).
-%-define(deco(X), secp256k1:decompress(X)).
-
 verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
            B, G, H, Q) ->
-    %we may need to decompress the proof at this point.
     [AG|Cs] = simplify_v([AG0|Cs0]),
     C1 = hd(lists:reverse(Cs)),
     C1b = add(add(AG, commit(B, H)), 
@@ -265,38 +165,30 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
         true ->
     
             [X] = points_to_entropy([C1]),
-            %X = fr:encode(1),
             Xi = fr:inv(X),
             GN = get_gn(Xi, G),
             HN = get_gn(X, H),
             CNa = add(add(mul(AN, GN),
                           mul(BN, HN)),
                       mul(fr:mul(AN, BN), Q)),
-            %T1 = erlang:timestamp(),
             CNb = fold_cs(X, Xi, Cs),
-            %T2 = erlang:timestamp(),
             B2 = ed:e_eq(CNa, CNb),
             if
                 B2 -> true;
                 true ->
                     io:fwrite("verify ipa false 2\n"),
                     false
-                    %io:fwrite({size(CNa), size(CNb), base64:encode(fq:extended2affine(CNa)), base64:encode(fq:extended2affine(CNb))})
             end
     end.
 
-gen_point() -> ed:gen_point().
-gen_point(R) -> ed:gen_point(hash:doit(<<R:256>>)).
-%    fq:affine2extended(
-%      fq:gen_point()).
 basis(S) ->
     G = lists:map(fun(R) ->
-                           gen_point(R)
+                          ed:gen_point(R)
                    end, range(0, S)),
     H = lists:map(fun(R) ->
-                           gen_point(R)
+                           ed:gen_point(R)
                    end, range(S, S*2)),
-    Q = gen_point(S*2),
+    Q = ed:gen_point(S*2),
     {G, H, Q}.
 
 range(X, X) -> [];

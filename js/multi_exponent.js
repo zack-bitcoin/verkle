@@ -14,7 +14,8 @@ var multi_exponent = (function(){
     function simple_exponent(rs, gs){
         var p = points.extended_zero();
         for(var i = 0; i<rs.length; i++){
-            p = p.add(gs[i].multiplyUnsafe(rs[i]));
+            p = points.add(
+                p, points.mul(gs[i], rs[i]));
         };
         return(p);
     };

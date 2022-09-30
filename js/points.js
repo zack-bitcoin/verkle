@@ -105,6 +105,26 @@ var points = (function(){
     function extended_zero(){
         return(Extended.ZERO);
     };
+    function mul(a, r){
+        if(!(a instanceof Extended)){
+            return(["error", "error, can only  mupltiply extended points, a"]);
+        };
+        if(!(r instanceof Extended)){
+            return(["error", "error, can only  mupltiply extended points, b"]);
+        };
+           return(a.multiplyUnsafe(r));
+
+    };
+    function add(a, b){
+        if(!(a instanceof Extended)){
+            return(["error", "error, can only  mupltiply extended points, a"]);
+        };
+        if(!(b instanceof Extended)){
+            return(["error", "error, can only  mupltiply extended points, b"]);
+        };
+        return(a.add(b));
+    };
+        
 
     return({
         affine2compressed: affine2compressed,
@@ -112,6 +132,8 @@ var points = (function(){
         is_on_curve: is_on_curve,
         hash: hash,
         extended_zero: extended_zero,
-        eq: eq
+        eq: eq,
+        mul: mul,
+        add: add
     });
 })();
