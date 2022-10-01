@@ -124,6 +124,10 @@ batch_inverse(Vs) ->
     V3 = lists:reverse(pis(lists:reverse(Vs), encode(1))),%[v16, v26, v36, v46, v56, v6]
     V4 = tl(V3)++[encode(1)],%[v26, v36, v46, v56, v6, 1]
     VI2 = [AllI|lists:reverse(VI)],%[i16, i26, i36, i46, i56, i6]
+%    io:fwrite({{all, fr:decode(All)}, {v2, fr:decode(V2)}, 
+%               {all_i, fr:decode(AllI)}, {vi, fr:decode(VI)}, 
+%               {v3, fr:decode(V3)}, {v4, fr:decode(V4)},
+%               {vi2, fr:decode(VI2)}}),
     lists:zipwith(fun(A, B) ->
                           mul(A, B)
                   end, V4, VI2).
@@ -391,7 +395,7 @@ test(20) ->
     success;
 test(21) ->
     io:fwrite("batch inverse\n"),
-    A = encode([4,5,6,7,8]),
+    A = encode([2,3,4,5,6]),
     AI = batch_inverse(A),
     [1,1,1,1,1] = 
         fr:decode(

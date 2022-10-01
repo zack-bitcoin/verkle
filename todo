@@ -1,10 +1,9 @@
-in main.js, switch to using the fq verstions of functions.
-
 
 javascript version of the code.
-* multi_exponent:doit. needs to be tested.
-* ipa:verify_ipa, div_e, mul_scalar, add, eval_e
 * poly:eval outside v
+  * fr:batch_inverse
+  * poly:eval_c
+* ipa:verify_ipa, div_e, mul_scalar, add, eval_e
 * multiproof:verify
 * verify2.erl
 

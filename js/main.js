@@ -47,7 +47,8 @@
         var base = Extended.fromAffine(Point.BASE);
         var base4 = base.double().double();
         var base4b = multi_exponent.doit(
-            [2, 1, 1], [base, base, base]);
+            [2n, 1n, 1n], [base, base, base]);
+        console.log([base4, base4b]);
         if(!(points.eq(base4, base4b))){
             return(["error", "unequal"]);
         };

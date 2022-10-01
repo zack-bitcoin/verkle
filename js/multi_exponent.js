@@ -4,7 +4,7 @@ var multi_exponent = (function(){
         var rs2 = [];
         var gs2 = [];
         for(var i = 0; i<rs.length; i++){
-            if(!(rs[i] == 0)){
+            if(!(rs[i] == 0n)){
                 rs2.push(rs[i]);
                 gs2.push(gs[i]);
             };
@@ -17,6 +17,7 @@ var multi_exponent = (function(){
             p = points.add(
                 p, points.mul(gs[i], rs[i]));
         };
+        console.log(p);
         return(p);
     };
 

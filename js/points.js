@@ -109,11 +109,7 @@ var points = (function(){
         if(!(a instanceof Extended)){
             return(["error", "error, can only  mupltiply extended points, a"]);
         };
-        if(!(r instanceof Extended)){
-            return(["error", "error, can only  mupltiply extended points, b"]);
-        };
            return(a.multiplyUnsafe(r));
-
     };
     function add(a, b){
         if(!(a instanceof Extended)){
