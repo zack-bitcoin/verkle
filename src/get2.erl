@@ -193,21 +193,10 @@ batch(Keys, Root, CFG) ->
         fill_points(Spoints, Listed, []),
     {Tree5, CommitG2, list_to_tuple(Opening2)}.
     %{Tree4, CommitG, Opening}.
-%points_list([<<E:1024>>|T]) ->%1024 bits in an extended bit.
-%    [<<E:1024>>|points_list(T)];
-%tree_leaves(X = {<<_:256>>, Value}) 
-%  when is_binary(Value) -> [X];
-%tree_leaves([]) -> [];
-%tree_leaves([H|T]) -> 
-%    tree_leaves(H) ++ tree_leaves(T);
-%tree_leaves(T) when is_tuple(T) -> 
-%    tree_leaves(tuple_to_list(T));
-%tree_leaves(_) ->  [].
 
 points_list(<<E:1024>>) -> [<<E:1024>>];
 points_list({I, 0}) when is_integer(I) -> [];
 points_list({I, <<E:1024>>}) when is_integer(I) ->
-    %[<<E:1024>>];
     [<<E:1024>>];
 points_list([H|T]) ->% when is_list(H) ->
     points_list(H) ++ points_list(T);
@@ -224,26 +213,10 @@ points_list([]) -> [].
 compressed_points_list(X = <<_:256>>) -> 
 %    1=2,
     [X];
-compressed_points_list(X = <<_:512>>) -> 
-    1=2,
-    [ed:compress_point(X)];
-compressed_points_list(X = <<_:1024>>) -> 
-    1=2,
-    ed:compress_points([X]);
 compressed_points_list({I, X = <<_:256>>}) 
   when is_integer(I) -> 
     %1=2,
     [X];
-compressed_points_list({I, X = <<_:512>>}) 
-  when is_integer(I) -> 
-    1=2,
-    [ed:compress_point(X)];
-compressed_points_list({I, X = <<_:1024>>}) 
-  when is_integer(I) -> 
-    %[stem2:hash_point(X)];
-    1=2,
-    P2 = ed:e_mul2(X, <<8:256/little>>),
-    ed:compress_points([P2]);
 %ed:compress_points([X]);
 compressed_points_list([H|T]) -> 
     compressed_points_list(H) ++
@@ -269,21 +242,6 @@ fill_points([P|PT], [<<_:1024>>|R], Result) ->
 fill_points(Ps, [T|R], Result) ->
     fill_points(Ps, R, [T|Result]).
 
-
-    
-
-   
-%binary2int([]) -> [];
-%binary2int([H|T]) ->
-%    L = tuple_to_list(H),
-%    L2 = fr:decode(L),
-%    [L2|binary2int(T)].
-%binary2int2([]) -> [];
-%binary2int2([<<H:256>>|T]) -> 
-%    [H|binary2int2(T)].
-%binary2int2([<<H:256>>|T]) -> 
-%    [fr:decode(<<H:256>>)|
-%     binary2int2(T)].
               
     %remove duplicate elliptic points in the tree structure by moving where they are written more towards the root of the tree.
 withdraw_points(X = [[{_, R}|_]|_]) ->

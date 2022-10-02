@@ -1,11 +1,34 @@
 
 javascript version of the code.
-* poly:eval outside v
-  * fr:batch_inverse
-  * poly:eval_c
-* ipa:verify_ipa, div_e, mul_scalar, add, eval_e
+* ipa:verify_ipa,
+   * simplify_v (is ed:normalize, so done.)
+   * add (is ed:e_add, so done.)
+   * commit (multi_exponent:doit. so done)
+   * mul (ed:mul, so done.)
+   * points_to_entropy (stem2:hash. compress, then take it mod the order of the elliptic curve group.)
+   * get_gn
+     * v_mul
+     * v_add
+   * fold_cs
+     * foldh_mul
+     
+   div_e, mul_scalar, eval_e
 * multiproof:verify
+  * calc_R
+    * hash function
+  * calc_T
+    * hash function.
+  * calc_G2_2
+    * mul_r_powers
+    * fr:add_all
+  
 * verify2.erl
+  * get2:compressed_points_ist
+  * ed:a_eq
+  * unfold
+  * get2:split3parts
+  * index2domain
+  * leaves
 
 
 

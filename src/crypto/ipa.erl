@@ -56,7 +56,9 @@ v_mul(A, Bs) ->
     R.
 
 simplify_v(X) -> ed:normalize(X).
-points_to_entropy(L) -> ed:compress_points(L).
+point_to_entropy(L) -> 
+    %ed:compress_points(L).
+    stem2:hash_point(L).
 
 make_ipa(A, B, G, H, Q) ->
     %proving a statement of the form
@@ -65,7 +67,7 @@ make_ipa(A, B, G, H, Q) ->
     AB = dot(A, B),
     C1 = add(add(AG, commit(B, H)), 
              mul(AB, Q)),%AB is int, Q is e-point
-    [X] = points_to_entropy([C1]),
+    X = point_to_entropy(C1),
     Xi = fr:inv(X),
     {Cs0, AN, BN} = 
         make_ipa2(C1, A, G, B, H, 
@@ -164,7 +166,7 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
             false;
         true ->
     
-            [X] = points_to_entropy([C1]),
+            X = point_to_entropy(C1),
             Xi = fr:inv(X),
             GN = get_gn(Xi, G),
             HN = get_gn(X, H),
@@ -183,12 +185,12 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
 
 basis(S) ->
     G = lists:map(fun(R) ->
-                          ed:gen_point(R)
+                          ed:gen_point(hash:doit(<<R:256>>))
                    end, range(0, S)),
     H = lists:map(fun(R) ->
-                           ed:gen_point(R)
+                           ed:gen_point(hash:doit(<<R:256>>))
                    end, range(S, S*2)),
-    Q = ed:gen_point(S*2),
+    Q = ed:gen_point(hash:doit(<<(S*2):256>>)),
     {G, H, Q}.
 
 range(X, X) -> [];
