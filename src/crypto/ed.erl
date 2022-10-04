@@ -142,6 +142,10 @@ e_mul2(X = <<_:1024>>, Y = <<_:256>>) ->
 neg(X) ->
     c_ed:neg(X).
 sqrt(A) ->
+    % v = (2 * a) ^ ((m - 5)/8) mod m
+    % i = 2 * a * v^2  mod m    (aka sqrt(-1))
+    % r = +- a * v * (i - 1) mod m
+
     T = encode(2),
     V = pow(mul(T, A), (?q - 5) div 8),
     AV = mul(A, V),
@@ -251,9 +255,11 @@ gen_point() ->
     <<X:256>> = crypto:strong_rand_bytes(32),
     gen_point(<<X:256>>).
 gen_point(<<X:256>>) ->
+    %accepts 32 random bytes.
     P = decompress_point(<<X:256>>),
     case P of
         error -> 
+            io:fwrite("gen point next\n"),
             gen_point(<<(X+1):256>>);
         _ -> 
             %P = decompress_point(compress_point(P)),
@@ -472,6 +478,14 @@ c2m(<<X:256/little, Y:256/little,
 range(N, N) -> [N];
 range(A, B) when (A < B) -> 
     [A|range(A+1, B)].
+test(0) ->
+    %printing a basis point.
+    {G, H, Q} = ipa:basis(256),
+    P = hd(G),
+    C = compress_point(P),
+    P1 = hd(tl(G)),
+    C1 = compress_point(P1),
+    [base64:encode(C), base64:encode(C1)];
 test(1) ->
     %encode decode test
     X = 55,

@@ -66,9 +66,11 @@ get_fr(X) ->
 domain(Many) -> 
     lists:map(fun(X) -> fr:encode(X) end,
               range(1, Many)).
-    
 
 make_ghq() ->
+    ipa:basis(256).
+
+unused_make_ghq() ->
     %p{g, h, q, domain, a, da}
     Many = 256,
     %Many = 4,

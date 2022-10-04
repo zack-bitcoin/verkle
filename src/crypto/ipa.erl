@@ -3,6 +3,7 @@
          commit/2, %eq/2, 
          %gen_point/0,
          basis/1, dot/2,
+         base64_tree/1,
          test/1]).
 %inner product arguments using pedersen commitments.
 
@@ -57,7 +58,6 @@ v_mul(A, Bs) ->
 
 simplify_v(X) -> ed:normalize(X).
 point_to_entropy(L) -> 
-    %ed:compress_points(L).
     stem2:hash_point(L).
 
 make_ipa(A, B, G, H, Q) ->
@@ -183,14 +183,16 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
             end
     end.
 
+gen_point(I) ->
+    A = <<I:256/little>>,
+    H = hash:doit(A),
+    ed:gen_point(H).
 basis(S) ->
-    G = lists:map(fun(R) ->
-                          ed:gen_point(hash:doit(<<R:256>>))
+    G = lists:map(fun(R) -> gen_point(R)
                    end, range(0, S)),
-    H = lists:map(fun(R) ->
-                           ed:gen_point(hash:doit(<<R:256>>))
+    H = lists:map(fun(R) -> gen_point(R)
                    end, range(S, S*2)),
-    Q = ed:gen_point(hash:doit(<<(S*2):256>>)),
+    Q = gen_point(S*2),
     {G, H, Q}.
 
 range(X, X) -> [];
@@ -228,7 +230,22 @@ fr_print(X = <<_:256>>) ->
     io:fwrite(integer_to_list(Z)).
             
 
+test(0) ->
+    A0 = range(100, 108),
+    A = encode_list(lists:reverse(A0)),
+    %A = A0,
+    S = length(A),
+    {G, H, Q} = basis(S),
 
+
+    Bv = encode_list([10,0,3,1,1,2,0,10]),%103+104 = 207
+    Bv2 = encode_list([1000000000000,0,0,0,0,0,0,10000000]),%100+105 = 205
+    io:fwrite("test 1 0 \n"),
+    Proof = make_ipa(
+              A, Bv,%103+104 = 207
+              G, H, Q),
+    Proof;
+%rp(ipa:base64_tree(ipa:test(0))).
 test(1) ->
 
     A0 = range(100, 108),
@@ -407,3 +424,16 @@ test(7) ->
     Proof = make_ipa(A, B, G, H, Q),
     true = verify_ipa(Proof, B, G, H, Q),
     success.
+
+base64_tree(T) when is_tuple(T) ->
+    L = tuple_to_list(T),
+    L2 = base64_tree(L),
+    list_to_tuple(L2);
+base64_tree([]) -> [];
+base64_tree([H|T]) ->
+    [base64_tree(H)|
+     base64_tree(T)];
+base64_tree(B) when is_binary(B) ->
+    base64:encode(B).
+
+    

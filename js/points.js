@@ -11,7 +11,12 @@ var points = (function(){
     var D = 37095705934669439343138083508754565189542113879843219016388785533085940283555n;
 
     function compressed2affine(X0){
+        //base64 encoded to affine.
         var X = string_to_array(atob(X0));
+        return(compressed2affine2(X));
+    };
+    function compressed2affine2(X){
+        // array encoded to affine.
         var B1 = X[0];
         var P = JSON.parse(JSON.stringify(X));
         var S;
@@ -42,11 +47,9 @@ var points = (function(){
         var VV = fq.mul(T, B);
         var SqrtVV = fq.sqrt(VV);
         if(SqrtVV == "error"){
-            console.log("failed to square root 1");
-            return "error";
+            return(["error", "sqrt failure 1"]);
         } else if (SqrtVV == [0, 0]){
-            console.log("failed to square root 2");
-            return("error");
+            return(["error", "sqrt failure 2"]);
         } else {
             var [V1, V2] = SqrtVV;
             var SB = (S == 0);
@@ -77,10 +80,11 @@ var points = (function(){
         return(btoa(result));
     };
     function clear_torsion(p) {
+        console.log(p);
         var p2 = p.double().double().double();
         return(p2);
     };
-    function hash(p){
+    function point_hash(p){
         if(p instanceof Extended){
             var p2 = clear_torsion(p);
             var p3 = p2.toAffine();
@@ -113,23 +117,85 @@ var points = (function(){
     };
     function add(a, b){
         if(!(a instanceof Extended)){
-            return(["error", "error, can only  mupltiply extended points, a"]);
+            return(["error", "error, can only add extended points, a"]);
         };
         if(!(b instanceof Extended)){
-            return(["error", "error, can only  mupltiply extended points, b"]);
+            return(["error", "error, can only add extended points, b"]);
         };
         return(a.add(b));
     };
-        
+    function normalize(l){
+        return(Extended.normalizeZ(l));
+    };
+    function gen_point(x) {
+        //there are 513 generator points. so x is an integer from 0 to 512.
+        var a = integer_to_array(x, 32);
+        var h = hash(a);
+        console.log(a);
+        console.log(h);
+        return gen_point2(h);
+    };
+    function gen_point2(x){
+        //x is 32 bytes. lets see if it decodes into an elliptic point. otherwise, try adding 1 to it, and testing the next to see if it is a valid point.
+        //returns is a point in affine format.
+        var b = compressed2affine2(x);
+        if(b[0] === "error"){
+            console.log("gen point next");
+            var n = array_to_int(x);
+            var n2 = n+1n;
+            var x2 = integer_to_array(n2, 32).reverse();
+            console.log(x);
+            console.log(x2);
+            return(gen_point2(x2));
+        } else {
+            return(b);
+        };
+    };
+    function basis(s) {
+        var g = [];
+        var h = [];
+        for(var i = 0; i < s; i++){
+            g.push(gen_point(i));
+            h.push(gen_point(s + i));
+        };
+        var q = gen_point(s * 2);
+        return([g, h, q]);
+    };
+    function test_0(){
+        //testing that we generate the 0th generator point correctly.
+        var should_be = "Zmh6rfhivXdsj8GLjp+OIAiXFIVu4jOzkCpZHQ1fKSU=";
+        var affine1 = compressed2affine(should_be);
+        var affine2 = gen_point(0n);
+        console.log(affine1);
+        console.log(affine2);
+        var e1 = Extended.fromAffine(affine1);
+        var e2 = Extended.fromAffine(affine2);
+        return(eq(e2, e1));
+    };
+    function test_1(){
+        //testing that we generate the 1st generator point correctly.
+        var should_be = "AdD6vSUfy74rk7S5J7Jq0qGpkHcVLkXe0eZ4r6RdvsY=";
+        var affine1 = compressed2affine(should_be);
+        var affine2 = gen_point(1n);
+        console.log(affine1);
+        console.log(affine2);
+        var e1 = Extended.fromAffine(affine1);
+        var e2 = Extended.fromAffine(affine2);
+        return(eq(e2, e1));
+    };
 
     return({
         affine2compressed: affine2compressed,
         compressed2affine: compressed2affine,
         is_on_curve: is_on_curve,
-        hash: hash,
+        hash: point_hash,
         extended_zero: extended_zero,
         eq: eq,
         mul: mul,
-        add: add
+        add: add,
+        normalize: normalize,
+        gen_point: gen_point,
+        test_0: test_0,
+        test_1: test_1
     });
 })();

@@ -1,18 +1,9 @@
+in points.js, working on making the generator points. test_1().
+
 
 javascript version of the code.
-* ipa:verify_ipa,
-   * simplify_v (is ed:normalize, so done.)
-   * add (is ed:e_add, so done.)
-   * commit (multi_exponent:doit. so done)
-   * mul (ed:mul, so done.)
-   * points_to_entropy (stem2:hash. compress, then take it mod the order of the elliptic curve group.)
-   * get_gn
-     * v_mul
-     * v_add
-   * fold_cs
-     * foldh_mul
-     
-   div_e, mul_scalar, eval_e
+ipa:verify is written, but needs to be tested.
+
 * multiproof:verify
   * calc_R
     * hash function

@@ -22,13 +22,13 @@ function array_to_int(l) {
 }
 
 function integer_to_array(i, size) {
+    //this is not the inverse function of array_to_int.
+    //because array to int is accepting big endian encoded binaries, but integer_to_array is returning little endian encoded binaries.
     var a = [];
     for ( var b = 0; b < size ; b++ ) {
         
         c = ((i % 256n) + 256n) % 256n;
         a.push(Number(c));
-        //a.push(((i % 256n) + 256n) % 256n);
-        //i = Math.floor(i/256);
         i = i/256n;
     }
     return(a);//in little endian.

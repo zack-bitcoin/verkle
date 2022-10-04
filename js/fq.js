@@ -33,7 +33,7 @@ var fq = (function(){
         return(x);
     };
     function mul(a, b){
-        var c = a * b % Order;
+        var c = a * b % N;
         return(c);
     };
     function sub(a, b) {
@@ -41,22 +41,22 @@ var fq = (function(){
         if(c > 0){
             return(c);
         } else {
-            return(Order + c);
+            return(N + c);
         };
     };
     function neg(a) {
-        return(Order - a);
+        return(N - a);
     };
     function add(a, b){
         var c = a + b;
-        if(c < Order) {
+        if(c < N) {
             return(c);
         } else {
-            return(c - Order);
+            return(c - N);
         };
     };
     function inv(a){
-        return(finite_inverse.doit(a, Order));
+        return(finite_inverse.doit(a, N));
     };
     function pow(X, P) {
         if(P == 0){ return(1n);}
@@ -68,12 +68,12 @@ var fq = (function(){
         };
     };
     function sqrt(A){
-        //var V = (A * 2n) ** ((Order - 5n) / 8n);
-        var V = powmod(A*2n, ((Order - 5n) / 8n));
+        //var V = (A * 2n) ** ((N - 5n) / 8n);
+        var V = pow(A*2n, ((N - 5n) / 8n));
         var AV = mul(A, V);
         var I = mul(mul(2n, AV), V);
-        var R = mul(AV, fsub(I, 1n));
-        return([R, fneg(R)]);
+        var R = mul(AV, sub(I, 1n));
+        return([R, neg(R)]);
     };
     function is_positive(N){
         var M = encode(N);
