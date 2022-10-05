@@ -2,8 +2,9 @@ var ipa = (function(){
 //inner product arguments using pedersen commitments.
     //learn more about inner product arguments here https://dankradfeist.de/ethereum/2021/07/27/inner-product-arguments.html
 
-    function commit(x){
-        return(multi_exponent.doit(x));
+    var Extended = nobleEd25519.ExtendedPoint;
+    function commit(rs, xs){//xs is points.
+        return(multi_exponent.doit(rs, xs));
     };
     function add(a, b){
         // elliptic addition
@@ -11,15 +12,15 @@ var ipa = (function(){
     };
     function mul(a, b){
         //elliptic multiplication. b is the scalar.
-        return(a.multiplyUnsafe(b));
+        return(b.multiplyUnsafe(a));
     };
     function point_to_entropy(l){
         return(point.hash(l));
     };
     function v_mul(a, bs){
-        //a is an elliptic curve point. bs is a list of scalars.
-        return(bs.map(function(x) ->
-                      return(mul(a, x))));
+        //a is a scalar. bs is a list of elliptic curve points.
+        return(bs.map(function(x){
+            return(mul(a, x))}));
     };
     function v_add(as, bs){
         //as and bs are lists of elliptic curve points. returns another list of elliptic curve points.
@@ -33,7 +34,7 @@ var ipa = (function(){
         if(gs.length === 1){
             return(gs[0]);
         };
-        var s2 = BigInt(gs.length) / 2n;
+        var s2 = Number(BigInt(gs.length) / 2n);
         var gl = gs.slice(0, s2);
         var gr = gs.slice(s2);
         var gr2 = v_mul(x, gr);
@@ -42,23 +43,24 @@ var ipa = (function(){
     };
     function foldh_mul(x, xi, cs){
         if(cs.length === 1){
-            return(cs[0]);
+            return([cs[0]]);
+        } else {
+            var l = cs[0];
+            var r = cs[1];
+            return([mul(x, l), mul(xi, r)]
+                   .concat(foldh_mul(x, xi, cs.slice(2))));
         };
-        var l = cs[0];
-        var r = cs[1];
-        return([mul(x, l), mul(xi, r)]
-               .concat(foldh_mul(x, xi, cs.slice(2))));
     };
     function fold_cs(x, xi, cs){
         var cs3 = foldh_mul(x, xi, cs);
-        fold_cs2(cs3, points.extended_zero());
+        return(fold_cs2(cs3, points.extended_zero()));
     };
     function fold_cs2(l, a){
         if(l.length === 0){
             return(a);
         };
         var b = add(a, l[0]);
-        return(fold_cs(l.slice(1), b));
+        return(fold_cs2(l.slice(1), b));
     };
     function verify(proof, b, g, h, q){
         var [ag0, ab, cs0, an, bn] = proof;
@@ -89,7 +91,7 @@ var ipa = (function(){
         return(false);
     };
     function fr_decode(x) {
-        var x3 = string_to_array(atob(x));
+        var x3 = string_to_array(atob(x)).reverse();
         var x2 = array_to_int(x3, 32);
         return(fr.decode(x2));
     };
@@ -99,11 +101,11 @@ var ipa = (function(){
         var u, v, z, t;
         for(var i = 0; i < l.length; i++){
             x1 = string_to_array(atob(l[i]));
-            u = fq.decode(array_to_int(x1.slice(0, 32)));
-            v = fq.decode(array_to_int(x1.slice(32, 64)));
-            z = fq.decode(array_to_int(x1.slice(64, 96)));
-            t = fq.decode(array_to_int(x1.slice(96)));
-            r.push(new ExtendedPoint(u, v, z, t));
+            u = fq.decode(array_to_int(x1.slice(0, 32).reverse()));
+            v = fq.decode(array_to_int(x1.slice(32, 64).reverse()));
+            z = fq.decode(array_to_int(x1.slice(64, 96).reverse()));
+            t = fq.decode(array_to_int(x1.slice(96).reverse()));
+            r.push(new Extended(u, v, z, t));
         };
         return(r);
     };
@@ -127,7 +129,8 @@ var ipa = (function(){
         var [g, h, q] = points.basis(s);
         var bv = [10n,0n,3n,1n,1n,2n,0n,10n];
 
-        var encoded_proof = ["d9LapjwYXF5btVsNlC2yO9m/XppuTjzItDZDTiFKfzaF1DllmIiIKtzXPjvYkx/S4ILbC2vEat880xYTTzR/USYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA9jwSrBuH8OnaO82SP4Rqye4l90wbv1So3xB24gV3sWM=",
+        var encoded_proof = [//"d9LapjwYXF5btVsNlC2yO9m/XppuTjzItDZDTiFKfzaF1DllmIiIKtzXPjvYkx/S4ILbC2vEat880xYTTzR/USYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA9jwSrBuH8OnaO82SP4Rqye4l90wbv1So3xB24gV3sWM=",
+                             "d9LapjwYXF5btVsNlC2yO9m/XppuTjzItDZDTiFKfzaF1DllmIiIKtzXPjvYkx/S4ILbC2vEat880xYTTzR/USYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA9jwSrBuH8OnaO82SP4Rqye4l90wbv1So3xB24gV3sWM=",
                      "LcyLjiUk7Mo3TKgcIEDO38Dx/////////////////w8=",
                      ["YmgH6zf4ol0YzD75nzYHtGtcGt/4QGPq34MWIYm3MymsnuRXFrTIf0HfPzHOBUvsvF9Y+ms7l8XXctieObifYCYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAawNhFmKjkxRhuc3jfu7Ickcgw12YhUYkAE0L41i2YHE=",
                       "BOoGB6l6k4ftOEAsaYukZKplJ2Fwn/TCQdgWEHtDVkSQNKWSzzOQFi5ae+F9Ikjx/32UQq8jO1u3gwmPdzkcHCYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgdpH7BogqS2mwDIANLnovz3X81/XuW5UL9zb451zERE=",
@@ -139,10 +142,65 @@ var ipa = (function(){
                      "OjYHmVXczy5cPQ2eObhdTFSfPFzcAEycAN8P9SsVAw8=",
                      "nGN7kfLVp8lHCKz7XbEKS7qOXvqax82YlNDw1nj7fA4="];
         var proof = decode_proof(encoded_proof);
+
+        var com_bh = commit(bv, h);
+        var com_bh2 = points.affine2extended(points.compressed2affine("okhsAVWF8fL4VbSV1/4Qm35qZCJMsCutGoIDUYCu7HY="));
+        if(!(points.eq(com_bh, com_bh2))){
+            return(["fail", "commit"]);
+        };
+
+        var q2 = points.affine2extended(points.compressed2affine("Vv0llW91nmToUwcf8BWHw2Tq9ihsl9pgDgvnjHAWN9s="));
+        if(!(points.eq(q, q2))){
+            return(["fail", "incorrect q"]);
+        };
+
+        var ab2 = 2796;
+        var ab = proof[1];
+        if(!(ab == ab2)){
+            return(["fail", "incorrect ab"]);
+        };
+        //console.log(mul(q, ab));
+        var abq = mul(ab, q);
+        var abq2 = points.affine2extended(points.compressed2affine("HII+A/RrxoNdF75iqvfN3VlgybqfbE+JuAnNNbd3TLw="));
+        if(!(points.eq(abq, abq2))){
+            return(["fail", "incorrect abq"]);
+        };
+
+        var ag = proof[0];
+        var ag2 = points.affine2extended(points.compressed2affine("tn9KIU5DNrTIPE5uml6/2TuyLZQNW7VbXlwYPKba0nc="));
+        if(!(points.eq(ag, ag2))){
+            console.log(points.affine2compressed(points.extended2affine(ag)));
+            console.log(points.affine2compressed(points.extended2affine(ag2)));
+            console.log(ag);
+            console.log(ag2);
+            return(["fail", "incorrect ag"]);
+        };
+        
+        var agbh = add(ag, commit(bv, h));
+        var agbh2 = points.affine2extended(points.compressed2affine("2vxh6uTdiwR4jIM+8ETSCN2bUe+R53n53PqJLFHk+dY="));
+        if(!(points.eq(agbh, agbh2))){
+            console.log(points.normalize([agbh])[0]);
+            console.log(agbh2);
+            return(["fail", "incorrect agbh"]);
+        };
+
+        var cs = proof[2];
+        var c1 = cs.slice(-1)[0];
+        var x = points.hash(c1);
+        var xi = fr.inv(x);
+        if(!(x === 3898199472263723027621061407270843773322283208812533451190715072240125531040)){
+            return(["fail", "bad point hash"]);
+        };
+        if(!(xi === 2367767890116161245529624526464261783028336926455660932013331042772803303985)){
+            return(["fail", "bad inverse"]);
+        };
+        
+
         return(verify(proof, bv, g, h, q));
     };
 
     return({
-        verify: verify
+        verify: verify,
+        test_1: test_1
     });
 })();

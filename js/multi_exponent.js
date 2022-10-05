@@ -17,7 +17,6 @@ var multi_exponent = (function(){
             p = points.add(
                 p, points.mul(gs[i], rs[i]));
         };
-        console.log(p);
         return(p);
     };
 

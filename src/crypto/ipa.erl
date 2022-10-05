@@ -2,6 +2,7 @@
 -export([make_ipa/5, verify_ipa/5,
          commit/2, %eq/2, 
          %gen_point/0,
+         gen_point/1,
          basis/1, dot/2,
          base64_tree/1,
          test/1]).
@@ -157,6 +158,14 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
            B, G, H, Q) ->
     [AG|Cs] = simplify_v([AG0|Cs0]),
     C1 = hd(lists:reverse(Cs)),
+    %ComBH = commit(B, H),
+    %AGBH = add(AG, commit(B, H)),
+    %io:fwrite(base64:encode(AG0)),
+    %io:fwrite("\n"),
+    %io:fwrite(base64:encode(ed:compress_point(hd(ed:extended2affine_batch([AG]))))),
+    %io:fwrite("\n"),
+    %1=2,
+    %io:fwrite(base64:encode(ed:compress_point(hd(ed:extended2affine_batch([AGBH]))))),
     C1b = add(add(AG, commit(B, H)), 
              mul(AB, Q)),
     EB = ed:e_eq(C1, C1b),
@@ -168,6 +177,11 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
     
             X = point_to_entropy(C1),
             Xi = fr:inv(X),
+            io:fwrite(integer_to_list(fr:decode(X))),
+            io:fwrite("\n"),
+            io:fwrite(integer_to_list(fr:decode(Xi))),
+            io:fwrite("\n"),
+            1=2,
             GN = get_gn(Xi, G),
             HN = get_gn(X, H),
             CNa = add(add(mul(AN, GN),
@@ -263,6 +277,11 @@ test(1) ->
               G, H, Q),
     io:fwrite("test 1 1 \n"),
 %    io:fwrite({Proof, Bv}), %{point point list point point} list
+
+    {_, AB, _, _, _} = Proof,
+    %io:fwrite(fr:decode(AB)), %2796
+    %io:fwrite(base64:encode(ed:compress_point(mul(AB, Q)))),
+    %1=2,
     true = verify_ipa(Proof, Bv, G, H, Q),
     %N207 = fr:encode(207),
     %{_, N207, _, _, _} = Proof,

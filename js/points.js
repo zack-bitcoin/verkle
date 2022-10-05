@@ -57,8 +57,8 @@ var points = (function(){
             var V;
             if(SB == S2){ V = V1; }
             else { V = V2; }
-            console.log([U, V]);
-            console.log(Point.BASE);
+            //console.log([U, V]);
+            //console.log(Point.BASE);
             var P = new Point(U, V);
             var OnCurve = is_on_curve(P);
             if(OnCurve){return(P);}
@@ -72,7 +72,7 @@ var points = (function(){
         var x = p.x;
         var y = p.y;
         var x2 = fq.encode(x);
-        var arr = integer_to_array(x2, 32);
+        var arr = integer_to_array(x2, 32).reverse();
         if(!(fq.is_positive(y))){
             arr[0] = arr[0] + 128;
         };
@@ -80,7 +80,7 @@ var points = (function(){
         return(btoa(result));
     };
     function clear_torsion(p) {
-        console.log(p);
+        //console.log(p);
         var p2 = p.double().double().double();
         return(p2);
     };
@@ -94,7 +94,7 @@ var points = (function(){
             var result = (n % EllipticGroupOrder);
             return(result);
         } else {
-            console.log(p);
+            //console.log(p);
             return(["error", "hash of this is not implemented"]);
         };
     };
@@ -129,10 +129,10 @@ var points = (function(){
     };
     function gen_point(x) {
         //there are 513 generator points. so x is an integer from 0 to 512.
-        var a = integer_to_array(x, 32);
+        var a = integer_to_array(BigInt(x), 32);
         var h = hash(a);
-        console.log(a);
-        console.log(h);
+        //console.log(a);
+        //console.log(h);
         return gen_point2(h);
     };
     function gen_point2(x){
@@ -140,25 +140,31 @@ var points = (function(){
         //returns is a point in affine format.
         var b = compressed2affine2(x);
         if(b[0] === "error"){
-            console.log("gen point next");
+            //console.log("gen point next");
             var n = array_to_int(x);
             var n2 = n+1n;
             var x2 = integer_to_array(n2, 32).reverse();
-            console.log(x);
-            console.log(x2);
+            //console.log(x);
+            //console.log(x2);
             return(gen_point2(x2));
         } else {
             return(b);
         };
     };
+    function affine2extended(p){
+        return(Extended.fromAffine(p));
+    };
+    function extended2affine(p){
+        return(p.toAffine());
+    };
     function basis(s) {
         var g = [];
         var h = [];
         for(var i = 0; i < s; i++){
-            g.push(gen_point(i));
-            h.push(gen_point(s + i));
+            g.push(Extended.fromAffine(gen_point(i)));
+            h.push(Extended.fromAffine(gen_point(s + i)));
         };
-        var q = gen_point(s * 2);
+        var q = Extended.fromAffine(gen_point(s * 2));
         return([g, h, q]);
     };
     function test_0(){
@@ -183,10 +189,33 @@ var points = (function(){
         var e2 = Extended.fromAffine(affine2);
         return(eq(e2, e1));
     };
+    function test_2(){
+        var should_bes = [
+            "Zmh6rfhivXdsj8GLjp+OIAiXFIVu4jOzkCpZHQ1fKSU=",
+            "AdD6vSUfy74rk7S5J7Jq0qGpkHcVLkXe0eZ4r6RdvsY=",
+            "V3j5hdt1TGYoaR9W+trlDGX92+jrLpMDljP++gXUXjI=",
+            "kdOCfwUvWktE1f4r7WV8dSJHNl2U+AozywnBQ2oWsSU=",
+            "S3gGO5wiTaMRvR0/uWm7oZ5+ke4HtQb5xMQ4gokVVkA=",
+            "qudhN387Tx8H2YJ4O5AjFLYanL5sz9+pZVkDnwfjMu0=",
+            "k4g01sY2mRcQHBgsWOeDSqh2P+4tNffgZVkHUojGIxE=",
+            "9UEex+UeRhWcZUvb3zzCB4WiF7hzhIEO0uVB3AAWlDs="];
+        var ids = [0,1,2,3,4,5,6,7];
+        for(var i = 0; i<ids.length; i++){
+            var affine1 = compressed2affine(should_bes[i]);
+            var affine2 = gen_point(ids[i]);
+            var e1 = Extended.fromAffine(affine1);
+            var e2 = Extended.fromAffine(affine2);
+            console.log(eq(e2, e1));
+        };
+        return(0);
+
+    };
 
     return({
         affine2compressed: affine2compressed,
         compressed2affine: compressed2affine,
+        affine2extended: affine2extended,
+        extended2affine: extended2affine,
         is_on_curve: is_on_curve,
         hash: point_hash,
         extended_zero: extended_zero,
@@ -195,7 +224,9 @@ var points = (function(){
         add: add,
         normalize: normalize,
         gen_point: gen_point,
+        basis: basis,
         test_0: test_0,
-        test_1: test_1
+        test_1: test_1,
+        test_2: test_2
     });
 })();
