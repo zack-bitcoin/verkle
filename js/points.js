@@ -89,8 +89,9 @@ var points = (function(){
             var p2 = clear_torsion(p);
             var p3 = p2.toAffine();
             var p4 = affine2compressed(p3);//in base64
-            var bin = atob(p4);
-            var n = array_to_int(string_to_array(bin).reverse());
+            var bin = string_to_array(atob(p4));
+            //var n = array_to_int(string_to_array(bin).reverse());
+            var n = array_to_int(bin);
             var result = (n % EllipticGroupOrder);
             return(result);
         } else {
@@ -208,9 +209,18 @@ var points = (function(){
             console.log(eq(e2, e1));
         };
         return(0);
-
     };
+    function test_3(){
+        var p0 = "Zmh6rfhivXdsj8GLjp+OIAiXFIVu4jOzkCpZHQ1fKSU=";
+        var a0 = compressed2affine(p0);
+        var e0 = Extended.fromAffine(a0);
+        var h0 = points.hash(e0);
+        var h1 = array_to_int(string_to_array(atob("3EGjINsYRlYMN3Hyv/98ZiQyvZDbWhpzqNy/BTjI8Qs=")).reverse(), 32);
+        console.log(h0);
+        console.log(fr.decode(h1));
 
+        return(0);
+    };
     return({
         affine2compressed: affine2compressed,
         compressed2affine: compressed2affine,
@@ -227,6 +237,7 @@ var points = (function(){
         basis: basis,
         test_0: test_0,
         test_1: test_1,
-        test_2: test_2
+        test_2: test_2,
+        test_3: test_3
     });
 })();
