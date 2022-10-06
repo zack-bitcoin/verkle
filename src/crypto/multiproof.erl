@@ -89,6 +89,8 @@ calc_H2([H|T], [A|AT], Acc) ->
 
 calc_R([], [], [], B) -> 
     %deterministically generated random number. 
+    io:fwrite(base64:encode(B)),
+    io:fwrite("\n"),
     <<R:256>> = hash:doit(B),
     fr:encode(R rem fr:prime());
 calc_R([<<C1:256, C2:256>>|CT], 
@@ -290,15 +292,15 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     %here.
     %io:fwrite({Open_G_E, EV}),
     %io:fwrite(EV),
-    io:fwrite("second time through\n"),
-    EVi = fr:decode(EV),
-    <<EVB:256>> = hash:list_of_ints(EVi),
-    io:fwrite(integer_to_list(length(EVi))),
-    io:fwrite("\n"),
-    io:fwrite(integer_to_list(hd(EVi))),
-    io:fwrite("\n"),
-    io:fwrite(integer_to_list(EVB)),
-    io:fwrite("\n"),
+%    io:fwrite("second time through\n"),
+    %EVi = fr:decode(EV),
+%    <<EVB:256>> = hash:list_of_ints(EVi),
+%    io:fwrite(integer_to_list(length(EVi))),
+%    io:fwrite("\n"),
+%    io:fwrite(integer_to_list(hd(EVi))),
+%    io:fwrite("\n"),
+%    io:fwrite(integer_to_list(EVB)),
+%    io:fwrite("\n"),
     %lists:map(fun(X) -> io:fwrite(integer_to_list(X)), io:fwrite("\n") end, EVi),
     true = ipa:verify_ipa(
              Open_G_E, EV, Gs, Hs, Q),
@@ -448,7 +450,7 @@ test(3) ->
     success;
     
 test(7) ->
-    Many = 10,
+    Many = 3,
     io:fwrite("many is "),
     io:fwrite(integer_to_list(Many)),
     io:fwrite("\n"),
@@ -480,11 +482,22 @@ test(7) ->
     T2 = erlang:timestamp(),
     %io:fwrite("verify proof\n"),
     %io:fwrite({Ys}),
+%    {Proof, Commits},
+    
+
+%test(_) ->
+%    Proof = ok,
+%    Commits = ok,
+%    Zs = ok,
+%    Ys = ok,
+%    T1 = ok,
+%    T2 = ok,
+    
     Verified = verify(Proof, Commits, Zs, Ys),
     if
         Verified -> ok;
         true ->
-            io:fwrite({Proof, hd(Zs), hd(Ys)}),
+            %io:fwrite({Proof, hd(Zs), hd(Ys)}),
             io:fwrite("here\n"),
             1=2,
             ok
@@ -524,7 +537,15 @@ test(8) ->
     Proof = prove(As, Zs, Commits, Gs, Hs, 
                   Q, DA, PA, Domain),
     true = verify(Proof, Commits, Zs, Ys),
-    success.
+    success;
+test(9) ->
+    Y = fr:encode(5),
+    Z = fr:encode(6),
+    P = ipa:gen_point(0),
+    R = calc_R([P], [Z], [Y], <<>>),
+    R.
+%<<"ZH19WZA9dBN/b0UWEjP1Ogiz/UlHXjkIBWvHNeDnVQ8=">>
+
                           
 
     

@@ -251,11 +251,11 @@ decompress_point2(U, S, T, B) ->
     end.
            
 gen_point() ->
-    %generates points in a prime ordered subgroup.
     <<X:256>> = crypto:strong_rand_bytes(32),
     gen_point(<<X:256>>).
 gen_point(<<X:256>>) ->
     %accepts 32 random bytes.
+    %returns point in affine format.
     P = decompress_point(<<X:256>>),
     case P of
         error -> 

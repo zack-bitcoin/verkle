@@ -125,6 +125,9 @@ var points = (function(){
         };
         return(a.add(b));
     };
+    function sub(a, b){
+        return(a.subtract(b));
+    };
     function normalize(l){
         return(Extended.normalizeZ(l));
     };
@@ -157,6 +160,9 @@ var points = (function(){
     };
     function extended2affine(p){
         return(p.toAffine());
+    };
+    function extended2affine_batch(l){
+        return(Extended.toAffineBatch(l));
     };
     function basis(s) {
         var g = [];
@@ -226,12 +232,14 @@ var points = (function(){
         compressed2affine: compressed2affine,
         affine2extended: affine2extended,
         extended2affine: extended2affine,
+        extended2affine_batch: extended2affine_batch,
         is_on_curve: is_on_curve,
         hash: point_hash,
         extended_zero: extended_zero,
         eq: eq,
         mul: mul,
         add: add,
+        sub: sub,
         normalize: normalize,
         gen_point: gen_point,
         basis: basis,

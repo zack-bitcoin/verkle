@@ -256,6 +256,26 @@ calc_DA(Domain) ->
     %this is the derivative of polynomial A. for some deterministic version of the derivative.
     %in the roots of unity case, A(root_i) is (vector size)*(root^(-i))
     %only used for generating parameters
+    BasePolys = 
+        lists:map(fun(D) -> base_polynomial_c(D) end, 
+                  Domain),
+    Forward = calc_DA2(BasePolys, [[fr:encode(1)]]),
+    Backward = lists:reverse(calc_DA2(
+                               lists:reverse(BasePolys), 
+                               [[fr:encode(1)]])),
+    L = lists:zipwith(fun(B, F) -> mul_c(B, F) end,
+                      Backward, Forward),
+    poly_add_all(L).
+                          
+calc_DA2([_], R) -> lists:reverse(R);
+calc_DA2([P|Ps], R = [H|_]) -> 
+    Q = mul_c(P, H),
+    calc_DA2(Ps, [Q|R]).
+
+calc_DA_old(Domain) -> 
+    % a much slower version of calc_DA.
+    % this version is easier to read and understand.
+
     io:fwrite("calculating the DA polynomial. 256 elements.\n"),
     X = lists:map(
           fun(D) ->
@@ -392,7 +412,7 @@ test(1) ->
     EP2 = eval_outside(Z, Ps2, Domain, A, DA),
     %EP3 = fr:mul(EP, Inv),
     EP3 = fr:mul(EP2, fr:encode(DZ - DM)),
-    {symetric_view(fr:decode([EP, EP2, EP3]), fr:order())};
+    {symetric_view(fr:decode([EP, EP2, EP3]), fr:prime())};
 test(2) -> 
     Domain = fr:encode([1,2,3,4]),
     A = calc_A(Domain),
@@ -454,7 +474,28 @@ test(6) ->
     Domain = fr:encode([1,2,3,4]),
     DA = c2e(calc_DA(Domain), Domain),
     DivEAll = all_div_e_parameters(Domain, DA),
-    fr:decode(lagrange(hd(tl(Domain)), Domain, DA, DivEAll)).
+    fr:decode(lagrange(hd(tl(Domain)), Domain, DA, DivEAll));
+test(7) -> 
+    io:fwrite("new version of DA\n"),
+    %Domain = [1,2,3,4,5,6,7,8],
+    Domain = range(1, 256),
+    io:fwrite("calc old\n"),
+    T1 = erlang:timestamp(),
+    Old = poly:symetric_view(
+            fr:decode(
+              calc_DA_old(fr:encode(Domain))), 
+            fr:prime()),
+    T2 = erlang:timestamp(),
+    io:fwrite("calc new\n"),
+    New = poly:symetric_view(
+            fr:decode(
+              poly:calc_DA(fr:encode(Domain))), 
+            fr:prime()),
+    T3 = erlang:timestamp(),
+    Old = New,
+    {{old, timer:now_diff(T2, T1)},
+     {new, timer:now_diff(T3, T2)}}.
+
     
     
     
