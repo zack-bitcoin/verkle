@@ -1,10 +1,11 @@
 var precomputes = (function(){
     function range(a, b){
+        //exclusive of b.
         if(a >= b){return([]);};
         return([BigInt(a)].concat(range(a+1, b)));
     };
     function calc_domain(many){
-        return(range(1, many));
+        return(range(1, many+1));
     };
 
     var cached_domain;

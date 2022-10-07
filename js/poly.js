@@ -71,10 +71,8 @@ var poly = (function(){
     };
     function calc_a(domain){
         console.log("calc a");
-        //console.log(domain);
         var l = domain.map(
             function(d) {
-                console.log(d);
                 return(base_polynomial_c(d));
             });
         return(mul_c_all(l));
@@ -143,7 +141,6 @@ var poly = (function(){
             var x = fr.mul(da[i], fr.sub(z, domain[i]));
             divisors.push(x);
         };
-        console.log(divisors);
         var ids = fr.batch_inverse(divisors);
         var az = eval_c(z, a);
         var r = ids.map(function(x){
@@ -213,6 +210,7 @@ var poly = (function(){
         eval_e: eval_e,
         test_2: test_2,
         test_3: test_3,
-        test_da: test_da
+        test_da: test_da,
+        c2e: c2e
     });
 })();

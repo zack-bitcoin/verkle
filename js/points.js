@@ -227,6 +227,21 @@ var points = (function(){
 
         return(0);
     };
+    function test_4(){
+        //checking that the q point is correct.
+        var c = "FhbEtcjbtEbyafLJcFuFe0pDFTVaUpZpM+aw5R2nSnk=";
+        var a0 = compressed2affine(c);
+        var e0 = Extended.fromAffine(a0);
+
+        var q = precomputes.ghq()[2];
+        var q2 = Extended.fromAffine(gen_point(512));
+
+        console.log(q);
+        console.log(e0);
+        console.log(eq(q, q2));
+        console.log(eq(q, e0));
+
+    };
     return({
         affine2compressed: affine2compressed,
         compressed2affine: compressed2affine,
@@ -246,6 +261,7 @@ var points = (function(){
         test_0: test_0,
         test_1: test_1,
         test_2: test_2,
-        test_3: test_3
+        test_3: test_3,
+        test_4: test_4
     });
 })();

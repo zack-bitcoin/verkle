@@ -426,7 +426,7 @@ test(2) ->
     Result2 = eval_outside(Z, E, Domain, A, DA),
     Result3 = eval_outside_v(Z, Domain, A, DA),
 
-    %io:fwrite(fr:decode(Result3),
+    io:fwrite(fr:decode(Result3)),
 
     success;
 test(3) -> 

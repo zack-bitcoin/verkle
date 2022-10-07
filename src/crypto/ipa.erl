@@ -177,7 +177,6 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
     
             X = point_to_entropy(C1),
             Xi = fr:inv(X),
-            io:fwrite([fr:decode(X), fr:decode(Xi)]),
             GN = get_gn(Xi, G),
             HN = get_gn(X, H),
             CNa = add(add(mul(AN, GN),

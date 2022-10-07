@@ -142,6 +142,7 @@ var ipa = (function(){
                      "OjYHmVXczy5cPQ2eObhdTFSfPFzcAEycAN8P9SsVAw8=",
                      "nGN7kfLVp8lHCKz7XbEKS7qOXvqax82YlNDw1nj7fA4="];
         var proof = decode_proof(encoded_proof);
+        var proof2 = multiproof.decode_helper(encoded_proof);
 
         var com_bh = commit(bv, h);
         var com_bh2 = points.affine2extended(points.compressed2affine("okhsAVWF8fL4VbSV1/4Qm35qZCJMsCutGoIDUYCu7HY="));

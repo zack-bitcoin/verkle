@@ -138,6 +138,9 @@ calc_domain(Many) ->
     
 
 make_ghq() ->
+    ipa:basis(256).
+
+make_ghq_old() ->
     %p{g, h, q, domain, a, da}
     Many = 256,
     %Many = 4,

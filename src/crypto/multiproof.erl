@@ -89,8 +89,8 @@ calc_H2([H|T], [A|AT], Acc) ->
 
 calc_R([], [], [], B) -> 
     %deterministically generated random number. 
-    io:fwrite(base64:encode(B)),
-    io:fwrite("\n"),
+    %io:fwrite(base64:encode(B)),
+    %io:fwrite("\n"),
     <<R:256>> = hash:doit(B),
     fr:encode(R rem fr:prime());
 calc_R([<<C1:256, C2:256>>|CT], 
@@ -285,6 +285,9 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     benchmark:now(),
     EV = poly:eval_outside_v(
            T, Domain, PA, DA),
+    %io:fwrite("EV: "),
+    %io:fwrite(fr:decode(hd(tl(EV)))),
+    %io:fwrite("\n"),
     T4 = erlang:timestamp(),
 
     io:fwrite("multiproof verify ipa\n"),
@@ -302,6 +305,7 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
 %    io:fwrite(integer_to_list(EVB)),
 %    io:fwrite("\n"),
     %lists:map(fun(X) -> io:fwrite(integer_to_list(X)), io:fwrite("\n") end, EVi),
+    %io:fwrite(ipa:base64_tree(Open_G_E)),
     true = ipa:verify_ipa(
              Open_G_E, EV, Gs, Hs, Q),
     T5 = erlang:timestamp(),
@@ -482,16 +486,16 @@ test(7) ->
     T2 = erlang:timestamp(),
     %io:fwrite("verify proof\n"),
     %io:fwrite({Ys}),
-%    {Proof, Commits},
+    {Proof, Commits};
     
 
-%test(_) ->
-%    Proof = ok,
-%    Commits = ok,
-%    Zs = ok,
-%    Ys = ok,
-%    T1 = ok,
-%    T2 = ok,
+test(_) ->
+    Proof = ok,
+    Commits = ok,
+    Zs = ok,
+    Ys = ok,
+    T1 = ok,
+    T2 = ok,
     
     Verified = verify(Proof, Commits, Zs, Ys),
     if
