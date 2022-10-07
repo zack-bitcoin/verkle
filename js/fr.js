@@ -52,6 +52,13 @@ var fr = (function(){
             return(c - N);
         };
     };
+    function add_all(l){
+        var s = 0n;
+        for(var i = 0; i<l.length; i++){
+            s = add(s, l[i]);
+        };
+        return(s);
+    };
     function inv(a){
         return(finite_inverse.doit(a, N));
     };
@@ -149,6 +156,7 @@ pis([H|T], A) ->
         sqrt: sqrt,
         is_positive: is_positive,
         batch_inverse: batch_inverse,
+        add_all: add_all,
         batch_inverse_test: batch_inverse_test
     });
 })();

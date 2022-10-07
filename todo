@@ -1,17 +1,6 @@
 
 javascript version of the code.
 
-points.test_4.
-it looks like the precomputed point for Q is incorrect.
-
-* multiproof:verify
-  * failing on the ipa verify.
-    * check that the inputs are identical.
-    * if that doesn't solve it, then make a new test to try and identify what is wrong in the ipa library.
-  * calc_G2_2
-    * mul_r_powers
-    * fr:add_all
-  
 * verify2.erl
   * get2:compressed_points_ist
   * ed:a_eq
