@@ -64,6 +64,9 @@ point_to_entropy(L) ->
 make_ipa(A, B, G, H, Q) ->
     %proving a statement of the form
     %C = AG+BH+AB*Q
+
+    %the receiver already knows B, G, H, and Q. 
+    %We send them C, AG, and AB, 
     AG = commit(A, G),
     AB = dot(A, B),
     C1 = add(add(AG, commit(B, H)), 

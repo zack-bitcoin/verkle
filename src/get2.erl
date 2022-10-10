@@ -1,6 +1,7 @@
 -module(get2).
 -export([
-batch/3, index2domain/2, paths2tree/1,
+batch/3, paths2tree/1,
+index2domain2/1,
 %get/3, same_end/3, 
 split3parts/4, 
 keys2paths/2, 
@@ -86,7 +87,7 @@ batch(Keys, Root, CFG) ->
     io:fwrite("get index to domain conversion\n"),
     benchmark:now(),
     Zs = index2domain2(
-           Zs0, list_to_tuple(Domain)),
+           Zs0),
     As = As0,
     %io:fwrite({As}),
 
@@ -321,13 +322,15 @@ split3parts([], A, B, C) -> {A, B, C};
 split3parts([{X, Y, Z}|T], A, B, C) -> 
     split3parts(T, [X|A], [Y|B], [Z|C]).
 
-index2domain2([], _Domain) -> [];
-index2domain2([H|T], Domain) ->
+index2domain2([]) -> [];
+index2domain2([H|T]) ->
     [%element(H+1, Domain)|
      H+1|%for domain that is the integers.
-     index2domain2(T, Domain)].
+     index2domain2(T)].
 
 index2domain(Zs, Domain) ->
+    %unused.
+    %this is the general version that works for any domain.
     D = setup_domain_dict(0, Domain, dict:new()),
     lists:map(fun(Z) -> dict:fetch(Z, D) end, Zs).
 setup_domain_dict(_, [], D) -> D;

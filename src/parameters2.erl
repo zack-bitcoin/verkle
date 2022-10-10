@@ -135,6 +135,7 @@ det_point(X) ->
 calc_domain(Many) -> 
     lists:map(fun(X) -> fr:encode(X) end,
               range(1, Many)).
+              %range(0, Many-1)).
     
 
 make_ghq() ->

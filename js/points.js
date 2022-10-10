@@ -99,6 +99,11 @@ var points = (function(){
             return(["error", "hash of this is not implemented"]);
         };
     };
+    function a_eq(a, b){
+        var a2 = affine2extended(a);
+        var b2 = affine2extended(b);
+        return(eq(a2, b2));
+    };
     function eq(a, b){
         var c = a.subtract(b);
         return(is_extended_zero(c));
@@ -252,6 +257,7 @@ var points = (function(){
         hash: point_hash,
         extended_zero: extended_zero,
         eq: eq,
+        a_eq: a_eq,
         mul: mul,
         add: add,
         sub: sub,

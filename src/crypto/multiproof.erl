@@ -122,27 +122,83 @@ calc_T(<<C1:256, C2:256>>, <<R:256>>) ->
 %    Csa = lists:map(fun(X) -> ?deco(X) end, Csa2),
 %    Ipa = ipa:decompress(Cipa),
 %    {?deco(C2), Csa, Ipa}.
+
+dot(A, B) ->
+    C = dot2(A,B),
+    fr:add_all(C).
+   
+
+dot2([], []) -> [];
+dot2([A|AT], [B|BT]) -> 
+    [fr:mul(A, B)|dot2(AT, BT)].
+   
+fast_prove(As, %[[256 fr encoded ints]...]
+           Zs, %[element_in_domain...]
+           Commits_e, %commits of vectors in A to Gs.
+           Gs, _Hs, _Q, DA, _PA, Domain) -> 
     
+    Ys = lists:zipwith(
+           fun(F, Z) ->
+                   poly:eval_e(Z, F, Domain)
+           end, As, Zs),%this should be streamed with calculating the As.
+    AffineCommits = 
+        ed:extended2affine_batch(
+          Commits_e),
+    R = calc_R(AffineCommits, Zs, Ys, <<>>),
+    G = calc_G(R, As, Ys, Zs, Domain, DA),
+    CommitG_e = ipa:commit(G, Gs),
+    T = calc_T(hd(ed:extended2affine_batch(
+                    [CommitG_e])), R),
+    He = calc_H(R, T, As, Zs),%this is G1
+    NG2 = poly:sub(G, He),%this is A in the bullet proof.
+    %EV = poly:eval_outside_v(T, Domain, PA, DA),
+    {CommitG_e, NG2}.
+fast_verify({CommitG, NG2}, Commits, Zs, Ys) ->
+    {Gs, _Hs, _Q} = parameters2:read(),
+    DA = parameters2:da(),
+    PA = parameters2:a(),
+    Domain = parameters2:domain(),
+    [ACG|AffineCommits] = 
+        ed:extended2affine_batch(
+          [CommitG|Commits]),
+    R = calc_R(AffineCommits, Zs, 
+               Ys, <<>>),
+    T = calc_T(ACG, R),
+    EV = poly:eval_outside_v(
+           T, Domain, PA, DA),
+    {RIDs, G2} = 
+        calc_G2_2(R, T, Ys, Zs),
+    CommitE = 
+        multi_exponent:doit(
+          RIDs, Commits),%this is the slowest step.
+    CommitNegE = ed:e_neg(CommitE),
+    CommitG_sub_E = 
+        ed:e_add(CommitG, CommitNegE),
+    AG = ipa:commit(NG2, Gs),
+    true = ed:e_eq(CommitG_sub_E, 
+                   AG),
+    AB = dot(NG2, EV),
+    true = (fr:encode(0) == 
+                fr:add(G2, AB)),
+    true. 
     
 prove(As, %committed data
       Zs, %the slot in each commit we are reading from. A list as long as As. Made up of elements that are in the domain.
       Commits_e, Gs, Hs, Q, DA, PA, Domain) ->
 
-    %todo. instead of accepting the entire list of As, we should receive a tree structure that allows us to stream the As. that way the memory requirement doesn't get so big.
     io:fwrite("multiprove Ys from As \n"),
     benchmark:now(),
-    Ys0 = lists:zipwith(
+    Ys = lists:zipwith(
            fun(F, Z) ->
                    poly:eval_e(Z, F, Domain)
            end, As, Zs),%this should be streamed with calculating the As.
-    %io:fwrite({fr:decode([Ys0, As, Zs])}),
+    %io:fwrite({fr:decode([Ys, As, Zs])}),
     %Ys [3,3,3,3]
     %As [[4,3,2,1],...]
     %Zs [2,2,2,2]
-    %io:fwrite(lists:map(fun(<<X:256>>) -> X end, Ys0)),
-    %io:fwrite(fr:decode(Ys0)),
-    %io:fwrite(Ys0),
-    Ys =Ys0,
+    %io:fwrite(lists:map(fun(<<X:256>>) -> X end, Ys)),
+    %io:fwrite(fr:decode(Ys)),
+    %io:fwrite(Ys),
     io:fwrite("multiprove calc random R\n"),% 4%
     benchmark:now(),
     AffineCommits = 
@@ -174,7 +230,7 @@ prove(As, %committed data
     benchmark:now(),
     %the slow step.
     G = calc_G(R, As, Ys, Zs, Domain, DA),
-    %G is a vector of fr encoded values.
+    %G is a vector of 256 fr encoded values.
     %io:fwrite("multiprove 4\n"),
     io:fwrite("multiprove commit to G\n"),
     benchmark:now(),
@@ -217,11 +273,11 @@ prove(As, %committed data
                 calc_G2_2(R, T, Ys, Zs),
             EVi = fr:decode(EV),
             <<EVB:256>> = hash:list_of_ints(EVi),
-    io:fwrite(integer_to_list(length(EVi))),
-    io:fwrite("\n"),
-    io:fwrite(integer_to_list(hd(EVi))),
-    io:fwrite("\n"),
-    io:fwrite(integer_to_list(EVB)),
+            io:fwrite(integer_to_list(length(EVi))),
+            io:fwrite("\n"),
+            io:fwrite(integer_to_list(hd(EVi))),
+            io:fwrite("\n"),
+            io:fwrite(integer_to_list(EVB)),
             %lists:map(fun(X) -> io:fwrite(integer_to_list(X)), io:fwrite("\n") end, EVi),
             io:fwrite("\n"),
             true = ipa:verify_ipa(
@@ -261,64 +317,31 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     DA = parameters2:da(),
     PA = parameters2:a(),
     Domain = parameters2:domain(),
-
     io:fwrite("multiproof verify calc r\n"),
     benchmark:now(),
-    T1 = erlang:timestamp(),
     [ACG|AffineCommits] = 
-        %fq:to_affine_batch(
         ed:extended2affine_batch(
           [CommitG|Commits]),
-    T2 = erlang:timestamp(),
     R = calc_R(AffineCommits, Zs, 
-               %fr:encode(Ys), <<>>),
                Ys, <<>>),
     io:fwrite("multiproof verify calc t\n"),
     benchmark:now(),
-    T3 = erlang:timestamp(),
     T = calc_T(ACG, R),
-    %io:fwrite("verify RT: "),
-    %RT = fr:decode([R, T]),
-    %lists:map(fun(X) -> io:fwrite(integer_to_list(X)), io:fwrite("\n") end, RT),
 
     io:fwrite("multiproof verify eval outside v\n"),
     benchmark:now(),
     EV = poly:eval_outside_v(
            T, Domain, PA, DA),
-    %io:fwrite("EV: "),
-    %io:fwrite(fr:decode(hd(tl(EV)))),
-    %io:fwrite("\n"),
-    T4 = erlang:timestamp(),
-
     io:fwrite("multiproof verify ipa\n"),
     benchmark:now(),
-    %here.
-    %io:fwrite({Open_G_E, EV}),
-    %io:fwrite(EV),
-%    io:fwrite("second time through\n"),
-    %EVi = fr:decode(EV),
-%    <<EVB:256>> = hash:list_of_ints(EVi),
-%    io:fwrite(integer_to_list(length(EVi))),
-%    io:fwrite("\n"),
-%    io:fwrite(integer_to_list(hd(EVi))),
-%    io:fwrite("\n"),
-%    io:fwrite(integer_to_list(EVB)),
-%    io:fwrite("\n"),
-    %lists:map(fun(X) -> io:fwrite(integer_to_list(X)), io:fwrite("\n") end, EVi),
-    %io:fwrite(ipa:base64_tree(Open_G_E)),
     true = ipa:verify_ipa(
              Open_G_E, EV, Gs, Hs, Q),
-    T5 = erlang:timestamp(),
 
     io:fwrite("multiproof verify g2\n"),
     benchmark:now(),
     %io:fwrite({R, T, Ys, Zs}),%bin, bin, [int..], [bin]
     {RIDs, G2} = 
-        %calc_G2_2(R, T, fr:encode(Ys), Zs),
         calc_G2_2(R, T, Ys, Zs),
-    %io:fwrite({G2, R, T, hd(Ys), hd(Zs)}),
-
-    T6 = erlang:timestamp(),
 
     %sum_i  Ci*(R^i/(T-Zi))
     io:fwrite("multiproof verify commit neg *slow* e\n"),% 70% of the cost of verification is here.
@@ -327,38 +350,22 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     CommitE = 
         multi_exponent:doit(
           RIDs, Commits),%this is the slowest step.
-    %CommitNegE = fq:e_neg(CommitE),
     CommitNegE = ed:e_neg(CommitE),
-    %true = secp256k1:jacob_equal(CommitNegE, CommitNegE2, E),
-    T7 = erlang:timestamp(),
     
-    %CommitG_sub_E = ipa:add(CommitG, CommitNegE, E),
     io:fwrite("multiproof verify commit G-E\n"),
     benchmark:now(),
     CommitG_sub_E = 
-        %fq:e_add(CommitG, CommitNegE),
         ed:e_add(CommitG, CommitNegE),
-    T8 = erlang:timestamp(),
     io:fwrite("multiproof verify eq\n"),
     benchmark:now(),
     true = ed:e_eq(CommitG_sub_E, 
                    element(1, Open_G_E)),
-    T9 = erlang:timestamp(),
-    NegE = timer:now_diff(T7, T6),
     io:fwrite("multiproof verify done\n"),
     benchmark:now(),
-    %io:fwrite({G2, element(2, Open_G_E)}),
+    AB = element(2, Open_G_E),
     true = (fr:encode(0) == 
-                fr:add(G2, element(2, Open_G_E))),
+                fr:add(G2, AB)),
     true.
-    %io:fwrite(integer_to_list(timer:now_diff(T4, T3))),
-    %io:fwrite("\n"),
-    %io:fwrite("proofs per second: "),
-    %io:fwrite(integer_to_list(round(length(Zs) * 1000000 / NegE))),
-    %io:fwrite("\n"),
-    %0 == add(G2, element(2, Open_G_E), Base).
-%    fr:encode(0) == 
-%        fr:add(G2, element(2, Open_G_E)).
    
          
 range(X, X) -> [];
@@ -489,7 +496,7 @@ test(7) ->
     {Proof, Commits};
     
 
-test(_) ->
+test(100) ->
     Proof = ok,
     Commits = ok,
     Zs = ok,
@@ -541,6 +548,9 @@ test(8) ->
     Proof = prove(As, Zs, Commits, Gs, Hs, 
                   Q, DA, PA, Domain),
     true = verify(Proof, Commits, Zs, Ys),
+    FastProof = fast_prove(As, Zs, Commits, Gs, Hs, 
+                           Q, DA, PA, Domain),
+    true = fast_verify(FastProof, Commits, Zs, Ys),
     success;
 test(9) ->
     Y = fr:encode(5),
@@ -548,6 +558,7 @@ test(9) ->
     P = ipa:gen_point(0),
     R = calc_R([P], [Z], [Y], <<>>),
     R.
+
 %<<"ZH19WZA9dBN/b0UWEjP1Ogiz/UlHXjkIBWvHNeDnVQ8=">>
 
                           

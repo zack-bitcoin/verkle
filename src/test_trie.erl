@@ -13,9 +13,9 @@ test() ->
     %V = [101, 17],
     V = [
          %23,
-         %20,
-         21,
-         22
+         20%,
+         %21,
+         %22
          %24
         ],
     test_helper(V, CFG).
@@ -576,8 +576,12 @@ test(19, CFG) ->
           end, range(1, Times+1)),
     ok;
 test(20, CFG) ->
+
+    %making a proof, and not editing it.
+    %so this gives an idea of how it is for a light node.
     Loc = 1,
-    Times = 10,
+    Times = 10000,
+    Prove = 10,
     Leaves = 
         lists:map(
           fun(N) -> 
@@ -599,7 +603,8 @@ test(20, CFG) ->
     io:fwrite("make proof\n"),
     %Keys = [<<5:256>>|Many],
     %Keys = [<<5:256>>],
-    Keys = [hd(Many)],
+    %Keys = [hd(Many), hd(tl(Many))],
+    {Keys, _} = lists:split(Prove, Many),
     Proof = 
         get2:batch(Keys, NewLoc, CFG),
     %{K1, _} = element(2, hd(hd(tl(hd(tl(element(1, Proof))))))),

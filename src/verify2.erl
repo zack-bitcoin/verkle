@@ -17,26 +17,12 @@ fill_points([P|PT], [<<_:256>>|R], Result) ->
 fill_points(Ps, [T|R], Result) ->
     fill_points(Ps, R, [T|Result]).
 
-update(PL = [OldRoot0|ProofTree], Leaves, CFG) ->
+update(PL = [OldRoot|ProofTree], Leaves, CFG) ->
     %walk down the tree, then update everything in reverse in the callback stack.
-    %Leaves2 = store2:sort_by_path2(Leaves, CFG),
-    %lets decompress all the points in this tree to start off.
-    %CPL = get2:compressed_points_list(PL),
-    %Decompressed = fq:decompress(CPL),
-    %io:fwrite(PL),
-    %{PL2, _} = fill_points(Decompressed, PL, []),
 
-    PL2 = PL,
-    OldRoot = hd(PL2),
-    %io:fwrite({PL, PL2}),
-%    OldRoot = case size(OldRoot0) of
-%                  160 -> OldRoot0;
-%                  32 -> fq:decompress(OldRoot0)
-%              end,
     MEP = parameters2:multi_exp(),
     {Diff, Tree2} = 
-        %update_batch2(Leaves, ProofTree,
-        update_batch2(Leaves, tl(PL2),
+        update_batch2(Leaves, tl(PL),
                       0, CFG, MEP),
     NewRoot = case Diff of
                   0 -> OldRoot;
@@ -359,8 +345,8 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
     %io:fwrite({size(hd(CPL)), size(hd(tl(CPL)))}),%32, 32
     false = CPL == [],
 %    io:fwrite(
-    List = [CommitG0, Open1] ++ 
-        OpenL ++ CPL,
+%    List = [CommitG0, Open1] ++ 
+%        OpenL ++ CPL,
     %io:fwrite({size(CommitG0), size(Open1), size(hd(CPL))}),%32, 32, 32
     [CommitG, Open1b |Decompressed2] = 
 %          [CommitG0, Open1] ++ 
@@ -409,9 +395,10 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
                 get2:split3parts(Tree2, [],[],[]),
             io:fwrite("veirfy index2domain \n"),
             benchmark:now(),
-            Zs = get2:index2domain(
+            Zs1 = get2:index2domain2(
                    %Zs0, ?p#p.domain),
-                   Zs0, Domain),
+                   Zs0),
+            Zs = fr:encode(Zs1),
             %io:fwrite({Zs}),%[1,4,1,3,2,1,2]
             %io:fwrite({Commits}),%[17,10,10,88,35,35,88]
             %should be [17,88,10,88,35,35,88]
@@ -435,7 +422,6 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
             io:fwrite("verify done \n"),
             benchmark:now(),
             if
-                not(B) -> false;
                 not(B2) -> 
                     io:fwrite("verify2 fail, multiproof verify\n"),
                     false;
@@ -454,12 +440,16 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
     %[{1, p1}, [{0, L1},{1, L2}], [{3, p2},{0,L3}]]
 leaves({Y, X = 0}) -> [{Y, X}];
 leaves(X = {_, B}) when is_binary(B) -> [];
-leaves({_, X = {I, B}}) 
-  when is_binary(B) and is_integer(I) -> [X];
+%leaves({_, X = {I, B}}) 
+%  when is_binary(B) and is_integer(I) -> 
+%    1=2,
+%    [X];
 leaves({_, X = {I, B}}) 
   when is_binary(B) and 
        is_binary(I) and 
-       (size(I) == 32) -> [X];
+       (size(I) == 32) -> 
+    %1=2,
+    [X];
 leaves([H|T]) ->
     leaves(H) ++ leaves(T);
 leaves([]) ->  [];
@@ -477,13 +467,14 @@ unfold(Root, {Index, {Key, B}}, T, CFG) %leaf case
     Leaf = leaf:new(Key, B, 0, CFG),
     <<L:256>> = store2:leaf_hash(Leaf, CFG),
     lists:reverse([{Root, Index, <<L:256>>}|T]);
-unfold(Root, [{Index, X}|R], T, CFG) %stem case
-  when (is_binary(X) and (size(X) == (32*2))) 
-       ->
+%unfold(Root, [{Index, X}|R], T, CFG) %stem case
+%  when (is_binary(X) and (size(X) == (32*2))) 
+%       ->
+%    1=2,
     %io:fwrite("verify2 unfold affine point\n"),
-    <<H:256>> = stem2:hash_point(
-                  ed:affine2extended(X)),
-    unfold(X, R, [{Root, Index, <<H:256>>}|T], CFG);
+%    <<H:256>> = stem2:hash_point(
+%                  ed:affine2extended(X)),
+%    unfold(X, R, [{Root, Index, <<H:256>>}|T], CFG);
 unfold(Root, [{Index, X}|R], T, CFG) %stem case
   when (is_binary(X) and (size(X) == (32*4)))
    ->
