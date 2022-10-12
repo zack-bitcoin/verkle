@@ -1,5 +1,6 @@
 -module(multiproof).
--export([prove/9, verify/4, test/1]).
+-export([prove/9, fast_prove/9,
+         verify/4, test/1]).
 
 -define(sanity_checks, false).
 
@@ -154,7 +155,6 @@ fast_prove(As, %[[256 fr encoded ints]...]
                     [CommitG_e])), R),
     He = calc_H(R, T, As, Zs),%this is G1
     NG2 = poly:sub(G, He),%this is A in the bullet proof.
-    %EV = poly:eval_outside_v(T, Domain, PA, DA),
     {CommitG_e, NG2}.
 fast_verify({CommitG, NG2}, Commits, Zs, Ys) ->
     {Gs, _Hs, _Q} = parameters2:read(),

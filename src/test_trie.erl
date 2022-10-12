@@ -607,6 +607,8 @@ test(20, CFG) ->
     {Keys, _} = lists:split(Prove, Many),
     Proof = 
         get2:batch(Keys, NewLoc, CFG),
+    FastProof = 
+        get2:batch(Keys, NewLoc, CFG, fast),
     %{K1, _} = element(2, hd(hd(tl(hd(tl(element(1, Proof))))))),
     %L2 = #leaf{key = K1, value = <<27:16>>},
     %io:fwrite({Proof, 
@@ -629,7 +631,9 @@ test(20, CFG) ->
     io:fwrite("verify proof\n"),
     Root = stem2:root(stem2:get(NewLoc, CFG)),
     {true, Leaves2, _} = 
-        verify2:proof(Root, Proof, CFG),
+        verify2:proof(Proof, CFG),
+    {true, Leaves2, _} = 
+        verify2:proof(FastProof, CFG),
     T4 = erlang:timestamp(),
     %io:fwrite({lists:reverse(Leaves2)}),
     %io:fwrite({length(Leaves2), length(Keys)}),
@@ -670,7 +674,6 @@ test(21, CFG) ->
                    NewLoc, CFG),
     {true, _, DecompressedTree} = 
         verify2:proof(
-          hd(ProofTree), 
           {ProofTree, Commit, Opening}, CFG),
     %io:fwrite(ProofTree),
     Leaf01 = hd(Leaves),
@@ -724,7 +727,6 @@ test(21, CFG) ->
     {true, _, _} = 
         verify2:proof(
           %Root1,
-          hd(Proof1),
           {Proof1, Commit1, Opening1}, CFG),
                                  
     {Proof2, Commit2, Opening2} = 
@@ -732,7 +734,6 @@ test(21, CFG) ->
     Root2 = stem2:root(stem2:get(Loc2, CFG)),
     {true, _, _} = 
         verify2:proof(
-          hd(Proof2),
           %Root2,
           {Proof2, Commit2, Opening2}, CFG),
     HP1 = stem2:hash_point(ed:decompress_point(hd(Proof1))),
@@ -833,7 +834,6 @@ test(22, CFG) ->
 
     {true, _, DecompressedTree} = 
         verify2:proof(
-          hd(ProofTree), 
           {ProofTree, Commit, Opening}, CFG),
 
     %fprof:trace([stop]),
@@ -904,7 +904,6 @@ test(23, CFG) ->
         get2:batch(Keys, Loc2, CFG),
     {true, Leaves2} = 
         verify2:proof(
-          hd(ProofTree), 
           {ProofTree, Commit, Opening}, CFG),
     %io:fwrite({Leaves2, LeafDeletes}),
     ProofTree2 = verify2:update(
@@ -927,7 +926,6 @@ test(24, CFG) ->
                    Loc2, CFG),
     {true, _, DecompressedTree} = 
         verify2:proof(
-          hd(ProofTree), 
           {ProofTree, Commit, Opening}, CFG),
     ProofTree2 = 
         verify2:update(DecompressedTree, [Leaf2], CFG),
@@ -1035,7 +1033,6 @@ proof_test(Loc2, UpdateMany) ->
     T2 = erlang:timestamp(),
     {true, _, DecompressedTree} = 
         verify2:proof(
-          hd(ProofTree), 
           {ProofTree, Commit, Opening}, CFG),
 
 

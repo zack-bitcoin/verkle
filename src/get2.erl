@@ -1,6 +1,7 @@
 -module(get2).
 -export([
-batch/3, paths2tree/1,
+batch/3, batch/4, 
+paths2tree/1,
 index2domain2/1,
 %get/3, same_end/3, 
 split3parts/4, 
@@ -27,6 +28,10 @@ keys2paths(Keys, CFG) ->
     Paths0.
 
 batch(Keys, Root, CFG) ->
+    batch(Keys, Root, CFG, small).
+
+batch(Keys, Root, CFG, Type) ->
+    true = ((Type == small) or (Type == fast)),
     RootStem0 = stem2:get(Root, CFG),
     %io:fwrite(RootStem0#stem.hashes),
     RootStem = RootStem0#stem{
@@ -141,9 +146,16 @@ batch(Keys, Root, CFG) ->
     end,
 
     {CommitG, Opening} = 
-        multiproof:prove(
-          FAs, FZs, Commits,
-         Gs, Hs, Q, DA, PA, Domain),
+        case Type of
+            small ->
+                multiproof:prove(
+                  FAs, FZs, Commits,
+                  Gs, Hs, Q, DA, PA, Domain);
+            fast ->
+                multiproof:fast_prove(
+                  FAs, FZs, Commits,
+                  Gs, Hs, Q, DA, PA, Domain)
+        end,
 
     if
         ?sanity ->
@@ -179,7 +191,10 @@ batch(Keys, Root, CFG) ->
     %io:fwrite(
     %{Tree4, CommitG, Opening}),
     %{Tree, E, {E, E, [E...]}}
-    TLO = tuple_to_list(Opening),
+    TLO = case Type of
+              small -> tuple_to_list(Opening);
+              fast -> Opening
+          end,
     Listed = [Tree4, CommitG, TLO],
     PointsList = 
         points_list(Listed),
@@ -192,7 +207,11 @@ batch(Keys, Root, CFG) ->
                         end, PointsList),
     {[Tree5, CommitG2, Opening2], []} =
         fill_points(Spoints, Listed, []),
-    {Tree5, CommitG2, list_to_tuple(Opening2)}.
+    Opening3 = case Type of
+                   small -> list_to_tuple(Opening2);
+                   fast -> Opening2
+               end,
+    {Tree5, CommitG2, Opening3}.
     %{Tree4, CommitG, Opening}.
 
 points_list(<<E:1024>>) -> [<<E:1024>>];

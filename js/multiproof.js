@@ -70,7 +70,6 @@ var multiproof = (function(){
         var t = calc_T(acg, r);
         var ev = poly.eval_outside_v(
             t, domain, pa, poly.c2e(da, domain));
-        console.log(ev[1]);
         var ag = commit(ng2, gs);
         var [rids, g2] = calc_G2_2(r, t, ys, zs);
         var commit_e = multi_exponent.doit(rids, commits);

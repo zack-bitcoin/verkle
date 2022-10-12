@@ -1,5 +1,5 @@
 -module(verify2).
--export([proof/3, update/3, remove_empty/1,
+-export([proof/2, update/3, remove_empty/1,
          test/0
         ]).
 -include("constants.hrl").
@@ -331,39 +331,42 @@ merge_find_helper(P, D) ->
 	    merge_find_helper(P2, D)
     end.
 
-proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
-    {Open1, Open2, OpenL, Open4, Open5} = Open0,
-%    io:fwrite({size(CommitG0), size(Open1),
-%               size(hd(OpenL))
-               %size(hd(get2:compressed_points_list(Tree0)))
-%              }),
-    %CheckHash = (element(2, hd(hd(tl(Tree0))))),
-    %io:fwrite("verify2:proof, earlier case of incorrect Y value\n"),
-    %io:fwrite(integer_to_list(fr:decode(CheckHash))),
-    %io:fwrite("\n"),
+decompress_proof(
+  Open0 = {Open1, Open2, OpenL, Open4, Open5}, 
+  Tree0, CommitG0) ->
     CPL = get2:compressed_points_list(Tree0),
-    %io:fwrite({size(hd(CPL)), size(hd(tl(CPL)))}),%32, 32
     false = CPL == [],
-%    io:fwrite(
-%    List = [CommitG0, Open1] ++ 
-%        OpenL ++ CPL,
-    %io:fwrite({size(CommitG0), size(Open1), size(hd(CPL))}),%32, 32, 32
     [CommitG, Open1b |Decompressed2] = 
-%          [CommitG0, Open1] ++ 
-%              OpenL ++
-%              get2:compressed_points_list(Tree0),
-            
         ed:affine2extended(
           ed:decompress_points(
           [CommitG0, Open1] ++ 
               OpenL ++ CPL)),
-    %io:fwrite([CommitG, Open1b|Decompressed2]),
     {OpenLb, Decompressed} = 
         lists:split(length(OpenL), Decompressed2),
     {Tree, _} = fill_points(
                   Decompressed, Tree0, []),
-    %true = length(Decompressed) == length(CPL),
     Open = {Open1b, Open2, OpenLb, Open4, Open5},
+    Root1 = hd(Decompressed),
+    {Tree, Open, Root1, CommitG};
+decompress_proof(Open, Tree0, CommitG0) 
+  when is_list(Open)->
+    CPL = get2:compressed_points_list(Tree0),
+    false = CPL == [],
+    [CommitG|Decompressed] = 
+        ed:affine2extended(
+          ed:decompress_points(
+          [CommitG0] ++ CPL)),
+    {Tree, _} = fill_points(
+                  Decompressed, Tree0, []),
+    Root1 = hd(Decompressed),
+    {Tree, Open, Root1, CommitG}.
+    
+
+proof({Tree0, CommitG0, Open0}, CFG) ->
+    {Tree, Open, Root1, CommitG} = 
+       decompress_proof(Open0, Tree0, CommitG0), 
+
+    %Tree, Open, Root1, CommitG, 
 
     %multiproof:verify(Proof = {CommitG, Commits, Open_G_E}, Zs, Ys, ?p)
     %Zs are elements of the domain where we look up stuff.
@@ -374,7 +377,6 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
     io:fwrite("verify get parameters \n"),
     [Root|Rest] = Tree,
     Domain = parameters2:domain(),
-    Root1 = hd(Decompressed),
     %B = fq:eq(Root1, Root),
     B = ed:a_eq(Root1, Root),
     if
@@ -384,11 +386,7 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
         true ->
             io:fwrite("verify2 unfold \n"),
             benchmark:now(),
-            %io:fwrite({Root, Rest}),
-            %rest [[{251, {999995, <<0,1>>}}],
-            %      [[{252, {999996, <<0,2>>}}],
             Tree2 = unfold(Root, Rest, [], CFG),
-    %[{elliptic, index, hash}, ...]
             io:fwrite("verify split 3 parts \n"),
             benchmark:now(),
             {Commits, Zs0, Ys} = 
@@ -396,29 +394,13 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
             io:fwrite("veirfy index2domain \n"),
             benchmark:now(),
             Zs1 = get2:index2domain2(
-                   %Zs0, ?p#p.domain),
                    Zs0),
             Zs = fr:encode(Zs1),
-            %io:fwrite({Zs}),%[1,4,1,3,2,1,2]
-            %io:fwrite({Commits}),%[17,10,10,88,35,35,88]
-            %should be [17,88,10,88,35,35,88]
             io:fwrite("verify multiproof \n"),
             benchmark:now(),
-%            io:fwrite({size(CommitG), size(Open),
-%                       length(Commits), size(hd(Commits))}),
-            %io:fwrite("verify2 last ys is: \n"),
-            %io:fwrite(integer_to_list(fr:decode(hd(tl(Ys))))),
-            %io:fwrite("\n"),
-            %io:fwrite(integer_to_list(fr:decode(stem2:hash_point(ed:decompress_point(hd(tl(Ys))))))),
-            %io:fwrite("\n"),
             B2 = multiproof:verify(
                    {CommitG, Open}, 
-                   %Commits, Zs, fr:decode(Ys)),
                    Commits, Zs, Ys),
-
-            %sanity check
-            %element(2, Open) = -G2
-
             io:fwrite("verify done \n"),
             benchmark:now(),
             if
@@ -426,10 +408,7 @@ proof(Root0, {Tree0, CommitG0, Open0}, CFG) ->
                     io:fwrite("verify2 fail, multiproof verify\n"),
                     false;
                 true ->
-                    %io:fwrite({Rest}),
                     {true, leaves(Rest), Tree}
-                    %get all the leaves
-                        %ok
             end
     end.
     
