@@ -52,6 +52,13 @@ var fr = (function(){
             return(c - N);
         };
     };
+    function dot(l, m){
+        var r = [];
+        for(var i = 0; i<l.length; i++){
+            r.push(mul(l[i], m[i]));
+        };
+        return(add_all(r));
+    };
     function add_all(l){
         var s = 0n;
         for(var i = 0; i<l.length; i++){
@@ -157,7 +164,8 @@ pis([H|T], A) ->
         is_positive: is_positive,
         batch_inverse: batch_inverse,
         add_all: add_all,
-        batch_inverse_test: batch_inverse_test
+        batch_inverse_test: batch_inverse_test,
+        dot: dot
     });
 })();
 

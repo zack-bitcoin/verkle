@@ -132,6 +132,9 @@ dot2([], []) -> [];
 dot2([A|AT], [B|BT]) -> 
     [fr:mul(A, B)|dot2(AT, BT)].
    
+fast_prove(As, Zs, Commits_e, Gs, DA, Domain) ->
+    fast_prove(As, Zs, Commits_e, Gs, 0, 0, DA, 0, 
+               Domain).
 fast_prove(As, %[[256 fr encoded ints]...]
            Zs, %[element_in_domain...]
            Commits_e, %commits of vectors in A to Gs.
@@ -166,6 +169,9 @@ fast_verify({CommitG, NG2}, Commits, Zs, Ys) ->
     T = calc_T(ACG, R),
     EV = poly:eval_outside_v(
            T, Domain, PA, DA),
+
+    AG = ipa:commit(NG2, Gs),
+
     {RIDs, G2} = 
         calc_G2_2(R, T, Ys, Zs),
     CommitE = 
@@ -174,9 +180,7 @@ fast_verify({CommitG, NG2}, Commits, Zs, Ys) ->
     CommitNegE = ed:e_neg(CommitE),
     CommitG_sub_E = 
         ed:e_add(CommitG, CommitNegE),
-    AG = ipa:commit(NG2, Gs),
-    true = ed:e_eq(CommitG_sub_E, 
-                   AG),
+    true = ed:e_eq(CommitG_sub_E, AG),
     AB = dot(NG2, EV),
     true = (fr:encode(0) == 
                 fr:add(G2, AB)),
@@ -312,6 +316,10 @@ prove(As, %committed data
     benchmark:now(),
     {CommitG_e, 
      IPA}.
+verify({CommitG, Open_G_E}, Commits, Zs, Ys) 
+  when ((is_list(Open_G_E)) 
+        and (length(Open_G_E) == 256))->
+    fast_verify({CommitG, Open_G_E}, Commits, Zs, Ys);
 verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     {Gs, Hs, Q} = parameters2:read(),
     DA = parameters2:da(),
@@ -358,8 +366,8 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
         ed:e_add(CommitG, CommitNegE),
     io:fwrite("multiproof verify eq\n"),
     benchmark:now(),
-    true = ed:e_eq(CommitG_sub_E, 
-                   element(1, Open_G_E)),
+    AG = element(1, Open_G_E),
+    true = ed:e_eq(CommitG_sub_E, AG),
     io:fwrite("multiproof verify done\n"),
     benchmark:now(),
     AB = element(2, Open_G_E),
@@ -490,10 +498,14 @@ test(7) ->
     %256,1,1,1
     Proof = prove(As, Zs, Commits, Gs, Hs, 
                   Q, DA, PA, Domain),
+    FProof = fast_prove(As, Zs, Commits, Gs, Hs, 
+                  Q, DA, PA, Domain),
+    true = verify(Proof, Commits, Zs, Ys),
+    true = verify(FProof, Commits, Zs, Ys),
     T2 = erlang:timestamp(),
     %io:fwrite("verify proof\n"),
     %io:fwrite({Ys}),
-    {Proof, Commits};
+    {FProof, Commits};
     
 
 test(100) ->
@@ -550,7 +562,7 @@ test(8) ->
     true = verify(Proof, Commits, Zs, Ys),
     FastProof = fast_prove(As, Zs, Commits, Gs, Hs, 
                            Q, DA, PA, Domain),
-    true = fast_verify(FastProof, Commits, Zs, Ys),
+    true = verify(FastProof, Commits, Zs, Ys),
     success;
 test(9) ->
     Y = fr:encode(5),
