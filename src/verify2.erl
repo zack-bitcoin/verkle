@@ -429,10 +429,6 @@ proof({Tree0, CommitG0, Open0}, CFG) ->
     %[{1, p1}, [{0, L1},{1, L2}], [{3, p2},{0,L3}]]
 leaves({Y, X = 0}) -> [{Y, X}];
 leaves(X = {_, B}) when is_binary(B) -> [];
-%leaves({_, X = {I, B}}) 
-%  when is_binary(B) and is_integer(I) -> 
-%    1=2,
-%    [X];
 leaves({_, X = {I, B}}) 
   when is_binary(B) and 
        is_binary(I) and 

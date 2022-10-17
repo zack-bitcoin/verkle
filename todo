@@ -1,15 +1,4 @@
 
-javascript version of the code.
-
-* verify2.erl
-  * get2:compressed_points_ist
-  * ed:a_eq
-  * unfold
-  * get2:split3parts
-  * index2domain
-  * leaves
-
-
 
 
 in stem2:serialize, we could batch this to make it faster.

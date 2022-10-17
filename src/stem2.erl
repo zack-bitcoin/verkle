@@ -9,7 +9,7 @@
          empty_hashes/1, 
 	 update_pointers/2, empty_tuple/0,
 	 make/3, make/2, update/3, onify2/2,
-	 put_batch/2, serialize/2,
+	 put_batch/2, %serialize/2,
          root/1, check_root_integrity/1,
 	 empty_trie/2]).
 %-include("constants.hrl").
@@ -207,6 +207,7 @@ put(Stem, CFG) ->
     ID = ids:stem(CFG),
     dump:put(S, ID).
 put_batch(Leaves, CFG) ->
+    %unused
     SL = serialize_stems(Leaves, CFG),
     dump:put_batch(SL, ids:stem(CFG)).
 

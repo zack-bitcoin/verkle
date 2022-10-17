@@ -1,6 +1,6 @@
 
 
--include("parameters256.hrl").
+%-include("parameters256.hrl").
 
 -define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
 -define(sub(A, B), ((A - B + ?order) rem ?order)).%assumes B less than ?order

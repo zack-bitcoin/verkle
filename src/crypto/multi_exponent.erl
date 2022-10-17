@@ -110,8 +110,6 @@ bucketify([BucketNumber|T], BucketsETS,
                 ed:e_add(X, G)
         end,
 
-%todo, instead of adding here, we should build up a list. so we can do efficient addition later with simplified format numbers. this can potentially make it twice as fast. This was tried, and it made it slower. but it still seems possible.
-            
     if
         (Bucket2 == error) ->
             {_, X2} = hd(BucketETS0),

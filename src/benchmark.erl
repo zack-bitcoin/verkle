@@ -54,7 +54,7 @@ doit(1) ->
     io:fwrite("load up the batch database\n"),
     T1 = erlang:timestamp(),
     {NewLoc, stem, _} = 
-        store:batch(Leaves, Loc, CFG),
+        store2:batch(Leaves, Loc, CFG),
     T2 = erlang:timestamp(),
     io:fwrite("make proof\n"),
     Proof = 

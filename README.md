@@ -9,8 +9,8 @@ learn about verkle trees here:
 https://vitalik.ca/general/2021/06/18/verkle.html
 
 Techniques used in this software:
-https://dankradfeist.de/ethereum/2021/07/27/inner-product-arguments.html
-https://dankradfeist.de/ethereum/2021/06/18/pcs-multiproofs.html
+inner product argument bullet proofs: https://dankradfeist.de/ethereum/2021/07/27/inner-product-arguments.html
+polynomial multiproofs: https://dankradfeist.de/ethereum/2021/06/18/pcs-multiproofs.html
 
 Installation
 =============
@@ -19,11 +19,9 @@ You need to install erlang first to use this database.
 
 To run the software: ```sh start.sh```
 
-It will take a while to build the generator points and precomputes, but once it is computed once, you don't have to re-compute it the next time you turn the software on.
-
 to turn off the software, and save everything
 ```verkle_sup:stop(ID).```
-where ID is the name of the database (allowing multiple databases.)
+where ID is the name of the database (this allows for multiple databases.)
 The test database is `trie01`.
 
 Then, to run the benchmark: `benchmark:doit(1).`
@@ -84,5 +82,6 @@ finite field in r.
 pedersen commitments library.
 [bulletproofs inner product library.](src/crypto/ipa.erl)
 [precomputed multi exponentiation with bucket algorithm.](src/crypto/multi_exponent.erl)
-[polynomials in evaluation format library.](poly.erl)
+[polynomials in evaluation format library.](src/crypto/poly.erl)
+[polynomials multiproofs.](src/crypto/multiproof.erl)
 

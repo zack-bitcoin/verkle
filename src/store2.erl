@@ -1,5 +1,5 @@
 -module(store2).
--export([store/3, %non-batched store is not needed.
+-export([%store/3, %non-batched store is not needed.
          batch/3,
          multi_exponent_parameters/2,
          test/1,
@@ -12,19 +12,6 @@
         ]).
 -include("constants.hrl").
 -define(sanity, false).
-%-define(nindex, 8).
-%-record(stem, { root
-%                , types
-%                , pointers
-%                , hashes
-%	      }).
-%-record(leaf, { key
-%	      , value
-%	      , meta = 0 %meta is data we want to remember that doesn't get hashed into the merkle tree.
-%	      }).
-
-store(Leaf, RP, CFG) ->
-    batch([Leaf], RP, CFG).
 
 batch(Leaves0, RP, CFG) ->%returns {location, stem/leaf, #stem{}/#leaf{}}
     %put them in an ordered list.
