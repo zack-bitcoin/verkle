@@ -10,6 +10,7 @@ var points = (function(){
     // a constant in the definition of the ed25519 elliptic curve.
     var D = 37095705934669439343138083508754565189542113879843219016388785533085940283555n;
 
+    
     function compressed2affine(X0){
         //base64 encoded to affine.
         var X = string_to_array(atob(X0));
@@ -34,12 +35,45 @@ var points = (function(){
         var B = fq.inv(DUU);
         return(decompress_point2(U, S, T, B));
     };
+    function compressed2affine_batch(l){
+        var q = l.map(function(x){
+            var y = string_to_array(atob(x));
+            var b1 = y[0];
+            var p = JSON.parse(JSON.stringify(y));
+            var s;
+            if(b1 > 128){
+                p[0] = p[0] - 128;
+                s = 1n;
+            } else {
+                s = 0n;
+            };
+            var u = fq.decode(array_to_int(p));
+            var uu = fq.mul(u, u);
+            var duu = fq.sub(1n, fq.mul(D, uu));
+            var t = fq.add(1n, uu);
+            return([u, s, t, duu]);
+        });
+        var duus = q.map(function(x){
+            return(x[3]);
+        });
+        var bs = fq.batch_inverse(duus);
+        var r = [];
+        for(var i = 0; i<bs.length; i++){
+            var x = q[i];
+            var new_point = decompress_point2(
+                x[0], x[1], x[2], bs[i]);
+            r.push(new_point);
+        };
+        return(r);
+    };
     function is_on_curve(P){
         var X = P.x;
         var Y = P.y;
         var XX = fq.mul(X, X);
         var YY = fq.mul(Y, Y);
         var XY = fq.mul(XX, YY);
+        var first = fq.sub(YY, XX);
+        var second = fq.add(1n, fq.mul(D, XY));
         return((fq.sub(YY, XX) ==
                 fq.add(1n, fq.mul(D, XY))));
     };
@@ -161,6 +195,11 @@ var points = (function(){
         };
     };
     function affine2extended(p){
+        if(p instanceof Array){
+            return(p.map(function(x){
+                return(affine2extended(x))
+            }));
+        };
         return(Extended.fromAffine(p));
     };
     function extended2affine(p){
@@ -225,7 +264,7 @@ var points = (function(){
         var p0 = "Zmh6rfhivXdsj8GLjp+OIAiXFIVu4jOzkCpZHQ1fKSU=";
         var a0 = compressed2affine(p0);
         var e0 = Extended.fromAffine(a0);
-        var h0 = points.hash(e0);
+        var h0 = hash(e0);
         var h1 = array_to_int(string_to_array(atob("3EGjINsYRlYMN3Hyv/98ZiQyvZDbWhpzqNy/BTjI8Qs=")).reverse(), 32);
         console.log(h0);
         console.log(fr.decode(h1));
@@ -250,6 +289,7 @@ var points = (function(){
     return({
         affine2compressed: affine2compressed,
         compressed2affine: compressed2affine,
+        compressed2affine_batch: compressed2affine_batch,
         affine2extended: affine2extended,
         extended2affine: extended2affine,
         extended2affine_batch: extended2affine_batch,

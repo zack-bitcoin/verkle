@@ -581,7 +581,7 @@ test(20, CFG) ->
     %so this gives an idea of how it is for a light node.
     Loc = 1,
     Times = 10000,
-    Prove = 10,
+    Prove = 3,
     Leaves = 
         lists:map(
           fun(N) -> 

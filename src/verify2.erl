@@ -351,6 +351,9 @@ decompress_proof(
 decompress_proof(Open, Tree0, CommitG0) 
   when is_list(Open)->
     CPL = get2:compressed_points_list(Tree0),
+    %lists:map(fun(X)-> io:fwrite(base64:encode(X)), io:fwrite("\n") end,
+    %                    [CommitG0] ++ CPL),
+    %1=2,
     false = CPL == [],
     [CommitG|Decompressed] = 
         ed:affine2extended(
@@ -365,6 +368,9 @@ decompress_proof(Open, Tree0, CommitG0)
 proof({Tree0, CommitG0, Open0}, CFG) ->
     {Tree, Open, Root1, CommitG} = 
        decompress_proof(Open0, Tree0, CommitG0), 
+
+    %io:fwrite(Tree), %[pt, {i, pt}, [{i, pt}, {i, l}]...
+    %1=2,
 
     %Tree, Open, Root1, CommitG, 
 
@@ -386,6 +392,9 @@ proof({Tree0, CommitG0, Open0}, CFG) ->
         true ->
             io:fwrite("verify2 unfold \n"),
             benchmark:now(),
+            %io:fwrite(Rest),
+            %1=2,
+            %rest is [{0, pt},[{186, pt},{115, l}], [{187, pt}, {115, l}],[{188, pt}, {115, l}]]
             Tree2 = unfold(Root, Rest, [], CFG),
             io:fwrite("verify split 3 parts \n"),
             benchmark:now(),
@@ -398,6 +407,7 @@ proof({Tree0, CommitG0, Open0}, CFG) ->
             Zs = fr:encode(Zs1),
             io:fwrite("verify multiproof \n"),
             benchmark:now(),
+            %io:fwrite({Zs, Ys}),
             B2 = multiproof:verify(
                    {CommitG, Open}, 
                    Commits, Zs, Ys),

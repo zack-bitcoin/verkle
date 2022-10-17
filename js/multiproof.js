@@ -440,6 +440,9 @@ var multiproof = (function(){
         //console.log(proof[1]);
         var commits = decode_helper(commits0);
         //return(0);
+        console.log(proof[0]);
+        console.log(proof[1]);
+        return(0);
         console.log(verify(proof, commits, zs, ys));
     };
 

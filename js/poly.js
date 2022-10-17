@@ -70,7 +70,6 @@ var poly = (function(){
         return([l[0]].concat(remove_element(x, r)));
     };
     function calc_a(domain){
-        console.log("calc a");
         var l = domain.map(
             function(d) {
                 return(base_polynomial_c(d));

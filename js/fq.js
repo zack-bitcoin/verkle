@@ -58,6 +58,9 @@ var fq = (function(){
     function inv(a){
         return(finite_inverse.doit(a, N));
     };
+    function batch_inverse(l){
+        return(finite_inverse.batch(l, N));
+    };
     function pow(X, P) {
         if(P == 0){ return(1n);}
         else if(P == 1){ return(X);}
@@ -90,6 +93,7 @@ var fq = (function(){
         neg: neg,
         add: add,
         inv: inv,
+        batch_inverse: batch_inverse,
         pow: pow,
         sqrt: sqrt,
         is_positive: is_positive

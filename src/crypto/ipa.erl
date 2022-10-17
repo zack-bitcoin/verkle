@@ -451,6 +451,9 @@ base64_tree([H|T]) ->
     [base64_tree(H)|
      base64_tree(T)];
 base64_tree(B) when is_binary(B) ->
-    base64:encode(B).
+    base64:encode(B);
+base64_tree(B) when is_integer(B)->
+    B.
+
 
     
