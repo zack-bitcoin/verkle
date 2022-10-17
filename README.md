@@ -81,7 +81,8 @@ finite field in r.
 [elliptic curve library](src/crypto/ed.erl)
 pedersen commitments library.
 [bulletproofs inner product library.](src/crypto/ipa.erl)
-[precomputed multi exponentiation with bucket algorithm.](src/crypto/multi_exponent.erl)
+[multi exponentiation with bucket algorithm.](src/crypto/multi_exponent.erl)
+[precomputed multi exponentiation with bucket algorithm.](src/store2.erl)
 [polynomials in evaluation format library.](src/crypto/poly.erl)
 [polynomials multiproofs.](src/crypto/multiproof.erl)
 

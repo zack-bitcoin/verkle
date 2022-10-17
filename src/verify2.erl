@@ -40,7 +40,7 @@ update_batch2([], Tree, _Depth, _CFG, _MEP) ->
 update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
     %adding leaves to an existing stem.
     Leaves2 = store2:clump_by_path(
-                Depth, Leaves, CFG),
+                Depth, Leaves),
     {Diffs0, Tree2} = 
         update_merge(Leaves2, 
                      Tree, Depth, CFG, MEP, 
@@ -479,7 +479,7 @@ test() ->
     Leaves = [leaf:new(999999872, <<0,0>>, 0, CFG),
               leaf:new(999999744, <<0,0>>, 0, CFG)],
     Leaves2 = store2:clump_by_path(
-                0, Leaves, CFG),
+                0, Leaves),
     %todo. each should have the same number of leaves.
     true = (length(remove_empty(Leaves))) ==
         (length(remove_empty(Leaves2))),

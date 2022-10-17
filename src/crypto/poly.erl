@@ -342,6 +342,7 @@ eval_outside(Z, P, Domain, A, DA) ->
 
     %Z is a point not in domain.
     %A(Z)*sum(P_i/(A'(domain_i) * (z - domain_i)))
+    
     EV = eval_outside_v(Z, Domain, A, DA),
     L = lists:zipwith(
           fun(PE, V) ->

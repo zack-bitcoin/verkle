@@ -5,7 +5,7 @@
          test/1,
          precomputed_multi_exponent/2,
          leaf_hash/2,
-         clump_by_path/3,
+         clump_by_path/2,
          %sort_by_path2/2,
          %verified2/3
          verified/3
@@ -49,7 +49,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     %cut the list into sub lists that get included in each sub-branch.
     % %6
     Leaves2 = clump_by_path(
-                Depth, Leaves, CFG),
+                Depth, Leaves),
     %depth first recursion over the sub-lists on teh sub-trees to calculate the pointers and hashes for this node.
     RootStem = stem2:get(RP, CFG),
     #stem{
@@ -189,7 +189,7 @@ range(X, X) -> [X];
 range(X, Y) when (X < Y) -> 
     [X|range(X+1, Y)].
 
-clump_by_path(D, Leaves, CFG) ->
+clump_by_path(D, Leaves) ->
     Paths0 = lists:map(
                fun(L) -> 
                        D8 = (31 - D)*8,
@@ -302,16 +302,16 @@ multi_exponent_parameters(C, Gs) ->
           end, Gs, range(1, length(Gs))),
     io:fwrite("multi exponent parameters done\n"),
     list_to_tuple(L).
-batch_chunkify2(_Rs, _, 0) -> [];
-batch_chunkify2(Rs, C, Lim) -> 
-    {N, Rs2} = batch_chunkify3(Rs, C, [], []),
-    [N|batch_chunkify2(Rs2, C, Lim-1)].
-batch_chunkify3([], C, N, A) -> 
-    {lists:reverse(N), lists:reverse(A)};
-batch_chunkify3(
-  [<<N:8, A/binary>>|Rs], C, Ns, As) ->
+%batch_chunkify2(_Rs, _, 0) -> [];
+%batch_chunkify2(Rs, C, Lim) -> 
+%    {N, Rs2} = batch_chunkify3(Rs, C, [], []),
+%    [N|batch_chunkify2(Rs2, C, Lim-1)].
+%batch_chunkify3([], C, N, A) -> 
+%    {lists:reverse(N), lists:reverse(A)};
+%batch_chunkify3(
+%  [<<N:8, A/binary>>|Rs], C, Ns, As) ->
     %I think this N is 8 bits long, becuase the value of C in parameters.erl is 8.
-    batch_chunkify3(Rs, C, [N|Ns], [A|As]).
+%    batch_chunkify3(Rs, C, [N|Ns], [A|As]).
 batch_chunkify(_Rs, _, 0) -> [];
 batch_chunkify(Rs, F, Lim) -> 
     N = lists:map(fun(R) ->
@@ -326,26 +326,26 @@ chunkify(_, _, 0) -> [];
 chunkify(R, C, Many) -> 
     [(R rem C)|
      chunkify(R div C, C, Many-1)].
-matrix_diagonal_flip([[]|_]) -> [];
-matrix_diagonal_flip(M) ->
-    Col = lists:map(fun(X) -> hd(X) end, M),
-    Tls = lists:map(fun(X) -> tl(X) end, M),
-    [Col|matrix_diagonal_flip(Tls)].
+%matrix_diagonal_flip([[]|_]) -> [];
+%matrix_diagonal_flip(M) ->
+%    Col = lists:map(fun(X) -> hd(X) end, M),
+%    Tls = lists:map(fun(X) -> tl(X) end, M),
+%    [Col|matrix_diagonal_flip(Tls)].
 get_domain([], [], [], D, R, M) ->
     {lists:reverse(D),
      lists:reverse(R),
      lists:reverse(M)};
 get_domain([_D|DT], [0|RT], [_M|MT], Ds, Rs, Ms) ->
     get_domain(DT, RT, MT, Ds, Rs, Ms);
-get_domain([D|DT], [<<0:256>>|RT], [_M|MT], 
+get_domain([_D|DT], [<<0:256>>|RT], [_M|MT], 
            Ds, Rs, Ms) ->
     get_domain(DT, RT, MT, Ds, Rs, Ms);
 get_domain([D|DT], [R|RT], [M|MT], Ds, Rs, Ms) ->
     get_domain(DT, RT, MT, [D|Ds], [R|Rs], [M|Ms]).
 
-precomputed_multi_exponent_new(Rs0, _MEP) ->
-    {Gs, _, _} = parameters2:read(),
-    multi_exponent:doit(Rs0, Gs).
+%precomputed_multi_exponent_new(Rs0, _MEP) ->
+%    {Gs, _, _} = parameters2:read(),
+%    multi_exponent:doit(Rs0, Gs).
     
 precomputed_multi_exponent(Rs0, MEP) ->
     %Rs0 is a list of fr encoded values.

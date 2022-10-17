@@ -428,7 +428,7 @@ tl_times(N, L) ->
     tl_times(N-1, tl(L)).
 
 is_in(X, [X|_]) -> true;
-is_in(X, []) -> false;
+is_in(_, []) -> false;
 is_in(X, [_|T]) -> 
     is_in(X, T).
 

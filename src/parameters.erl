@@ -59,38 +59,7 @@ range(X, X) -> [X];
 range(X, Y) when X < Y -> 
     [X|range(X+1, Y)].
 
-get_fr(X) ->
-    <<Y:256>> = hash:doit(<<X:256>>),
-    Y rem fr:prime().
-   
 domain(Many) -> 
     lists:map(fun(X) -> fr:encode(X) end,
               range(1, Many)).
-
-make_ghq() ->
-    ipa:basis(256).
-
-unused_make_ghq() ->
-    %p{g, h, q, domain, a, da}
-    Many = 256,
-    %Many = 4,
-    R = range(1, Many),
-    G = lists:map(fun(X) ->
-                          io:fwrite(integer_to_list(X)),
-                          io:fwrite("\n"),
-                          Y = get_fr(X),
-                          %fq:gen_point(Y)
-                          ed:gen_point(Y)
-                  end, R),
-    H = lists:map(fun(X) ->
-                          io:fwrite(integer_to_list(X)),
-                          io:fwrite("\n"),
-                          Y = get_fr(X + Many),
-                          %fq:gen_point(Y)
-                          ed:gen_point(Y)
-                  end, R),
-    QN = get_fr(513),
-    %Q = fq:gen_point(QN),
-    Q = ed:gen_point(QN),
-    {G, H, Q}.
 

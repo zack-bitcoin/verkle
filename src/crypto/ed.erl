@@ -218,7 +218,7 @@ decompress_point2(U, S, T, B) ->
             io:fwrite("invalid, no square root\n"),
             error;
         {<<0:256>>, <<0:256>>} ->
-            io:fwrite("couldn't sqrt\m"),
+            %io:fwrite("couldn't sqrt\m"),
             error;
         {V1 = <<V1n:256/little>>, V2} ->
             SB = (S == 0),
@@ -259,7 +259,7 @@ gen_point(<<X:256>>) ->
     P = decompress_point(<<X:256>>),
     case P of
         error -> 
-            io:fwrite("gen point next\n"),
+            %io:fwrite("gen point next\n"),
             gen_point(<<(X+1):256>>);
         _ -> 
             %P = decompress_point(compress_point(P)),
