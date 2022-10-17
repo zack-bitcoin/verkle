@@ -33,8 +33,8 @@ commit(V, G) ->
     %pedersen commitment
     %V1*G1 + V2*G2 + V3*G3 + ...
     %V is montgomery encoded integers, g is elliptic curve points.
-
     multi_exponent:doit(V, G).
+
 add(A, B) ->
     ed:e_add(A, B).
 mul(X, G) -> mul2(X, G).
@@ -161,14 +161,6 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
            B, G, H, Q) ->
     [AG|Cs] = simplify_v([AG0|Cs0]),
     C1 = hd(lists:reverse(Cs)),
-    %ComBH = commit(B, H),
-    %AGBH = add(AG, commit(B, H)),
-    %io:fwrite(base64:encode(AG0)),
-    %io:fwrite("\n"),
-    %io:fwrite(base64:encode(ed:compress_point(hd(ed:extended2affine_batch([AG]))))),
-    %io:fwrite("\n"),
-    %1=2,
-    %io:fwrite(base64:encode(ed:compress_point(hd(ed:extended2affine_batch([AGBH]))))),
     C1b = add(add(AG, commit(B, H)), 
              mul(AB, Q)),
     EB = ed:e_eq(C1, C1b),

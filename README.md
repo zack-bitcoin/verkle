@@ -3,8 +3,6 @@ Verkle Tree
 
 Pedersen-commitment based verkle trees using the ed25519 elliptic curve.
 
-This software is still being built.
-
 learn about verkle trees here:
 https://vitalik.ca/general/2021/06/18/verkle.html
 
@@ -66,7 +64,7 @@ verifying the proof is 5.0x slower than optimal.
 calculating the root hash is 5.5x slower than optimal.
 
 
-Crypto used 
+Cryptography used 
 ===========
 
 Ed25519 https://en.wikipedia.org/wiki/EdDSA#Ed25519
@@ -75,14 +73,13 @@ The prime for the finite field: `q = 2^255 - 19`
 Curve equation: `-x^2 + y^2 = 1 - ((121665/121666) * x^2 * y^2 )`
 These are the algorithms we can use for operations on the elliptic curve: http://hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html
 
-finite field in q.
-finite field in r.
-[algorithms for elliptic curve operations. in C.](/src/crypto/ed25519.c)
-[elliptic curve library](src/crypto/ed.erl)
-pedersen commitments library.
-[bulletproofs inner product library.](src/crypto/ipa.erl)
-[multi exponentiation with bucket algorithm.](src/crypto/multi_exponent.erl)
-[precomputed multi exponentiation with bucket algorithm.](src/store2.erl)
-[polynomials in evaluation format library.](src/crypto/poly.erl)
+[ed25519 elliptic curve](src/crypto/ed.erl)
+[algorithms for elliptic curve operations in C.](/src/crypto/ed25519.c)
+
+[multi exponentiation with bucket method.](src/crypto/multi_exponent.erl)
+[precomputed multi exponentiation with bucket method.](src/crypto/precomputed_multi_exponent.erl)
+
+[bulletproofs inner product using pedersen commitments.](src/crypto/ipa.erl)
+[polynomials in evaluation format.](src/crypto/poly.erl)
 [polynomials multiproofs.](src/crypto/multiproof.erl)
 

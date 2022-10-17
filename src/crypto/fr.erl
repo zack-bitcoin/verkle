@@ -53,15 +53,8 @@ init() ->
 %1/r rem n
 %-define(ir, 4458503529701987551646482192314240623644693141688353256590997718326214331684).
 
-prime() -> ?q.% div 8.
-
-%todo. binary:encode_unsigned(X, little) is probably faster.
+prime() -> ?q.
 reverse_bytes(<<X:256>>) -> <<X:256/little>>.
-%reverse_bytes(X) ->
-%    reverse_bytes(X, <<>>).
-%reverse_bytes(<<A, B/binary>>, R) ->
-%    reverse_bytes(B, <<A, R/binary>>);
-%reverse_bytes(<<>>, R) -> R.
 
 encode([]) -> [];
 encode([H|T]) -> 
