@@ -22,7 +22,14 @@ to turn off the software, and save everything
 where ID is the name of the database (this allows for multiple databases.)
 The test database is `trie01`.
 
-Then, to run the benchmark: `benchmark:doit(1).`
+Tests
+============
+
+To do all integration tests: `test_trie:test().`
+If you know which integration test you want to do: `test_trie:test(3).`
+replace the `3` with the number of the test you wan to do.
+
+Many modules have their own unit tests. They are at the bottom
 
 Speed comparison.
 ===========
