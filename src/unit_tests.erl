@@ -34,12 +34,12 @@ doit(0) ->
                       S = 
                           multi_exponent:test(N)
               end, [0,1,5,6,7,8]),
-    S = store2:test(1),
+    S = precomputed_multi_exponent:test(1),
     lists:map(fun(N) ->
                       S = ipa:test(N)
               end, [1,3,5,7]),
     S = verify2:test(),
-    {prove, _, verify, _} = multiproof:test(7),
+    {_, _} = multiproof:test(7),
     S.
     
     

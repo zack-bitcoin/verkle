@@ -77,16 +77,11 @@ redc(R, N, IN, T) ->
 multiply(A, B) ->
     %X = (A * B * ?ir) rem ?n,
     redc(A*B).
-    %X = Y.
-    %Y.
 
 encode(A) when ((A < ?n) and (A > -1)) ->
     %redc((a mod n)(r*r mod n))
     redc(?r2 * A).
 decode(A) ->
-    %redc((A*R) rem N).
-    %redc((?r1 * A) rem ?n).
-    %ok.
     multiply(A, 1).
 
 

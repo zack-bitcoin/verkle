@@ -111,23 +111,9 @@ calc_T(<<C1:256, C2:256>>, <<R:256>>) ->
     <<R2:256>> = hash:doit(B),
     fr:encode(R2 rem fr:prime()).
 
-%-define(deco(X), secp256k1:decompress(X)).
-%-define(comp(X), secp256k1:compress(X)).
-%compress({C1, Csa, {AG, AB, Csb, AN, BN}}) ->
-%    Cs0 = Csa ++ Csb,
-%    [AG2, C2|Cs1] = ?comp([AG, C1|Cs0]),
-%    {Csa2, Csb2} = lists:split(length(Csa), Cs1),
-%    {C2, Csa2, {AG2, AB, Csb2, AN, BN}}.
-
-%decompress({C2, Csa2, Cipa}) ->
-%    Csa = lists:map(fun(X) -> ?deco(X) end, Csa2),
-%    Ipa = ipa:decompress(Cipa),
-%    {?deco(C2), Csa, Ipa}.
-
 dot(A, B) ->
     C = dot2(A,B),
     fr:add_all(C).
-   
 
 dot2([], []) -> [];
 dot2([A|AT], [B|BT]) -> 
@@ -200,36 +186,12 @@ prove(As, %committed data
     %Ys [3,3,3,3]
     %As [[4,3,2,1],...]
     %Zs [2,2,2,2]
-    %io:fwrite(lists:map(fun(<<X:256>>) -> X end, Ys)),
-    %io:fwrite(fr:decode(Ys)),
-    %io:fwrite(Ys),
     io:fwrite("multiprove calc random R\n"),% 4%
     benchmark:now(),
     AffineCommits = 
-        %fq:to_affine_batch(
         ed:extended2affine_batch(
           Commits_e),
-    %<<AffineN:512>> = hd(tl(AffineCommits)),
-    %io:fwrite("prove affine first is\n"),
-    %io:fwrite(integer_to_list(AffineN)),
-    %io:fwrite("\n"),
-    %io:fwrite(integer_to_list(length(AffineCommits))),
-    %io:fwrite("\n"),
-    %io:fwrite("prove zs ys \n"),
-    %[DZs, DYs] = fr:decode([Zs, Ys]),
-    %io:fwrite(integer_to_list(hd(DZs))),
-    %io:fwrite("\n"),
-    %io:fwrite(integer_to_list(hd(tl(DZs)))),
-    %io:fwrite("\n"),
-    %io:fwrite(integer_to_list(hd(DYs))),
-    %io:fwrite("\n"),
-    %io:fwrite(integer_to_list(hd(tl(DYs)))),
-    %io:fwrite("\n"),
-    %io:fwrite({Zs, Ys}),
     R = calc_R(AffineCommits, Zs, Ys, <<>>),
-    %R = fr:encode(1),%todo!!
-    %io:fwrite("multiprove 3\n"),
-    %spends lots of time here.
     io:fwrite("multiprove calc G *slow* \n"),% 45%
     benchmark:now(),
     %the slow step.
@@ -238,18 +200,11 @@ prove(As, %committed data
     %io:fwrite("multiprove 4\n"),
     io:fwrite("multiprove commit to G\n"),
     benchmark:now(),
-    %io:fwrite({length(G), length(Gs)}),
     CommitG_e = ipa:commit(G, Gs),
     io:fwrite("multiprove calc random T\n"),
     benchmark:now(),
-    %T = calc_T(fq:extended2affine(CommitG_e), R),
     T = calc_T(hd(ed:extended2affine_batch(
                     [CommitG_e])), R),
-    %io:fwrite("prove RT: "),
-    %RT = fr:decode([R, T]),
-    %lists:map(fun(X) -> io:fwrite(integer_to_list(X)), io:fwrite("\n") end, RT),
-    %T = fr:encode(5),%todo!!!
-    %io:fwrite("multiprove 6\n"),
     %spend very little time here.
     io:fwrite("multiprove calc polynomial h\n"), % 9%
     benchmark:now(),
@@ -268,8 +223,6 @@ prove(As, %committed data
     io:fwrite("multiprove create ipa opening to G-E\n"), % 2%
     benchmark:now(),
     %spend a little time here.
-%    io:fwrite({size(hd(NG2)), length(NG2),
-%               size(hd(EV)), length(EV), NG2, EV}),%{32, 256, 32, 256}
     IPA = ipa:make_ipa(NG2, EV, Gs, Hs, Q),
     if
         ?sanity_checks ->
@@ -404,35 +357,6 @@ test(1) ->
     R = fr:encode(1),
     G2 = calc_G(R, As, Ys, Zs, Domain, DA),
     {G2};
-test(2) ->
-    %dth root of unity
-    E = secp256k1:make(),
-    Base = secp256k1:order(E),
-
-    R1 = rand:uniform(Base),
-    
-    R2 = basics:lrpow(R1, Base-2, Base),
-    R3 = basics:lrpow(R1, (Base-1) div 2, Base),
-
-    
-    
-    {pedersen:fmul(R2, R2, E),
-     pedersen:fmul(R3, R3, E),
-     R3,
-     (Base-1) rem 2,
-     (Base-1) rem 3,
-     Base-1
-    },
-    %prime factors of base-1:
-    % 2^6, 3, 149, 631
-    %basics:prime_factors(Base-1).
-    %Root64 = primitive_nth_root(64, E),
-    %Root = primitive_nth_root(2, E),
-    ok;
-%    {pedersen:fmul(Root, Root, E),
-%     basics:lrpow(Root64, 64, Base)};
-%     Root, 
-%     Root64};
 test(3) ->
     %test prove.
     {Gs0, Hs0, Q} = parameters2:read(),
@@ -507,27 +431,6 @@ test(7) ->
     %io:fwrite({Ys}),
     {FProof, Commits};
     
-
-test(100) ->
-    Proof = ok,
-    Commits = ok,
-    Zs = ok,
-    Ys = ok,
-    T1 = ok,
-    T2 = ok,
-    
-    Verified = verify(Proof, Commits, Zs, Ys),
-    if
-        Verified -> ok;
-        true ->
-            %io:fwrite({Proof, hd(Zs), hd(Ys)}),
-            io:fwrite("here\n"),
-            1=2,
-            ok
-    end,
-    T3 = erlang:timestamp(),
-    {prove, timer:now_diff(T2, T1),
-     verify, timer:now_diff(T3, T2)};
 test(8) ->
     Domain = parameters2:domain(),
     {Gs, Hs, Q} = parameters2:read(),

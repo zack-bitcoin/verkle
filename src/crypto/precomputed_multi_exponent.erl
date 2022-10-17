@@ -1,7 +1,8 @@
 -module(precomputed_multi_exponent).
 -export([
          parameters/2,
-         doit/2
+         doit/2,
+         test/1
         ]).
 
 range(X, X) -> [X];
