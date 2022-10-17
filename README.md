@@ -7,8 +7,78 @@ learn about verkle trees here:
 https://vitalik.ca/general/2021/06/18/verkle.html
 
 Techniques used in this software:
-inner product argument bullet proofs: https://dankradfeist.de/ethereum/2021/07/27/inner-product-arguments.html
-polynomial multiproofs: https://dankradfeist.de/ethereum/2021/06/18/pcs-multiproofs.html
+
+
+How big are the proofs?
+==============
+
+The verkle tree has a radix of 256. So, if there are N elements in the tree, then a proof for a single element would be log_256(N) steps long.
+If you are proving more than one thing, then they share steps. So if you are proving 1000 things, the proof is more like 1000*(log_256(N) - 1) steps long.
+For each step we need to store a 32 byte compressed elliptic curve point.
+
+We also need to store some fixed sized data.
+
+There are 2 different formats for the proofs. Sometimes we want the proof to be very small, and are willing to put extra effort in. In that case, we use the bullet proof method, and the extra data is only 17 elliptic curve points, each 32 bytes. So, 544 bytes total.
+
+If we want to generate the proof very quickly, we can skip the bullet proof step, and the proof ends up being longer. It needs to have 256 finite field elements, each 32 bytes long. So, 8192 bytes total.
+
+If the Tree has N elements, and you want to prove M of them.
+
+Fast: 8192 + (32*M*(log_256(N) - 1)).
+
+Small: 544 + (32*M*(log_256(N) - 1)).
+
+Small proofs are usually better if we are proving many things, and fast proofs are usually better if we are proving very few things.
+
+In the context of a blockchain, we use the fast proofs for light nodes, and the small proofs in blocks.
+
+Speed tests, and results on a lenovo thinkpad 2017 laptop.
+===========
+
+units are in microseconds (millionths of a second) unless otherwise specified.
+
+finite field speed tests: `fr:test(8).`
+(if you run this test several times, it speeds up. I think there is some caching involved.)
+
+multiplication: 0.1
+
+subtraction: 0.08
+
+additions: 0.1
+
+
+elliptic point multiplication speed test `ed:test(6).`: 235
+
+elliptic point doubling speed test `ed:test(17).` : 0.9
+
+elliptic point doubling speed test `ed:test(18).` : 1.15
+
+
+proving 3 things. 'test_trie:test(1).`
+
+load 10 000 elements: 2.36 seconds
+
+make a small proof: 0.97 seconds
+
+verify the small proof: 0.2 seconds
+
+make a fast proof: 0.075 seconds
+
+verify the fast proof: 0.066 seconds
+
+
+Load a db with 10 000 elements, and prove 3000 of them with a small proof.
+
+loading the db: 5.7 seconds
+
+making the proof: 2.2 seconds
+
+verifying the proof: 0.57 seconds
+
+calculating the root hash after the update: 3.3 seconds
+
+storing the updated data in the database: 0.35 seconds
+
 
 Installation
 =============
@@ -24,7 +94,8 @@ where ID is the name of the database (this allows for multiple databases.)
 
 The test database is `trie01`.
 
-Tests
+
+Tests that the software works.
 ============
 
 To do all integration tests: `test_trie:test().`
@@ -42,41 +113,12 @@ Here is a calculator to get an idea for how much it should cost to do different 
 
 https://docs.google.com/spreadsheets/d/1740XUDJ89aSRE-4HBD44brjGake_MRAqC4YF7YcEScE/edit
 
-Lets look at how this software is falling short of the ideal.
-
-I changed the field multiplication speed to 1.5*10^-7, because that is how fast I got it to run on my computer. ```fq:test(8).``` (test results in millionths of a second)
-  I similarly decreased the elliptic curve speed to 2.3*10-4, because that is the speed I can get it to run. (6x slower than the suggested speed of 4*10-5) ```ed:test(6).```
-  
-For my test, I loaded the tree with 130 000 elements. so I edited the "Number of Elements" variable in the calculator page.
-
-The calculator gives: prover time, verify proof, verify updates.
-
-```
-prover time: 2.96 seconds
-verify proof: 0.757 seconds
-verify updates: 0.933 seconds
-```
-
-To run the benchmark, use these commands:
-```Loc = test_trie:load_db(130000).```
-This loads up the database with 130k dummy elements.
-
-then do:
-```test_trie:proof_test(Loc, 6000).```
-This creates a proof of 6000 elements, calculates a new root if they are all updated, and then merges the changes to the database.
-
-The results I get are:
- making the proof: 5.3155 seconds
- verifying proof: 3.8292 seconds
- root hash of the updated proof: 5.0938 seconds
-
-So, making the proof is 80% slower than optimal.
-verifying the proof is 5.0x slower than optimal.
-calculating the root hash is 5.5x slower than optimal.
-
-
 Cryptography used 
 ===========
+
+inner product argument bullet proofs: https://dankradfeist.de/ethereum/2021/07/27/inner-product-arguments.html
+
+polynomial multiproofs: https://dankradfeist.de/ethereum/2021/06/18/pcs-multiproofs.html
 
 Ed25519 https://en.wikipedia.org/wiki/EdDSA#Ed25519
 It is defined like this.

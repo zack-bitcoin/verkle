@@ -10,9 +10,9 @@ test() ->
     V = [
          %23,
          1,
-         21
-         %22,
-         %24
+         2,
+         3,
+         4
         ],
     test_helper(V, CFG).
 test(N) ->
@@ -80,7 +80,9 @@ test(1, CFG) ->
     if
         true ->
             io:fwrite("measured in millionths of a second. 6 decimals. \n"),
-            io:fwrite("load tree: "),
+            io:fwrite("load tree with "),
+            io:fwrite(integer_to_list(Times)),
+            io:fwrite(" elements: "),
             io:fwrite(integer_to_list(timer:now_diff(T2, T1))),
             io:fwrite("\nmake normal proof: "),
             io:fwrite(integer_to_list(timer:now_diff(T3, T2))),
@@ -94,7 +96,7 @@ test(1, CFG) ->
         true -> ok
     end,
     success;
-test(21, CFG) ->
+test(2, CFG) ->
     Loc = 1,
     Times = 200,
     Leaves = 
@@ -228,10 +230,10 @@ test(21, CFG) ->
     %true = fq:eq(RootStem#stem.root, RootStem4#stem.root),
 
     success;
-test(22, CFG) ->
+test(3, CFG) ->
     Loc = 1,
-    StartingElements = 6000,
-    UpdateElements = 6000,
+    StartingElements = 10000,
+    UpdateElements = 3000,
     Leaves = 
         lists:map(
           fun(N) -> 
@@ -356,7 +358,7 @@ test(23, CFG) ->
     %io:fwrite(get2:batch(Keys, Loc3, CFG)),
     
     success;
-test(24, CFG) ->
+test(4, CFG) ->
     %test of updating a point.
     Loc = 1,
     Key = 27,

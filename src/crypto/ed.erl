@@ -651,7 +651,7 @@ test(6) ->
                         e_mul(P, R)
                 end, 0, Ps),
     T2 = erlang:timestamp(),
-    {{c, timer:now_diff(T2, T1)/Many}};
+    timer:now_diff(T2, T1)/Many;
 test(7) ->
     %multiply test
     P = gen_point(),
@@ -950,7 +950,41 @@ test(16) ->
     [P, P2, P3] = lists:map(
                     fun(X) -> ed25519:fdecode_point(X)
                     end, [C, C2, C3]),
-    {P, P2, P3}.
+    {P, P2, P3};
+test(17) ->
+    %elliptic double speed test
+    Many = 1000,
+    R = range(0, Many),
+    Ps = lists:map(
+           fun(_) ->
+                   P1 = affine2extended(gen_point()),
+                   c_ed:double(P1)
+           end, R),
+    T1 = erlang:timestamp(),
+    lists:foldl(fun(P, _) ->
+                        c_ed:double(P)
+                end, 0, Ps),
+    T2 = erlang:timestamp(),
+    timer:now_diff(T2, T1)/Many;
+test(18) ->
+    %elliptic add speed test
+    Many = 1000,
+    R = range(0, Many),
+    Ps = lists:map(
+           fun(_) ->
+                   P1 = affine2extended(gen_point()),
+                   P2 = c_ed:double(P1),
+                   P3 = c_ed:double(P2),
+                   {P2, P3}
+           end, R),
+    T1 = erlang:timestamp(),
+    lists:foldl(fun({P2, P3}, _) ->
+                        e_add(P2, P3)
+                end, 0, Ps),
+    T2 = erlang:timestamp(),
+    timer:now_diff(T2, T1)/Many.
+
+    
 
 
 %success.
