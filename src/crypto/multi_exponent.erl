@@ -98,14 +98,6 @@ bucketify([BucketNumber|T], BucketsETS,
     Bucket2 = 
         case BucketETS0 of
             [] ->  G;
-%                case G of
-%                    <<_:(256*5)>> -> G;
-%                    _ ->
-                        %fq:extended_niels2extended(G)
-%                        fq:extended_niels2extended(G)
-%                end;
-            %[] -> G;
-            %[{_, X}] -> fq:e_add(X, G)
             [{_, X}] -> 
                 ed:e_add(X, G)
         end,
@@ -172,20 +164,11 @@ multi_exponent2(Rs, Gs) ->
                    false = (error == Result),
                    Result
            end, Ts),
-    %me3(Ss, fq:e_zero(), 
-    %false = ed:e_eq(ed:extended_zero(), hd(lists:reverse(Ss))),
-%    io:fwrite({length(Ss), 
-    %true = ed:e_eq(hd(lists:reverse(Ss)), hd(Gs)),
     
     me3(Ss, ed:extended_zero(), 
-        %fr:reverse_bytes(<<F:256>>)).
                  <<F:256/little>>).
-    %true = ed:e_eq(hd(Gs), Result),
    
-%fr:encode(F)).
 me3([H], A, _) -> 
-    %fq:e_add(H, A);
-    %io:fwrite({ed:e_eq(A, ed:extended_zero())}),
     ed:e_add(H, A);
 me3([H|T], A, F) -> 
     X = ed:e_add(A, H),

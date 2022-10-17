@@ -66,7 +66,8 @@ update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
     {_, Tree3} = insert_stem_hashes2(ECdict, Tree2, []),
     %Diffs = calc_subs(Diffs0, Cs),
     Diffs = calc_subs(Diffs0, Es),
-    EllDiff = store2:precomputed_multi_exponent(
+    %EllDiff = store2:precomputed_multi_exponent(
+    EllDiff = precomputed_multi_exponent:doit(
                 Diffs, MEP),
     {EllDiff, Tree3}.
 

@@ -57,7 +57,7 @@ init(ok) ->
     G2 = ed:affine2extended(G),
     ME = read_or_gen(
           "precomputes/ME.db",
-          fun() -> store2:multi_exponent_parameters(C, G2) end),
+          fun() -> precomputed_multi_exponent:parameters(C, G2) end),
     DB = #db{g = G2, h = H, q = Q, a = A, da = DA, 
              domain = Domain, dive = DivE, 
              me = ME},
