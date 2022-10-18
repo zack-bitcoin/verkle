@@ -24,9 +24,9 @@ If we want to generate the proof very quickly, we can skip the bullet proof step
 
 If the Tree has N elements, and you want to prove M of them.
 
-Fast: 8192 + (32*M*(log_256(N) - 1)).
+Fast: 8192 + (32 * M * (log_256(N) - 1)).
 
-Small: 544 + (32*M*(log_256(N) - 1)).
+Small: 544 + (32 * M * (log_256(N) - 1)).
 
 Small proofs are usually better if we are proving many things, and fast proofs are usually better if we are proving very few things.
 
