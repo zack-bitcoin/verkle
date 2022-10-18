@@ -17,8 +17,7 @@ start(normal, []) ->
     %Mode = ram,
     Mode = hd,
     Meta = 2,
-    HashSize = 32,
-    verkle_sup:start_link(KeyLength, Size, ID, Amount, Meta, HashSize, Mode, "").
+    verkle_sup:start_link(KeyLength, Size, ID, Amount, Meta, Mode, "").
 
 stop(_State) ->
     ok.

@@ -1,4 +1,4 @@
--module(verify2).
+-module(verify).
 -export([proof/2, update/3, remove_empty/1,
          test/0
         ]).
@@ -20,7 +20,7 @@ fill_points(Ps, [T|R], Result) ->
 update(PL = [OldRoot|ProofTree], Leaves, CFG) ->
     %walk down the tree, then update everything in reverse in the callback stack.
 
-    MEP = parameters2:multi_exp(),
+    MEP = parameters:multi_exp(),
     {Diff, Tree2} = 
         update_batch2(Leaves, tl(PL),
                       0, CFG, MEP),
@@ -39,7 +39,7 @@ update_batch2([], Tree, _Depth, _CFG, _MEP) ->
     {0, Tree};
 update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
     %adding leaves to an existing stem.
-    Leaves2 = store2:clump_by_path(
+    Leaves2 = store:clump_by_path(
                 Depth, Leaves),
     {Diffs0, Tree2} = 
         update_merge(Leaves2, 
@@ -53,7 +53,7 @@ update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
                    SubPoints),
     %Cs = fq:compress(Es),
     %Cs = ed:compress_points(Es),
-    Cs = lists:map(fun(E) -> stem2:hash_point(E)
+    Cs = lists:map(fun(E) -> stem:hash_point(E)
                    end, Es),
     ECs = lists:zipwith(fun(A, B) -> {A, B} end,
                         Es, Cs),
@@ -66,7 +66,7 @@ update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
     {_, Tree3} = insert_stem_hashes2(ECdict, Tree2, []),
     %Diffs = calc_subs(Diffs0, Cs),
     Diffs = calc_subs(Diffs0, Es),
-    %EllDiff = store2:precomputed_multi_exponent(
+    %EllDiff = store:precomputed_multi_exponent(
     EllDiff = precomputed_multi_exponent:doit(
                 Diffs, MEP),
     {EllDiff, Tree3}.
@@ -108,7 +108,7 @@ insert_stem_hashes2(
 insert_stem_hashes2(ECs, Tree = {I, 0}, []) ->
     {ECs, Tree};
 insert_stem_hashes2(_, Tree, _) ->
-    io:fwrite("verify2 corrupted tree\n"),
+    io:fwrite("verify corrupted tree\n"),
     io:fwrite(Tree).
     
 
@@ -138,7 +138,7 @@ get_remove(Key, [H|L], Rest) ->
 calc_subs(Diffs, []) ->
     Diffs;
 calc_subs([{sub, _, Fr}|T], [Compressed|CT]) ->
-    [fr:sub(stem2:hash_point(Compressed), Fr)|
+    [fr:sub(stem:hash_point(Compressed), Fr)|
      calc_subs(T, CT)];
 calc_subs([H|T], Cs) ->
     [H|calc_subs(T, Cs)].
@@ -192,7 +192,7 @@ update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees],
 
     {Point, Tree2} = 
         update_batch2(LH, S1, Depth+1, CFG, MEP),
-    OldN = stem2:hash_point(B),
+    OldN = stem:hash_point(B),
     %NewPoint0 = fq:e_add(B, Point),
     NewPoint0 = ed:e_add(B, Point),
     {NewPoint, Diff, Hash} = 
@@ -213,7 +213,7 @@ update_merge([[{K, 0}]|Leaves],
     %deleting a leaf.
     %io:fwrite("deleting a leaf"),
     OldLeaf = leaf:new(OldK, OldV, 0, CFG),
-    OldN = store2:leaf_hash(OldLeaf, CFG),
+    OldN = store:leaf_hash(OldLeaf, CFG),
     update_merge(Leaves, Subtrees, Depth, CFG, MEP,
                  [{N, 0}|R], 
                  [fr:neg(OldN)|Diffs], N+1);
@@ -231,9 +231,9 @@ update_merge([LH|Leaves],
         (B and B2) -> 
             %io:fwrite(LH),
             Leaf2 = hd(LH),
-            OldN = store2:leaf_hash(
+            OldN = store:leaf_hash(
                      FL, CFG),
-            NewN = store2:leaf_hash(
+            NewN = store:leaf_hash(
                      Leaf2, CFG),
             LeafDiff = 
                 if
@@ -286,7 +286,7 @@ update_merge([LH|Leaves],
     Value = leaf:value(hd(LH)),
     %#leaf{key = Key, value = Value} = hd(LH),
     io:fwrite("new leaf diff calculation\n"),
-    Diff = store2:leaf_hash(hd(LH), CFG),
+    Diff = store:leaf_hash(hd(LH), CFG),
     %Diff = leaf:hash(hd(LH), CFG),
     update_merge(Leaves, Subtrees, Depth, CFG, 
                  MEP, [[{N, {Key, Value}}]|R], 
@@ -335,7 +335,7 @@ merge_find_helper(P, D) ->
 decompress_proof(
   Open0 = {Open1, Open2, OpenL, Open4, Open5}, 
   Tree0, CommitG0) ->
-    CPL = get2:compressed_points_list(Tree0),
+    CPL = get:compressed_points_list(Tree0),
     false = CPL == [],
     [CommitG, Open1b |Decompressed2] = 
         ed:affine2extended(
@@ -351,7 +351,7 @@ decompress_proof(
     {Tree, Open, Root1, CommitG};
 decompress_proof(Open, Tree0, CommitG0) 
   when is_list(Open)->
-    CPL = get2:compressed_points_list(Tree0),
+    CPL = get:compressed_points_list(Tree0),
     %lists:map(fun(X)-> io:fwrite(base64:encode(X)), io:fwrite("\n") end,
     %                    [CommitG0] ++ CPL),
     %1=2,
@@ -383,15 +383,15 @@ proof({Tree0, CommitG0, Open0}, CFG) ->
     %[root, [{1, p1}, [{0, L1},{1, L2}], [{3, p2},{0,L3}]]]
     io:fwrite("verify get parameters \n"),
     [Root|Rest] = Tree,
-    Domain = parameters2:domain(),
+    Domain = parameters:domain(),
     %B = fq:eq(Root1, Root),
     B = ed:a_eq(Root1, Root),
     if
         not(B) -> 
-            io:fwrite("verify2 fail, unequal roots\n"),
+            io:fwrite("verify fail, unequal roots\n"),
             false;
         true ->
-            io:fwrite("verify2 unfold \n"),
+            io:fwrite("verify unfold \n"),
             benchmark:now(),
             %io:fwrite(Rest),
             %1=2,
@@ -400,10 +400,10 @@ proof({Tree0, CommitG0, Open0}, CFG) ->
             io:fwrite("verify split 3 parts \n"),
             benchmark:now(),
             {Commits, Zs0, Ys} = 
-                get2:split3parts(Tree2, [],[],[]),
+                get:split3parts(Tree2, [],[],[]),
             io:fwrite("veirfy index2domain \n"),
             benchmark:now(),
-            Zs1 = get2:index2domain2(
+            Zs1 = get:index2domain2(
                    Zs0),
             Zs = fr:encode(Zs1),
             io:fwrite("verify multiproof \n"),
@@ -416,7 +416,7 @@ proof({Tree0, CommitG0, Open0}, CFG) ->
             benchmark:now(),
             if
                 not(B2) -> 
-                    io:fwrite("verify2 fail, multiproof verify\n"),
+                    io:fwrite("verify fail, multiproof verify\n"),
                     false;
                 true ->
                     {true, leaves(Rest), Tree}
@@ -449,22 +449,22 @@ unfold(Root, {Index, 0}, T, CFG) ->%empty case
 unfold(Root, {Index, {Key, B}}, T, CFG) %leaf case
   when is_binary(B) ->
     %Leaf = #leaf{key = Key, value = B},
-    %io:fwrite("verify2 unfold leaf\n"),
+    %io:fwrite("verify unfold leaf\n"),
     Leaf = leaf:new(Key, B, 0, CFG),
-    <<L:256>> = store2:leaf_hash(Leaf, CFG),
+    <<L:256>> = store:leaf_hash(Leaf, CFG),
     lists:reverse([{Root, Index, <<L:256>>}|T]);
 %unfold(Root, [{Index, X}|R], T, CFG) %stem case
 %  when (is_binary(X) and (size(X) == (32*2))) 
 %       ->
 %    1=2,
-    %io:fwrite("verify2 unfold affine point\n"),
-%    <<H:256>> = stem2:hash_point(
+    %io:fwrite("verify unfold affine point\n"),
+%    <<H:256>> = stem:hash_point(
 %                  ed:affine2extended(X)),
 %    unfold(X, R, [{Root, Index, <<H:256>>}|T], CFG);
 unfold(Root, [{Index, X}|R], T, CFG) %stem case
   when (is_binary(X) and (size(X) == (32*4)))
    ->
-    <<H:256>> = stem2:hash_point(X),
+    <<H:256>> = stem:hash_point(X),
     unfold(X, R, [{Root, Index, <<H:256>>}|T], CFG);
 unfold(Root, [H|J], T, CFG) ->
     unfold(Root, H, T, CFG)
@@ -479,7 +479,7 @@ test() ->
     CFG = trie:cfg(trie01),
     Leaves = [leaf:new(999999872, <<0,0>>, 0, CFG),
               leaf:new(999999744, <<0,0>>, 0, CFG)],
-    Leaves2 = store2:clump_by_path(
+    Leaves2 = store:clump_by_path(
                 0, Leaves),
     %todo. each should have the same number of leaves.
     true = (length(remove_empty(Leaves))) ==

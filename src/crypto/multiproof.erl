@@ -27,7 +27,7 @@ calc_G(R, As, Ys, Zs, Domain, DA) ->
     L = length(Domain),
     DivEAll = case L of
                   256 -> 
-                      parameters2:div_e();
+                      parameters:div_e();
                   _ -> poly:all_div_e_parameters(
                          Domain, DA)
               end,
@@ -88,6 +88,7 @@ calc_H2([H|T], [A|AT], Acc) ->
     Acc2 = poly:add(X, Acc),
     calc_H2(T, AT, Acc2).
 
+%calc_R and calc_T are using 
 calc_R([], [], [], B) -> 
     %deterministically generated random number. 
     %io:fwrite(base64:encode(B)),
@@ -143,10 +144,10 @@ fast_prove(As, %[[256 fr encoded ints]...]
     NG2 = poly:sub(G, He),%this is A in the bullet proof.
     {CommitG_e, NG2}.
 fast_verify({CommitG, NG2}, Commits, Zs, Ys) ->
-    {Gs, _Hs, _Q} = parameters2:read(),
-    DA = parameters2:da(),
-    PA = parameters2:a(),
-    Domain = parameters2:domain(),
+    {Gs, _Hs, _Q} = parameters:read(),
+    DA = parameters:da(),
+    PA = parameters:a(),
+    Domain = parameters:domain(),
     [ACG|AffineCommits] = 
         ed:extended2affine_batch(
           [CommitG|Commits]),
@@ -274,10 +275,10 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys)
         and (length(Open_G_E) == 256))->
     fast_verify({CommitG, Open_G_E}, Commits, Zs, Ys);
 verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
-    {Gs, Hs, Q} = parameters2:read(),
-    DA = parameters2:da(),
-    PA = parameters2:a(),
-    Domain = parameters2:domain(),
+    {Gs, Hs, Q} = parameters:read(),
+    DA = parameters:da(),
+    PA = parameters:a(),
+    Domain = parameters:domain(),
     io:fwrite("multiproof verify calc r\n"),
     benchmark:now(),
     [ACG|AffineCommits] = 
@@ -340,7 +341,7 @@ many(X, N) when N > 0 ->
 test(1) ->
                                                 %calc_G
                                                 %sum from i=0 to m-1 of r^i f_i(X)/(t-z_i)
-    Domain = parameters2:domain(),
+    Domain = parameters:domain(),
     Many = 2,
     %As are vectors that contain elements Y at locations Z.
     A = lists:map(fun(X) -> fr:neg(X) end,
@@ -353,13 +354,13 @@ test(1) ->
                    poly:eval_e(Z, F, Domain)
            end, As, Zs),
 
-    DA = poly:c2e(parameters2:da(), Domain),
+    DA = poly:c2e(parameters:da(), Domain),
     R = fr:encode(1),
     G2 = calc_G(R, As, Ys, Zs, Domain, DA),
     {G2};
 test(3) ->
     %test prove.
-    {Gs0, Hs0, Q} = parameters2:read(),
+    {Gs0, Hs0, Q} = parameters:read(),
     {Gs, _} = lists:split(4, Gs0),
     {Hs, _} = lists:split(4, Hs0),
     Domain = fr:encode([1,2,3,4]),
@@ -397,7 +398,7 @@ test(7) ->
     io:fwrite("many is "),
     io:fwrite(integer_to_list(Many)),
     io:fwrite("\n"),
-    Domain = parameters2:domain(),
+    Domain = parameters:domain(),
     A = lists:map(fun(X) -> fr:neg(X) end,
                   lists:reverse(Domain)),
     As = lists:map(fun(_) -> A end,
@@ -407,17 +408,17 @@ test(7) ->
            fun(F, Z) ->
                    poly:eval_e(Z, F, Domain)
            end, As, Zs),
-    {Gs, Hs, Q} = parameters2:read(),
+    {Gs, Hs, Q} = parameters:read(),
     Commit1 = ipa:commit(hd(As), Gs),
     Commits0 = lists:map(fun(A) -> Commit1 end, 
                          As),
     Commits = ed:normalize(Commits0),
     io:fwrite("make proof\n"),
     T1 = erlang:timestamp(),
-    {Gs, Hs, Q} = parameters2:read(),
-    DA = parameters2:da(),
-    PA = parameters2:a(),
-    Domain = parameters2:domain(),
+    {Gs, Hs, Q} = parameters:read(),
+    DA = parameters:da(),
+    PA = parameters:a(),
+    Domain = parameters:domain(),
     %io:fwrite({length(hd(As)), length(As), length(Zs), length(Commits)}),
     %256,1,1,1
     Proof = prove(As, Zs, Commits, Gs, Hs, 
@@ -432,10 +433,10 @@ test(7) ->
     {FProof, Commits};
     
 test(8) ->
-    Domain = parameters2:domain(),
-    {Gs, Hs, Q} = parameters2:read(),
-    DA = parameters2:da(),
-    PA = parameters2:a(),
+    Domain = parameters:domain(),
+    {Gs, Hs, Q} = parameters:read(),
+    DA = parameters:da(),
+    PA = parameters:a(),
 
     Many = 3,
     As = lists:map(

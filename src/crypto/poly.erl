@@ -145,16 +145,16 @@ all_div_e_parameters(Domain, DA) ->
     io:fwrite(integer_to_list(fr:decode(hd(Domain)))),
     L = lists:map(
           fun(M) ->
-                  io:fwrite("div e parameter "),
-                  io:fwrite(integer_to_list(fr:decode(M))),
-                  io:fwrite("\n"),
+                  %io:fwrite("div e parameter "),
+                  %io:fwrite(integer_to_list(fr:decode(M))),
+                  %io:fwrite("\n"),
                   div_e_parameters(
                     Domain, DA, M)
           end, Domain),
     list_to_tuple(L).
 
 %div_e_parameters(_, _, M) ->
-%    parameters2:div_e(M);
+%    parameters:div_e(M);
 div_e_parameters(Domain, DA, M) ->
     Dividends = 
         lists:map(

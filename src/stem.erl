@@ -1,6 +1,6 @@
 %The purpose of this file is to define stems as a data structure in ram, and give some simple functions to operate on them.
 
--module(stem2).
+-module(stem).
 -export([test/1,get/2,put/2,put/3,type/2,
          hash/1,hash_point/1,
          pointers/1,
@@ -188,11 +188,11 @@ update(Location, Stem, CFG) ->
     dump:update(Location, serialize(Stem, CFG), ids:stem(CFG)).
 
 check_root_integrity(Stem) ->
-    MEP = parameters2:multi_exp(),
+    MEP = parameters:multi_exp(),
     Hashes = tuple_to_list(Stem#stem.hashes),
-    R = store2:precomputed_multi_exponent(
+    R = store:precomputed_multi_exponent(
           Hashes,MEP),
-    {Gs, Hs, Q} = parameters2:read(),
+    {Gs, Hs, Q} = parameters:read(),
     R2 = multi_exponent:doit(Hashes, Gs),
     true = ed:e_eq(R, R2),
     true = ed:e_eq(R, Stem#stem.root),
@@ -290,10 +290,10 @@ test(1) ->
     io:fwrite("before equal\n"),
     true = ed:e_eq(S#stem.root, Sb#stem.root),
     Hash = hash:doit(<<>>),
-    %Stem2 = unused_add(S, 3, 1, 5, Hash),
-    %hash(Stem2),
+    %Stem = unused_add(S, 3, 1, 5, Hash),
+    %hash(Stem),
     %testing reading and writing to the hard drive.
-    Pointer = stem2:put(S, CFG),
+    Pointer = stem:put(S, CFG),
     Stem2b = get(Pointer, CFG),
     io:fwrite("next equal\n"),
     true = equal(Stem2b, S),

@@ -1,4 +1,4 @@
--module(store2).
+-module(store).
 -export([batch/3,
          test/1,
          leaf_hash/2,
@@ -14,7 +14,7 @@ batch(Leaves0, RP, CFG) ->%returns {location, stem/leaf, #stem{}/#leaf{}}
     % 2%
     Leaves = sort_by_path2(Leaves0, CFG),
     io:fwrite("store parameters 1\n"),
-    MEP = parameters2:multi_exp(),
+    MEP = parameters:multi_exp(),
     io:fwrite("store storing 1\n"),
     batch(Leaves, RP, stem, 0, CFG, MEP).
 
@@ -46,7 +46,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     Leaves2 = clump_by_path(
                 Depth, Leaves),
     %depth first recursion over the sub-lists on teh sub-trees to calculate the pointers and hashes for this node.
-    RootStem = stem2:get(RP, CFG),
+    RootStem = stem:get(RP, CFG),
     #stem{
            hashes = Hashes,
            pointers = Pointers,
@@ -89,7 +89,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     % 51%
     %io:fwrite(Rs), [<<0,0,0,0...>>,...]
     EllDiff = precomputed_multi_exponent:doit(Rs, MEP),
-    %{Gs, _, _} = parameters2:read(),
+    %{Gs, _, _} = parameters:read(),
     %EllDiff = multi_exponent:doit(Rs, Gs),
 
     % 3.6%
@@ -116,21 +116,21 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
           types = list_to_tuple(Types2),
           root = NewRoot
          },
-    Loc = stem2:put(NewStem, Affine, CFG), 
+    Loc = stem:put(NewStem, Affine, CFG), 
     {Loc, stem, NewStem}.
 
 
 verified(Loc, ProofTree, CFG) ->
-    RootStem = stem2:get(Loc, CFG),
+    RootStem = stem:get(Loc, CFG),
     RootStem2 = verified2(tl(ProofTree), RootStem, CFG),
     RootStem3 = 
         RootStem2#stem{root = hd(ProofTree)},
     if
         ?sanity ->
-            stem2:check_root_integrity(RootStem3);
+            stem:check_root_integrity(RootStem3);
         true -> ok
     end,
-    Loc2 = stem2:put(RootStem3, CFG),
+    Loc2 = stem:put(RootStem3, CFG),
     Loc2.
     
 
@@ -151,21 +151,21 @@ verified2([[{N, {Key, Value}}]|T], Stem, CFG) ->
               leaf_hash(Leaf, CFG)),
     verified2(T, Stem2, CFG);
 verified2([[{N, B = <<_:1024>>}|T1]|T2], Stem, CFG) ->
-    Hash = stem2:hash_point(B),
+    Hash = stem:hash_point(B),
     %Hash = ed:compress_point(B),
     verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG);
 verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG) 
   when is_binary(B) -> 
     1 = element(N+1, Stem#stem.types),
-    ChildStem0 = verified2(T1, stem2:get(element(N+1, Stem#stem.pointers), CFG), CFG),
+    ChildStem0 = verified2(T1, stem:get(element(N+1, Stem#stem.pointers), CFG), CFG),
     ChildStem = ChildStem0#stem{root = B},
     if
         ?sanity ->
-            stem2:check_root_integrity(ChildStem);
+            stem:check_root_integrity(ChildStem);
         true -> ok
     end,
     %io:fwrite(size(ChildStem#stem.root)),
-    Loc = stem2:put(ChildStem, CFG),
+    Loc = stem:put(ChildStem, CFG),
     false = (Hash == uncalculated),
     Stem2 = verified3(N, Stem, 1, Loc, Hash),
     verified2(T2, Stem2, CFG).
@@ -196,7 +196,7 @@ clump_by_path(D, Leaves) ->
                                A < B
                        end, Paths0),
                                
-    {Gs, _, _} = parameters2:read(),
+    {Gs, _, _} = parameters:read(),
     clump_by_path2(
       0, length(Gs), Paths, []).
 clump_by_path2(I, I, _, _) -> [];
@@ -225,7 +225,7 @@ hash_thing(_, stem, stem_not_recorded,
 hash_thing(_, leaf, L = #leaf{}, _, CFG) -> 
     leaf_hash(L, CFG);
 hash_thing(_, stem, S = #stem{}, _, _) -> 
-    stem2:hash(S).
+    stem:hash(S).
 leaf_hash(L = #leaf{}, CFG) ->
     <<N:256>> = leaf:hash(L, CFG),
     fr:encode(N).
@@ -268,7 +268,7 @@ test(3) ->
     %                         leaf:raw_key(Leaf) end,
     %                 Leaves),
     fprof:trace(start),
-    store2:batch(Leaves, Loc, CFG),
+    store:batch(Leaves, Loc, CFG),
     fprof:trace(stop),
     fprof:profile(file, "fprof.trace"),
     fprof:analyse().

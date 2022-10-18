@@ -61,7 +61,7 @@ doit(Rs0, MEP) ->
     %Rs0 is a list of fr encoded values.
     %we want to do part of the bucket algorithm, but since the generator points are all known ahead of time, we want to use precalculated values where possible.
     %n = 2, C = 10 -> 128*2/8 -> 32.
-    Domain0 = parameters2:domain(),
+    Domain0 = parameters:domain(),
     Mepl0 = tuple_to_list(MEP),
     {Domain, Rs, Mepl} = 
         get_domain(% 0.4%
@@ -121,7 +121,7 @@ pme22([Power|T], [H|MEP], Acc) ->
     Acc2 = ed:e_add(X, Acc),
     pme22(T, MEP, Acc2);
 pme22(A, B, C) -> 
-    io:fwrite("store2 pme22 failure\n"),
+    io:fwrite("store pme22 failure\n"),
     io:fwrite({length(A), length(B), C}),
     io:fwrite("\n").
     
@@ -140,9 +140,9 @@ test(1) ->
     %R5 = many(fr:prime()-1, 256),
     R5 = ([fr:prime()-1|many(0, 255)]),
     R = R5,
-    {Gs, _, _} = parameters2:read(),
+    {Gs, _, _} = parameters:read(),
     Old = multi_exponent:doit(fr:encode(R), Gs),
-    MEP = parameters2:multi_exp(),
+    MEP = parameters:multi_exp(),
     New = doit(
             fr:encode(R), MEP), 
     G = hd(Gs),
@@ -168,7 +168,7 @@ test(2) ->
                            <<X:256>> = crypto:strong_rand_bytes(32),
                            fr:encode(X)
                    end, range(1, 256)),
-    MEP = parameters2:multi_exp(),
+    MEP = parameters:multi_exp(),
     T1 = erlang:timestamp(),
     fprof:trace(start),
     lists:map(fun(_) ->

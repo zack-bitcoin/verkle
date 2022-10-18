@@ -95,6 +95,55 @@ where ID is the name of the database (this allows for multiple databases.)
 The test database is `trie01`.
 
 
+Using the software
+============
+
+To create a new database.
+
+`verkle_sup:start_link(KeyLength, Size, ID, Amount, Meta, Mode, Location).`
+
+The verkle tree is a database that stores key-value pairs. Keylength is the number of bytes in a key. Size is the number of bytes in a value. ID is the id of this database, so you can have more than one of these databases at the same time.
+
+Amount is only used in RAM mode. in RAM mode we need to allocate 1 bit for each thing that can be stored, so "Amount" is the maximum number of things that can be stored.
+
+Meta is how many extra bytes you can store with each key-value pair. These extra bytes are meta data that doesn't impact the verkle root of the tree.
+
+Mode needs to be either `ram` or `hd`. This is where you can choose if you want the database to be stored in ram or on the hard drive.
+
+Location is the file where you want to store the database. The ram version also gets stored in a file when you turn off the software. So the database is still there when you turn it on again.
+
+
+To store data in your database.
+You want to store some key-value pairs. First, each key-value pair needs to be packaged into a leaf.
+
+`Leaf = leaf:new(Key, Value, Meta, CFG).`
+
+Key, Value, and Meta are binaries.
+CFG is configuration data for your database. You can find your CFG like this: `CFG = trie:cfg(ID).` where ID is the id of the database you want to use.
+
+Once you have a list of leaves, you can store them in the database like this:
+
+`{Loc2, _, _} = store:batch(Leaves, Loc, CFG).`
+
+Loc is the pointer to your current database. The number 1 is a pointer to your database when it is empty. Loc2 is a pointer to your database once it is filled with data.
+
+Now lets make a proof of some of the data from the database.
+
+`SmallProof = get:batch(Keys, Loc2, CFG, small).`
+
+Where Keys is a list of the keys of the leaves that you want to prove.
+
+And if you want to make the fast version of the proof:
+
+`FastProof = get:batch(Keys, Loc2, CFG, fast).`
+
+Now lets verify the proofs.
+
+`{true, Leaves, _} = verify:proof(Proof, CFG).`
+
+When you verify the proof, it returns a list of all the leaves that this proof proves. The same format works for both small proofs and fast proofs.
+
+
 Tests that the software works.
 ============
 

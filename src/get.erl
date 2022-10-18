@@ -1,4 +1,4 @@
--module(get2).
+-module(get).
 -export([
 batch/3, batch/4, 
 paths2tree/1,
@@ -32,7 +32,7 @@ batch(Keys, Root, CFG) ->
 
 batch(Keys, Root, CFG, Type) ->
     true = ((Type == small) or (Type == fast)),
-    RootStem0 = stem2:get(Root, CFG),
+    RootStem0 = stem:get(Root, CFG),
     %io:fwrite(RootStem0#stem.hashes),
     RootStem = RootStem0#stem{
                  %hashes = 
@@ -88,7 +88,7 @@ batch(Keys, Root, CFG, Type) ->
     %io:fwrite(integer_to_list(PHash)), 
     io:fwrite("get lookup parameters\n"),
     benchmark:now(),
-    Domain = parameters2:domain(),
+    Domain = parameters:domain(),
     io:fwrite("get index to domain conversion\n"),
     benchmark:now(),
     Zs = index2domain2(
@@ -100,13 +100,13 @@ batch(Keys, Root, CFG, Type) ->
     benchmark:now(),
     %the slow step.
     io:fwrite("param 0\n"),% 8%
-    {Gs, Hs, Q} = parameters2:read(),
+    {Gs, Hs, Q} = parameters:read(),
     io:fwrite("param 1\n"),% 8%
-    DA = parameters2:da(),
+    DA = parameters:da(),
     io:fwrite("param 2\n"),% 8%
-    PA = parameters2:a(),
+    PA = parameters:a(),
     io:fwrite("param 3\n"),% 8%
-    Domain = parameters2:domain(),
+    Domain = parameters:domain(),
     io:fwrite("param done\n"),% 8%
     %io:fwrite({As}),
     %FAs = fr:encode(As),%crashes here.
@@ -202,7 +202,7 @@ batch(Keys, Root, CFG, Type) ->
     %Spoints = ed:compress_points(PointsList),
     %TODO this can be batched!!!!!
     Spoints = lists:map(fun(X) ->
-                                %stem2:hash_point(X)
+                                %stem:hash_point(X)
                                 ed:compress_point(X)
                         end, PointsList),
     {[Tree5, CommitG2, Opening2], []} =
@@ -315,7 +315,7 @@ withdraw_points3([]) -> [].
 remove_hashes({-1, X = #stem{}}) -> X#stem.root;
 remove_hashes({Index, X = #stem{}}) -> 
     {Index, X#stem.root};
-    %{Index, stem2:hash_point(X#stem.root)};
+    %{Index, stem:hash_point(X#stem.root)};
 remove_hashes({Index, X = #leaf{}}) -> 
     %{Index, {leaf:key(X), leaf:value(X)}};
     {Index, {leaf:raw_key(X), leaf:value(X)}};
@@ -389,8 +389,8 @@ starts_same_split2(_, Rest, Sames) ->
 
 points_values([<<Loc:?nindex>>|R], Root, CFG) ->
     % Root is a #stem{}
-    Type = stem2:type(Loc+1, Root),
-    P = stem2:pointer(Loc+1, Root),
+    Type = stem:type(Loc+1, Root),
+    P = stem:pointer(Loc+1, Root),
     %EllipticPoint = stem:root(Root),
     %Hashes = stem:hashes(Root),
     V = {Loc, Root},
@@ -400,7 +400,7 @@ points_values([<<Loc:?nindex>>|R], Root, CFG) ->
             %[V, {NextLoc, 0}];
             [V, 0];
         1 -> %stem
-            S0 = stem2:get(P, CFG),
+            S0 = stem:get(P, CFG),
             S = S0#stem{
                   %hashes= fr:decode(S0#stem.hashes)
                   %hashes = binary2int2(

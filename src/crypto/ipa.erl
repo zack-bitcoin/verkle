@@ -311,7 +311,7 @@ test(2) ->
     {{make, timer:now_diff(T2, T1)},%     2246729
      {verify, timer:now_diff(T3, T2)}%,%   1570761
 %     {make2, timer:now_diff(T5, T4)},%   10728733
-%     {verify2, timer:now_diff(T6, T5)}%   9816297
+%     {verify, timer:now_diff(T6, T5)}%   9816297
 };
 %new version creates the proof 4.5x faster, and verifies 6x faster.
 
@@ -332,7 +332,7 @@ test(4) ->
     %E = ?p#p.e,
     %G2 = ok,
     %E = ok,
-    {Gs, _, _} = parameters2:read(),
+    {Gs, _, _} = parameters:read(),
     Many = 10,
     V = lists:map(fun(_) ->
                           <<R:256>> = 
@@ -340,14 +340,14 @@ test(4) ->
                           fr:encode(R)
                   end, range(0, 256)),
     256 = length(V),
-    MEP = parameters2:multi_exp(),
+    MEP = parameters:multi_exp(),
     T1 = erlang:timestamp(),
     lists:map(fun(_) ->
                       commit(V, Gs)
               end, range(0, Many)),
     T2 = erlang:timestamp(),
     lists:map(fun(_) ->
-                          store2:precomputed_multi_exponent(V, MEP)
+                          store:precomputed_multi_exponent(V, MEP)
               end, range(0, Many)),
     T3 = erlang:timestamp(),
     lists:map(fun(_) ->

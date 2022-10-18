@@ -6,9 +6,9 @@ doit(0) ->
     io:fwrite("leaf\n"),
     S = leaf:test(1),
     io:fwrite("stem\n"),
-    S = stem2:test(1),
+    S = stem:test(1),
     io:fwrite("get\n"),
-    S = get2:test(1),
+    S = get:test(1),
     lists:map(fun(N) ->
                       io:fwrite("fr "),
                       io:fwrite(integer_to_list(N)),

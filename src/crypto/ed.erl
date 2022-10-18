@@ -899,9 +899,9 @@ test(13) ->
     Es = affine2extended(decompress_points(Cs)),
     As = extended2affine_batch(Es),
     As = extended2affine_batch(Es0),
-    Hs = lists:map(fun(X) -> stem2:hash_point(X) end,
+    Hs = lists:map(fun(X) -> stem:hash_point(X) end,
                    Es),
-    Hs = lists:map(fun(X) -> stem2:hash_point(X) end,
+    Hs = lists:map(fun(X) -> stem:hash_point(X) end,
                    Es0),
     success;
 test(14) ->
