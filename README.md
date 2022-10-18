@@ -112,6 +112,8 @@ Mode needs to be either `ram` or `hd`. This is where you can choose if you want 
 
 Location is the file where you want to store the database. The ram version also gets stored in a file when you turn off the software. So the database is still there when you turn it on again.
 
+For example: `verkle_sup:start_link(32, 32, trie02, 1000000, 0, hd, "").`
+
 
 To store data in your database.
 You want to store some key-value pairs. First, each key-value pair needs to be packaged into a leaf.
@@ -121,17 +123,23 @@ You want to store some key-value pairs. First, each key-value pair needs to be p
 Key, Value, and Meta are binaries.
 CFG is configuration data for your database. You can find your CFG like this: `CFG = trie:cfg(ID).` where ID is the id of the database you want to use.
 
+for example: `Leaf = leaf:new(<<1:256>>, <<2:256>>, 0, trie:cfg(trie02)).`
+
 Once you have a list of leaves, you can store them in the database like this:
 
 `{Loc2, _, _} = store:batch(Leaves, Loc, CFG).`
 
 Loc is the pointer to your current database. The number 1 is a pointer to your database when it is empty. Loc2 is a pointer to your database once it is filled with data.
 
+for example: `{Loc2, _, _} = store:batch([Leaf], 1, trie:cfg(trie02)).`
+
 Now lets make a proof of some of the data from the database.
 
 `SmallProof = get:batch(Keys, Loc2, CFG, small).`
 
 Where Keys is a list of the keys of the leaves that you want to prove.
+
+for example: `get:batch([<<1:256>>], Loc2, CFG, small).`
 
 And if you want to make the fast version of the proof:
 

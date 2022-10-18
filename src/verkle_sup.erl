@@ -41,6 +41,6 @@ init([CFG, Amount, Mode, Location]) ->
 		{A4, {dump_sup, start_link, [A4, (?nwidth)+(?nwidth*(HashSize + KeyLength)) + (2*HashSize), Amount, Mode, Location]}, permanent, 5000, supervisor, [dump_sup]},
 		{A5, {trie, start_link, [CFG]}, permanent, 5000, worker, [trie]},
 		%{A6, {parameters, start_link, []}, permanent, 5000, worker, [parameters]},
-		{A7, {parameters, start_link, []}, permanent, 5000, worker, [parameters]}
+		{A6, {parameters, start_link, [CFG]}, permanent, 5000, worker, [parameters]}
 	       ],
     {ok, { {one_for_one, 5, 10}, Children} }.

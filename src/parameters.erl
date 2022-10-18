@@ -1,6 +1,6 @@
 -module(parameters).
 -behaviour(gen_server).
--export([start_link/0,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2]).
+-export([start_link/1,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2]).
 -export([read/0, div_e/1, div_e/0,
          multi_exp/0, multi_exp/1, multi_exp/2,
          domain/0, a/0, da/0,
@@ -62,7 +62,9 @@ init(ok) ->
              domain = Domain, dive = DivE, 
              me = ME},
     {ok, DB}.
-start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, ok, []).
+start_link(CFG) -> 
+    %gen_server:start_link({local, ?MODULE}, ?MODULE, ok, []).
+    gen_server:start_link({global, ids:parameters(CFG)}, ?MODULE, ok, []).
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 terminate(_, _) -> io:format("died!"), ok.
 handle_info(_, X) -> {noreply, X}.
@@ -101,23 +103,23 @@ handle_call(a, _From,
 handle_call(_, _From, X) -> {reply, X, X}.
 
 a() ->
-    gen_server:call(?MODULE, a).
+    gen_server:call({global, trie01_parameters}, a).
 da() ->
-    gen_server:call(?MODULE, da).
+    gen_server:call({global, trie01_parameters}, da).
 domain() ->
-    gen_server:call(?MODULE, domain).
+    gen_server:call({global, trie01_parameters}, domain).
 read() ->
-    gen_server:call(?MODULE, ghq).
+    gen_server:call({global, trie01_parameters}, ghq).
 div_e(M) ->
-    gen_server:call(?MODULE, {div_e, M}).
+    gen_server:call({global, trie01_parameters}, {div_e, M}).
 div_e() ->
-    gen_server:call(?MODULE, div_e).
+    gen_server:call({global, trie01_parameters}, div_e).
 multi_exp() ->
-    gen_server:call(?MODULE, multi_exp).
+    gen_server:call({global, trie01_parameters}, multi_exp).
 multi_exp(G) ->
-    gen_server:call(?MODULE, {multi_exp, G}).
+    gen_server:call({global, trie01_parameters}, {multi_exp, G}).
 multi_exp(G, R) ->
-    gen_server:call(?MODULE, {multi_exp, G, R}).
+    gen_server:call({global, trie01_parameters}, {multi_exp, G, R}).
 
 range(X, X) -> [X];
 range(X, Y) when X < Y -> 
