@@ -53,8 +53,9 @@ update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
                    SubPoints),
     %Cs = fq:compress(Es),
     %Cs = ed:compress_points(Es),
-    Cs = lists:map(fun(E) -> stem:hash_point(E)
-                   end, Es),
+    %Cs = lists:map(fun(E) -> stem:hash_point(E)
+    %               end, Es),
+    Cs = stem:hash_points(Es),
     ECs = lists:zipwith(fun(A, B) -> {A, B} end,
                         Es, Cs),
     ECdict = 
@@ -453,14 +454,6 @@ unfold(Root, {Index, {Key, B}}, T, CFG) %leaf case
     Leaf = leaf:new(Key, B, 0, CFG),
     <<L:256>> = store:leaf_hash(Leaf, CFG),
     lists:reverse([{Root, Index, <<L:256>>}|T]);
-%unfold(Root, [{Index, X}|R], T, CFG) %stem case
-%  when (is_binary(X) and (size(X) == (32*2))) 
-%       ->
-%    1=2,
-    %io:fwrite("verify unfold affine point\n"),
-%    <<H:256>> = stem:hash_point(
-%                  ed:affine2extended(X)),
-%    unfold(X, R, [{Root, Index, <<H:256>>}|T], CFG);
 unfold(Root, [{Index, X}|R], T, CFG) %stem case
   when (is_binary(X) and (size(X) == (32*4)))
    ->

@@ -1,11 +1,20 @@
-for multiplication, we could use the faster version of the doubling algorithm, because Z is always equal to 1.
+meta should be bytes, not an integer.
+
+
+use the batched version of hash_points.
+* in store:verified.
+* in verify.
+
+
+
+for multiplication, we could use the faster version of the doubling and adding algorithms, because Z1 is always equal to 1.
 
 
 
 in stem2:serialize, we could batch this to make it faster.
 %look into serialize_stems, there is some commented out code that should be a faster version.
+batched version of stem:put.
 
-in stem2:hash_point, we could batch this to make it faster.
 
 
 
@@ -19,28 +28,14 @@ update_batch2 and update_merge are currently doing a depth first update of the p
 
 
 
-update the readme to explain how to do tests.
-
-update readme to explain the results of benchmarks
-
-
-get2:batch. we should convert the points in a proof to affine format, because that speeds up the process of verification, and it makes the proofs much shorter.
-
-now we can use the updated proof to update the database. but we need more tests to be sure that this works.
-
-
-
-we want to store all the different sized things in a single tree.
-
-
-
 which parts could be re-written in c to make it fast.
 
 * for storage. store:pme2 + secp256k1:me3. We want to pass in a list of points, and have it add them all up fast.
  - pme2 accepts a matrix as input, it is looking up points from a precompute, and then summing them all. the precompute is powers of the generator points.
  - me3 is alternatively adding, and then (doubling the accumulated amount 8 times).
 
-* for proving. multiproof:calc_G_e. it is important not to list the entire As, it has a lot of repetitions. Have a compact non-repeating list of As, and a seperate list of pointers to show which of these corresponds to which Zs/Y combination. parameters:div_e can be made shorter if we are willing to do a few extra finite field multiplications. This will be a good investment because then the parameters fit into the L1 cache.
+* for proving. multiproof:calc_G_e. it is important not to list the entire As, it has a lot of repetitions. Have a compact non-repeating list of As, and a seperate list of pointers to show which of these corresponds to which Zs/Y combination.
+parameters:div_e can be made shorter if we are willing to do a few extra finite field multiplications. This will be a good investment because then the parameters fit into the L1 cache.
 involves a polynomial addition, multiplying the polynomials by scalars, multiplying precompute vectors together.
 
 * for verifying: secp256k1:multi_exponent. The bucket method. involves adding up lots of generator points, then doing me3.
@@ -60,6 +55,4 @@ we can make inner product arguments around 2x faster by using the same pre-compu
 maybe stems should store their data as lists, because in store.erl we only access the data in order.
 This could potentially make storage about 1 second faster.
 but it looks like it would make it slower to look up data.
-
-there are a couple todo notes in store.erl
 

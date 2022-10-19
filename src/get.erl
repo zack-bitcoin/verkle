@@ -198,13 +198,7 @@ batch(Keys, Root, CFG, Type) ->
     Listed = [Tree4, CommitG, TLO],
     PointsList = 
         points_list(Listed),
-    %Spoints = fq:compress(PointsList),
-    %Spoints = ed:compress_points(PointsList),
-    %TODO this can be batched!!!!!
-    Spoints = lists:map(fun(X) ->
-                                %stem:hash_point(X)
-                                ed:compress_point(X)
-                        end, PointsList),
+    Spoints = ed:compress_points(PointsList),
     {[Tree5, CommitG2, Opening2], []} =
         fill_points(Spoints, Listed, []),
     Opening3 = case Type of
@@ -315,9 +309,7 @@ withdraw_points3([]) -> [].
 remove_hashes({-1, X = #stem{}}) -> X#stem.root;
 remove_hashes({Index, X = #stem{}}) -> 
     {Index, X#stem.root};
-    %{Index, stem:hash_point(X#stem.root)};
 remove_hashes({Index, X = #leaf{}}) -> 
-    %{Index, {leaf:key(X), leaf:value(X)}};
     {Index, {leaf:raw_key(X), leaf:value(X)}};
 remove_hashes([H|T]) -> 
     [remove_hashes(H)|

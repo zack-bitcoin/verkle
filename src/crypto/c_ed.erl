@@ -7,6 +7,7 @@
 
          %ed25519 stuff
          double/1, padd/2, pmul/2, pmul_long/2,
+         pmul_long_fast/2,
          
          ctest/1
 ]).
@@ -43,6 +44,8 @@ padd(_, _) ->
 pmul(_, _) ->
     ok.
 pmul_long(_, _) ->
+    ok.
+pmul_long_fast(_, _) ->
     ok.
 ctest(_) ->
     ok.

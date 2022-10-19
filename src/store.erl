@@ -89,21 +89,14 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     % 51%
     %io:fwrite(Rs), [<<0,0,0,0...>>,...]
     EllDiff = precomputed_multi_exponent:doit(Rs, MEP),
-    %{Gs, _, _} = parameters:read(),
-    %EllDiff = multi_exponent:doit(Rs, Gs),
 
     % 3.6%
     NewRoot = ed:e_add(EllDiff, Root),
-    %NewRoot2 = fq:e_add(Root, EllDiff),
-    %true = fq:eq(NewRoot, NewRoot2),
-    %<<HP:256>> = fq:hash_point(NewRoot),
     if
         (NewRoot == error) -> io:fwrite({EllDiff, Root});
         true -> ok
     end,
     [Affine] = ed:extended2affine_batch([NewRoot]),
-    %[<<HP:256>>] = ed:compress_points([Affine]),
-    %io:fwrite({size(EllDiff), size(Root), fq:decode_extended(NewRoot)}),
     %clumping is 6%
     %hashing is 2.45%
     %reading + writing is ???
@@ -119,7 +112,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     Loc = stem:put(NewStem, Affine, CFG), 
     {Loc, stem, NewStem}.
 
-
+%after you verify that a verkle proof is correct, and you update that verkle proof with the new data, you can use this function to store the new data into the database.
 verified(Loc, ProofTree, CFG) ->
     RootStem = stem:get(Loc, CFG),
     RootStem2 = verified2(tl(ProofTree), RootStem, CFG),

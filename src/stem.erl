@@ -2,7 +2,7 @@
 
 -module(stem).
 -export([test/1,get/2,put/2,put/3,type/2,
-         hash/1,hash_point/1,
+         hash/1,hash_point/1,hash_points/1,
          pointers/1,
 	 types/1,hashes/1,pointer/2,%new/5,%add/5,
 	 new_empty/1,%recover/6, 
@@ -178,11 +178,17 @@ hash(S) ->
     P = S#stem.root,
     hash_point(P).
 hash_point(P) ->
-    %todo, this should be batched.
     P2 = ed:e_mul(P, <<8:256/little>>),
     %P2 = ed:affine2extended(P),
     [<<X:256>>] = ed:compress_points([P2]),
     fr:encode(X).
+hash_points(L) ->
+    L2 = lists:map(fun(X) ->
+                           ed:e_mul(X, <<8:256/little>>)
+                   end, L),
+    L3 = ed:compress_points(L2),
+    lists:map(fun(<<X:256>>) -> fr:encode(X) end,
+              L3).
 
 update(Location, Stem, CFG) ->
     dump:update(Location, serialize(Stem, CFG), ids:stem(CFG)).

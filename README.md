@@ -73,7 +73,7 @@ loading the db: 5.7 seconds
 
 making the proof: 2.2 seconds
 
-verifying the proof: 0.57 seconds
+verifying the proof: 0.55 seconds
 
 calculating the root hash after the update: 3.3 seconds
 

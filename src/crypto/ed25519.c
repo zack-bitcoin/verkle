@@ -470,38 +470,64 @@ static inline void e_add2
   mul2(G, H, y3);
   mul2(E, H, t3);
   mul2(F, G, z3);
-  
-  // A -> z3, B -> x3, C -> t3, D -> y3,
-  // E -> N, F-> M, G -> z3, H -> t3
+};
+static inline void e_add2_fast
+(const uint64_t * x1, const uint64_t * y1,
+ const uint64_t * z1,const uint64_t * t1,
+ const uint64_t * x2, const uint64_t * y2,
+ const uint64_t * z2, const uint64_t * t2,
+ uint64_t * x3, uint64_t * y3, uint64_t * z3,
+ uint64_t * t3)
+{
+  uint64_t A[4];
+  uint64_t B[4];
+  uint64_t C[4];
+  uint64_t D[4];
+  uint64_t E[4];
+  uint64_t F[4];
+  uint64_t G[4];
+  uint64_t H[4];
+  //also works if x1 = x3, y1 = y3, ...
 
-  //optimized to enable in-place addition, for less copying when multiplying. requires 64 extra bytes of memory.
-
+  //http://hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#addition-add-2008-hwcd-4
   /*
-  sub2(y1, x1, A);
-  add2(y2, x2, B);
-  mul2(A, B, C);
-  add2(y1, x1, A);
-  sub2(y2, x2, B);
-  mul2(B, A, x3);
-  sub2(x3, C, A);
-  if(is_zero(A)){
+  A = (Y1-X1)*(Y2+X2)
+    B = (Y1+X1)*(Y2-X2)
+    C = Z1*2*T2
+    D = T1*2*Z2
+      E = D+C
+      F = B-A
+      G = B+A
+      H = D-C
+      X3 = E*F
+      Y3 = G*H
+      T3 = E*H
+      Z3 = F*G
+  */
+
+  sub2(y1, x1, E);
+  add2(y2, x2, F);
+  mul2(E, F, A);
+  add2(y1, x1, E);
+  sub2(y2, x2, F);
+  mul2(E, F, B);
+  sub2(B, A, F);
+  if(is_zero(F)){
     return(e_double2(x2, y2, z2, t2, x3,
                      y3, z3, t3, A, B));
-  } else {
-    add2(z1, z1, D);
-    mul2(D, t2, D);
-    add2(z2, z2, y3);
-    mul2(y3, t1, y3);
-    add2(y3, D, B);
-    sub2(x3, C, A);
-    add2(C, x3, z3);
-    sub2(y3, D, t3);
-    mul2(B, A, x3);
-    mul2(z3, t3, y3);
-    mul2(B, t3, t3);
-    mul2(A, z3, z3);
-  }
-  */
+  };
+  add2(t2, t2, E);
+  mul2(z1, E, C);
+  add2(t1, t1, E);
+  //  mul2(z2, E, D);
+  memcpy(D, E, 32);
+  add2(C, D, E);
+  add2(B, A, G);
+  sub2(D, C, H);
+  mul2(E, F, x3);
+  mul2(G, H, y3);
+  mul2(E, H, t3);
+  mul2(F, G, z3);
 };
 
 static inline void e_mul_long2
@@ -519,22 +545,55 @@ static inline void e_mul_long2
   memcpy(y2, one, 32);
   memcpy(z2, one, 32);
   memcpy(t2, zero, 32);
+
   //printf("\n");
   for(int i = 3; i >= 0; i--){
     //printf("\n");
     for(int j = 63; j >= 0; j--){
       int bool = kth_bit(b[i], j);
-      if(1){
-        e_double2(x2, y2, z2, t2,
-                  x2, y2, z2, t2, J, K);
-        if(bool){
-          e_add2(x2, y2, z2, t2,
-                 x, y, z, t,
-                 x2, y2, z2, t2);
+      e_double2(x2, y2, z2, t2,
+                x2, y2, z2, t2, J, K);
+      if(bool){
+        e_add2(x2, y2, z2, t2,
+               x, y, z, t,
+               x2, y2, z2, t2);
           //printf("a");
-        } else {
+      } else {
           //printf(".");
-        }
+      }
+    }
+  }
+}
+static inline void e_mul_long_fast2
+(uint64_t * x, uint64_t * y,//point
+ uint64_t * z, uint64_t * t,
+ uint64_t * b,//exponent
+ uint64_t * x2, uint64_t * y2, //resulting point.
+ uint64_t * z2, uint64_t * t2)
+{
+  uint64_t J[4];
+  uint64_t K[4];
+  uint64_t L[4];
+  uint64_t M[4];
+  memcpy(x2, zero, 32);
+  memcpy(y2, one, 32);
+  memcpy(z2, one, 32);
+  memcpy(t2, zero, 32);
+
+  //printf("\n");
+  for(int i = 3; i >= 0; i--){
+    //printf("\n");
+    for(int j = 63; j >= 0; j--){
+      int bool = kth_bit(b[i], j);
+      e_double2(x2, y2, z2, t2,
+                x2, y2, z2, t2, J, K);
+      if(bool){
+        e_add2_fast(x2, y2, z2, t2,
+               x, y, z, t,
+               x2, y2, z2, t2);
+          //printf("a");
+      } else {
+          //printf(".");
       }
     }
   }
@@ -805,8 +864,71 @@ static ERL_NIF_TERM e_mul_long
     memcpy(Y2, one, 32);
     memcpy(Z2, one, 32);
     memcpy(T2, zero, 32);
+    //} else if(!(is_eq(Z, one))){
+    //    return(error_atom(env));
   } else {
     e_mul_long2(X, Y, Z, T,
+                (uint64_t *)B.data,
+                X2, Y2, Z2, T2);
+  }
+  enif_release_binary(&Point);
+  enif_release_binary(&B);
+  return Result;
+};
+static ERL_NIF_TERM e_mul_long_fast
+(ErlNifEnv* env, int argc,
+ const ERL_NIF_TERM argv[])
+{
+  ErlNifBinary Point, B;
+
+  ERL_NIF_TERM Result;
+  char * C = enif_make_new_binary
+    (env, 128, &Result);
+  
+  int checka =
+    enif_inspect_binary(env, argv[0], &Point);
+  int checkb =
+    enif_inspect_binary(env, argv[1], &B);
+  if((!checka)){
+    //printf("mul error elliptic point\n");
+    return(error_atom(env));
+  };
+  if((!(Point.size == 128))){
+    //printf("mul error elliptic point size\n");
+    return(error_atom(env));
+  }
+  if((!checkb) || (!(B.size == 32))){
+    //printf("mul error exponent size\n");
+    return(error_atom(env));
+  };
+  uint64_t * X2 = (uint64_t *)&(C[0]);
+  uint64_t * Y2 = (uint64_t *)&(C[32]);
+  uint64_t * Z2 = (uint64_t *)&(C[64]);
+  uint64_t * T2 = (uint64_t *)&(C[96]);
+
+  uint64_t * X = (uint64_t *)&(Point.data[0]);
+  uint64_t * Y = (uint64_t *)&(Point.data[32]);
+  uint64_t * Z = (uint64_t *)&(Point.data[64]);
+  uint64_t * T = (uint64_t *)&(Point.data[96]);
+  if((B.data[0] == 0U) &&
+     (B.data[32] == 0U) &&
+     (B.data[64] == 0U) &&
+     (B.data[96] == 0U)){
+    //printf("exponent is zero\n");
+    memcpy(X2, zero, 32);
+    memcpy(Y2, one, 32);
+    memcpy(Z2, one, 32);
+    memcpy(T2, zero, 32);
+  } else if(is_zero_point(X, Y, Z)) {
+    //printf("elliptic point is zero\n");
+    memcpy(X2, zero, 32);
+    memcpy(Y2, one, 32);
+    memcpy(Z2, one, 32);
+    memcpy(T2, zero, 32);
+  } else if(!(is_eq(Z, one))){
+    return(error_atom(env));
+  } else {
+    e_mul_long_fast2(X, Y, Z, T,
                 (uint64_t *)B.data,
                 X2, Y2, Z2, T2);
   }
@@ -951,6 +1073,7 @@ static ErlNifFunc nif_funcs[] =
    {"padd", 2, e_add},
    //{"pmul", 2, e_mul},
    {"pmul_long", 2, e_mul_long},
+   {"pmul_long_fast", 2, e_mul_long_fast},
 
    {"ctest", 1, ctest}
   };

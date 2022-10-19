@@ -117,7 +117,11 @@ e_mul(X = <<_:1024>>, Y = <<_:256>>) ->
     if
         (Xp == 0) and (Yp == Zp) ->
             extended_zero();
+        (<<Zp:256>> == ?one) ->
+            c_ed:pmul_long_fast(X, Y);
         true ->
+            %X2 = affine2extended(
+            %       hd(extended2affine_batch([X]))),
             c_ed:pmul_long(X, Y)
     end.
 %    end.
@@ -899,10 +903,8 @@ test(13) ->
     Es = affine2extended(decompress_points(Cs)),
     As = extended2affine_batch(Es),
     As = extended2affine_batch(Es0),
-    Hs = lists:map(fun(X) -> stem:hash_point(X) end,
-                   Es),
-    Hs = lists:map(fun(X) -> stem:hash_point(X) end,
-                   Es0),
+    HS = stem:hash_points(Es),
+    HS = stem:hash_points(Es0),
     success;
 test(14) ->
     io:fwrite(""),
