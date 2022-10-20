@@ -118,7 +118,7 @@ e_mul(X = <<_:1024>>, Y = <<_:256>>) ->
         (Xp == 0) and (Yp == Zp) ->
             extended_zero();
         (<<Zp:256>> == ?one) ->
-            c_ed:pmul_long_fast(X, Y);
+            c_ed:pmul_long_fast(X, Y); %this is slower. not clear why.
         true ->
             %X2 = affine2extended(
             %       hd(extended2affine_batch([X]))),
@@ -650,12 +650,26 @@ test(6) ->
                    {affine2extended(gen_point()), 
                     <<X2:256/little>>}
               end, R),
+    Ps2 = lists:map(
+           fun(_) ->
+                   <<X:256>> = crypto:strong_rand_bytes(32),
+                   X2 = X rem ?q,
+                   P = affine2extended(gen_point()),
+                   P2 = c_ed:double(c_ed:double(P)),
+                   {P2, 
+                    <<X2:256/little>>}
+              end, R),
     T1 = erlang:timestamp(),
     lists:foldl(fun({P, R}, _) ->
                         e_mul(P, R)
-                end, 0, Ps),
+                end, 0, Ps2),
     T2 = erlang:timestamp(),
-    timer:now_diff(T2, T1)/Many;
+    lists:foldl(fun({P, R}, _) ->
+                        e_mul(P, R)
+                end, 0, Ps),
+    T3 = erlang:timestamp(),
+    {{slow, timer:now_diff(T2, T1)/Many},
+     {fast, timer:now_diff(T3, T2)/Many}};
 test(7) ->
     %multiply test
     P = gen_point(),

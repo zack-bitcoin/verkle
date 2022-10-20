@@ -69,7 +69,7 @@ verify the fast proof: 0.066 seconds
 
 Load a db with 10 000 elements, and prove 3000 of them with a small proof. 'test_trie:test(3).`
 
-loading the db: 5.7 seconds
+loading the db: 6.0 seconds
 
 making the proof: 2.2 seconds
 

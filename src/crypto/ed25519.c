@@ -487,24 +487,6 @@ static inline void e_add2_fast
   uint64_t F[4];
   uint64_t G[4];
   uint64_t H[4];
-  //also works if x1 = x3, y1 = y3, ...
-
-  //http://hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#addition-add-2008-hwcd-4
-  /*
-  A = (Y1-X1)*(Y2+X2)
-    B = (Y1+X1)*(Y2-X2)
-    C = Z1*2*T2
-    D = T1*2*Z2
-      E = D+C
-      F = B-A
-      G = B+A
-      H = D-C
-      X3 = E*F
-      Y3 = G*H
-      T3 = E*H
-      Z3 = F*G
-  */
-
   sub2(y1, x1, E);
   add2(y2, x2, F);
   mul2(E, F, A);
@@ -520,7 +502,8 @@ static inline void e_add2_fast
   mul2(z1, E, C);
   add2(t1, t1, E);
   //  mul2(z2, E, D);
-  memcpy(D, E, 32);
+    memcpy(D, E, 32);
+    //  add2(zero, E, D);
   add2(C, D, E);
   add2(B, A, G);
   sub2(D, C, H);
@@ -925,8 +908,6 @@ static ERL_NIF_TERM e_mul_long_fast
     memcpy(Y2, one, 32);
     memcpy(Z2, one, 32);
     memcpy(T2, zero, 32);
-  } else if(!(is_eq(Z, one))){
-    return(error_atom(env));
   } else {
     e_mul_long_fast2(X, Y, Z, T,
                 (uint64_t *)B.data,
