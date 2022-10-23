@@ -16,7 +16,7 @@ start(normal, []) ->
     Amount = 1000000,
     %Mode = ram,
     Mode = hd,
-    Meta = 2,
+    Meta = 0,
     verkle_sup:start_link(KeyLength, Size, ID, Amount, Meta, Mode, "").
 
 stop(_State) ->

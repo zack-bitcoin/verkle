@@ -20,30 +20,46 @@ serialize(X, CFG) ->
     M = cfg:meta(CFG) * 8,
     S = cfg:value(CFG),
     S = size(X#leaf.value),
+    M = size(X#leaf.meta),
     %io:fwrite({CFG, X}),
     %<<(X#leaf.key):P, 
     <<(X#leaf.key)/binary,
-      (X#leaf.meta):M,
-      (X#leaf.value)/binary>>.
+      %(X#leaf.meta):M,
+      (X#leaf.value)/binary,
+      (X#leaf.meta)/binary
+    >>.
 deserialize(A, CFG) ->
     L = cfg:value(CFG) * 8,
     P = cfg:path(CFG) * 8,
     MS = cfg:meta(CFG) * 8,
     <<Key:P, 
-      Meta:MS,
-      Value:L>> = A,
+      Value:L,
+      Meta:MS
+    >> = A,
     %#leaf{key = Key, value = <<Value:L>>, meta = Meta}. 
-    #leaf{key = <<Key:P>>, value = <<Value:L>>, meta = Meta}. 
+    #leaf{key = <<Key:P>>, value = <<Value:L>>, meta = <<Meta:MS>>}. 
 new(Key, Value, Meta, CFG) when is_integer(Key) ->
     new(<<Key:256>>, Value, Meta, CFG);
-new(<<Key:256>>, Value, Meta, CFG) ->
+new(<<Key:256>>, Value, Meta0, CFG) ->
     P = cfg:path(CFG),
     L = cfg:value(CFG) * 8,
+    M = cfg:meta(CFG) * 8,
+    Meta = if
+               Meta0 == 0 -> <<0:M>>;
+               is_binary(Meta0) -> Meta0
+           end,
+    true = is_binary(Meta),
     case Value of
 	empty -> ok;
 	<<_:L>> -> ok;
-	_ -> io:fwrite({value_is, size(Value), 
+	_ -> io:fwrite({leaf_value_failure, 
+                        size(Value), 
                         L div 8})
+    end,
+    case Meta of
+        <<_:M>> -> ok;
+        _ -> io:fwrite({leaf_meta_failure, 
+                        size(Meta), M div 8})
     end,
     #leaf{key = <<Key:256>>, value = Value, meta = Meta}. 
 key(#leaf{key = <<K:256>>}) -> K.

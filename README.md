@@ -47,14 +47,16 @@ subtraction: 0.08
 additions: 0.1
 
 
-elliptic point multiplication speed test `ed:test(6).`: 235
-
+elliptic point multiplication speed test `ed:test(6).`:
+for unsimplified points: 230
+for simplified points: 220
+chain, we use the fast proofs for light nodes, and the small proofs in blocks.
 elliptic point doubling speed test `ed:test(17).` : 0.9
 
 elliptic point doubling speed test `ed:test(18).` : 1.15
 
 
-proving 3 things. 'test_trie:test(1).`
+proving 3 things. `test_trie:test(1).`
 
 load 10 000 elements: 2.36 seconds
 
@@ -67,11 +69,11 @@ make a fast proof: 0.075 seconds
 verify the fast proof: 0.066 seconds
 
 
-Load a db with 10 000 elements, and prove 3000 of them with a small proof. 'test_trie:test(3).`
+Load a db with 10 000 elements, and prove 3000 of them with a small proof. `test_trie:test(3).`
 
 loading the db: 6.0 seconds
 
-making the proof: 2.2 seconds
+making the proof: 2.1 seconds
 
 verifying the proof: 0.55 seconds
 

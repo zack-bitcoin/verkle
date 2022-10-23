@@ -51,10 +51,6 @@ update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
     SubPoints = sub_points(Diffs0),
     Es = lists:map(fun({sub, X, _}) -> X end, 
                    SubPoints),
-    %Cs = fq:compress(Es),
-    %Cs = ed:compress_points(Es),
-    %Cs = lists:map(fun(E) -> stem:hash_point(E)
-    %               end, Es),
     Cs = stem:hash_points(Es),
     ECs = lists:zipwith(fun(A, B) -> {A, B} end,
                         Es, Cs),
