@@ -136,7 +136,10 @@ verified2([[{N, 0}]|T], Stem, CFG) ->
 verified2([{N, 0}|T], Stem, CFG) -> 
     Stem2 = verified3(N, Stem, 0, 0, <<0:256>>),
     verified2(T, Stem2, CFG);
-verified2([[{N, {Key, Value}}]|T], Stem, CFG) -> 
+%verified2([[{N, {Key, Value, Meta}}]|T], 
+verified2([[{N, {Key, Value}}]|T], 
+          Stem, CFG) -> 
+    %Leaf = leaf:new(Key, Value, Meta, CFG),
     Leaf = leaf:new(Key, Value, 0, CFG),
     Loc = leaf:put(Leaf, CFG),
     Stem2 = verified3(

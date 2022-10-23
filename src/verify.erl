@@ -41,6 +41,7 @@ update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
     %adding leaves to an existing stem.
     Leaves2 = store:clump_by_path(
                 Depth, Leaves),
+    %io:fwrite({Tree, Leaves2}),
     {Diffs0, Tree2} = 
         update_merge(Leaves2, 
                      Tree, Depth, CFG, MEP, 
@@ -59,7 +60,6 @@ update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
                             dict:store(
                               Key, Value, A) 
                     end, dict:new(), ECs),
-                
     {_, Tree3} = insert_stem_hashes2(ECdict, Tree2, []),
     %Diffs = calc_subs(Diffs0, Cs),
     Diffs = calc_subs(Diffs0, Es),
@@ -96,7 +96,8 @@ insert_stem_hashes2(ECs, [H|T], Result) ->
     {ECs2, H2} = insert_stem_hashes2(ECs, H, []),
     insert_stem_hashes2(ECs2, T, [H2|Result]);
     %insert_stem_hashes2(ECs2, T, H2 ++ Result);
-insert_stem_hashes2(ECs, Tree = {I, {K, V}}, 
+%insert_stem_hashes2(ECs, Tree = {_I, {_K, _V, _M}}, 
+insert_stem_hashes2(ECs, Tree = {_I, {_K, _V}}, 
                     []) ->
     {ECs, Tree};
 insert_stem_hashes2(
@@ -205,6 +206,7 @@ update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees],
                  [[{N, {mstem, Hash, NewPoint}}|Tree2]|R], 
                  [Diff|Diffs], N+1);
 update_merge([[{K, 0}]|Leaves], 
+             %[[{N, {OldK, OldV, Meta}}]|Subtrees],
              [[{N, {OldK, OldV}}]|Subtrees],
              Depth, CFG, MEP, R, Diffs, N) ->
     %deleting a leaf.
@@ -215,11 +217,13 @@ update_merge([[{K, 0}]|Leaves],
                  [{N, 0}|R], 
                  [fr:neg(OldN)|Diffs], N+1);
 update_merge([LH|Leaves], 
+             %[[{N, {Key, Value, Meta}}]|Subtrees], 
              [[{N, {Key, Value}}]|Subtrees], 
              Depth, CFG, MEP, R, Diffs, N) ->
     %io:fwrite("add a leaf to a spot with an existing leaf\n"),
     %there is already a leaf here.
     %NewLeaf = leaf:new(Key, Value, 0, CFG),
+    %FL = leaf:new(Key, Value, Meta, CFG),
     FL = leaf:new(Key, Value, 0, CFG),
                      
     B = leaf_in_list(FL, LH),
@@ -247,7 +251,9 @@ update_merge([LH|Leaves],
               Leaves, Subtrees, Depth, CFG, 
               %MEP, [[{N, {leaf:key(Leaf2),
               MEP, [[{N, {leaf:raw_key(Leaf2),
-                          leaf:value(Leaf2)}}]|
+                          leaf:value(Leaf2)
+                          %leaf:meta(Leaf2)}}]|
+                          }}]|
                     R],
               [LeafDiff|Diffs], N+1);
         B -> 
@@ -281,12 +287,15 @@ update_merge([LH|Leaves],
     %Key = leaf:key(hd(LH)),
     Key = leaf:raw_key(hd(LH)),
     Value = leaf:value(hd(LH)),
+    Meta = leaf:meta(hd(LH)),
     %#leaf{key = Key, value = Value} = hd(LH),
     io:fwrite("new leaf diff calculation\n"),
     Diff = store:leaf_hash(hd(LH), CFG),
     %Diff = leaf:hash(hd(LH), CFG),
     update_merge(Leaves, Subtrees, Depth, CFG, 
-                 MEP, [[{N, {Key, Value}}]|R], 
+                 %MEP, [[{N, {Key, Value, Meta}}]
+                 MEP, [[{N, {Key, Value}}]
+                       |R], 
                  [Diff|Diffs], N+1);
 update_merge(Ls, [X|T], Depth, CFG, MEP, R, Diffs, 
              N) when is_tuple(X)->
@@ -427,9 +436,11 @@ proof({Tree0, CommitG0, Open0}, CFG) ->
     %[{1, p1}, [{0, L1},{1, L2}], [{3, p2},{0,L3}]]
 leaves({Y, X = 0}) -> [{Y, X}];
 leaves(X = {_, B}) when is_binary(B) -> [];
+%leaves({_, X = {I, B, M}}) 
 leaves({_, X = {I, B}}) 
   when is_binary(B) and 
        is_binary(I) and 
+%       is_binary(M) and
        (size(I) == 32) -> 
     %1=2,
     [X];
@@ -443,10 +454,12 @@ leaves(X) ->
 
 unfold(Root, {Index, 0}, T, CFG) ->%empty case
     lists:reverse([{Root, Index, <<0:256>>}|T]);
+%unfold(Root, {Index, {Key, B, Meta}}, T, CFG) %leaf case
 unfold(Root, {Index, {Key, B}}, T, CFG) %leaf case
   when is_binary(B) ->
     %Leaf = #leaf{key = Key, value = B},
     %io:fwrite("verify unfold leaf\n"),
+    %Leaf = leaf:new(Key, B, Meta, CFG),
     Leaf = leaf:new(Key, B, 0, CFG),
     <<L:256>> = store:leaf_hash(Leaf, CFG),
     lists:reverse([{Root, Index, <<L:256>>}|T]);

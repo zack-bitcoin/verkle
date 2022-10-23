@@ -59,11 +59,11 @@ test(1, CFG) ->
     %Keys = [<<5:256>>],
     %Keys = [hd(Many), hd(tl(Many))],
     {Keys, _} = lists:split(Prove, Many),
-    Proof = 
+    {Proof, _} = 
         get:batch(Keys, NewLoc, CFG),
     T3 = erlang:timestamp(),
     io:fwrite("make fast proof\n"),
-    FastProof = 
+    {FastProof, _} = 
         get:batch(Keys, NewLoc, CFG, fast),
 
     T4 = erlang:timestamp(),
@@ -100,7 +100,7 @@ test(1, CFG) ->
     %FastProof;
 test(2, CFG) ->
     Loc = 1,
-    Times = 200,
+    Times = 2,
     Leaves = 
         lists:map(
           fun(N) -> 
@@ -116,7 +116,7 @@ test(2, CFG) ->
                      Leaves),
     {NewLoc, stem, _} = 
         store:batch(Leaves, Loc, CFG),
-    {ProofTree, Commit, Opening} = 
+    {{ProofTree, Commit, Opening}, _} = 
         get:batch([<<5:256>>,<<6:256>>|Many], 
                    NewLoc, CFG),
     {true, _, DecompressedTree} = 
@@ -143,6 +143,7 @@ test(2, CFG) ->
         store:batch(Leaves2, 1, CFG),
     io:fwrite("test trie stored\n"),
     RootStem = stem:get(Loc3, CFG),
+    %io:fwrite(DecompressedTree),
     ProofTree2 = 
         verify:update(
           %DecompressedTree, [Leaf1, Leaf2, Leaf3],
@@ -167,7 +168,7 @@ test(2, CFG) ->
     HP3 = HP4,
    
     %5 is the new leaf.
-    {Proof1, Commit1, Opening1} = 
+    {{Proof1, Commit1, Opening1}, _} = 
         get:batch([<<5:256>>], Loc3, CFG),
     Root1 = stem:root(stem:get(Loc3, CFG)),
     %io:fwrite({size(Root1), size(hd(Proof1))}),
@@ -176,7 +177,7 @@ test(2, CFG) ->
           %Root1,
           {Proof1, Commit1, Opening1}, CFG),
                                  
-    {Proof2, Commit2, Opening2} = 
+    {{Proof2, Commit2, Opening2}, _} = 
         get:batch([<<5:256>>], Loc2, CFG),
     Root2 = stem:root(stem:get(Loc2, CFG)),
     {true, _, _} = 
@@ -188,17 +189,17 @@ test(2, CFG) ->
     HP1 = HP2,
 
     %this is for the leaf being edited.
-    {Proof3, _, _} = 
+    {{Proof3, _, _}, _} = 
         get:batch([leaf:raw_key(Leaf1)], 
                    Loc3, CFG),
-    {Proof4, _, _} = 
+    {{Proof4, _, _}, _} = 
         get:batch([leaf:raw_key(Leaf1)], 
                    Loc2, CFG),
 
     %this is for the leaf being deleted.
-    {Proof5, _, _} = 
+    {{Proof5, _, _}, _} = 
         get:batch([DeleteKey], Loc3, CFG),
-    {Proof6, _, _} = 
+    {{Proof6, _, _}, _} = 
         get:batch([DeleteKey], Loc2, CFG),
 
     %io:fwrite(Proof5),
@@ -270,7 +271,7 @@ test(3, CFG) ->
         store:batch(Leaves, Loc, CFG),
     %making the verkle proof
     T1 = erlang:timestamp(),
-    {ProofTree, Commit, Opening} = 
+    {{ProofTree, Commit, Opening}, _} = 
         get:batch(Updating, Loc2, CFG),
     %verifying the verkle proof
     T2 = erlang:timestamp(),
@@ -347,7 +348,7 @@ test(23, CFG) ->
     
     {Loc2, _, _} = 
         store:batch(Leaves, Loc, CFG),
-    {ProofTree, Commit, Opening} = 
+    {{ProofTree, Commit, Opening}, _} = 
         get:batch(Keys, Loc2, CFG),
     {true, Leaves2} = 
         verify:proof(
@@ -368,7 +369,7 @@ test(4, CFG) ->
     Leaf1 = leaf:new(Key, <<27:16>>, <<>>, CFG),
     Leaf2 = leaf:new(Key, <<29:16>>, <<>>, CFG),
     {Loc2, stem, _} = store:batch([Leaf1], Loc, CFG),
-    {ProofTree, Commit, Opening} = 
+    {{ProofTree, Commit, Opening}, _} = 
         get:batch([<<Key:256>>],
                    Loc2, CFG),
     {true, _, DecompressedTree} = 
@@ -428,7 +429,7 @@ proof_test(Loc2, UpdateMany) ->
     
     %making the verkle proof
     T1 = erlang:timestamp(),
-    {ProofTree, Commit, Opening} = 
+    {{ProofTree, Commit, Opening}, _} = 
         get:batch(Updating, Loc2, CFG),
 
     io:fwrite("verifying the proof\n"),

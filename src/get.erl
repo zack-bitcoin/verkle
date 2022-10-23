@@ -68,6 +68,9 @@ batch(Keys, Root, CFG, Type) ->
     io:fwrite("get remove hashes\n"),
     benchmark:now(),
     Tree4 = remove_hashes(Tree3),%the hashes in each stem aren't needed to verify the verkle proof, so they are removed.
+    
+    %todo, strip the meta data from the leaves.
+
     %[El, {I, El}, [{I, leaf}], [{I, El}, {I, El}], [{I, El}, [{I, El}], [{I, El}]]]
     %io:fwrite(fr:decode(ed:compress_point(element(2, hd(hd(tl(Tree4))))))),%bad point!
 
@@ -205,8 +208,26 @@ batch(Keys, Root, CFG, Type) ->
                    small -> list_to_tuple(Opening2);
                    fast -> Opening2
                end,
-    {Tree5, CommitG2, Opening3}.
+    {Tree6, Meta} = strip_meta(Tree5, dict:new()),
+    %todo. return meta data from the leaves.
+    {{Tree6, CommitG2, Opening3}, Meta}.
     %{Tree4, CommitG, Opening}.
+
+strip_meta([], D) -> {[], D};
+strip_meta([H|T], D) -> 
+    {H2, D2} = strip_meta(H, D),
+    {T2, D3} = strip_meta(T, D2),
+    {[H2|T2], D3};
+strip_meta({Key, Value, Meta}, D) -> 
+    {{Key, Value}, dict:store(Key, Meta, D)};
+strip_meta(T, D) when is_tuple(T) ->
+    L = tuple_to_list(T),
+    {L2, D2} = strip_meta(L, D),
+    T2 = list_to_tuple(L2),
+    {T2, D2};
+strip_meta(B, D) when is_binary(B) -> {B, D};
+strip_meta(I, D) when is_integer(I) -> {I, D}.
+
 
 points_list(<<E:1024>>) -> [<<E:1024>>];
 points_list({I, 0}) when is_integer(I) -> [];
@@ -216,7 +237,7 @@ points_list([H|T]) ->% when is_list(H) ->
     points_list(H) ++ points_list(T);
 %points_list([_|T]) ->
 %    points_list(T);
-points_list({I, {_Key, _Value}}) 
+points_list({I, {_Key, _Value, _Meta}}) 
   when is_integer(I) -> 
     %a leaf.
     [];
@@ -236,7 +257,7 @@ compressed_points_list([H|T]) ->
     compressed_points_list(H) ++
         compressed_points_list(T);
 compressed_points_list([]) -> [];
-compressed_points_list({_Key, _Value}) -> 
+compressed_points_list({_Key, _Value, _Meta}) -> 
     %a leaf
     [];
 %compressed_points_list(X) -> 
@@ -310,7 +331,8 @@ remove_hashes({-1, X = #stem{}}) -> X#stem.root;
 remove_hashes({Index, X = #stem{}}) -> 
     {Index, X#stem.root};
 remove_hashes({Index, X = #leaf{}}) -> 
-    {Index, {leaf:raw_key(X), leaf:value(X)}};
+    {Index, {leaf:raw_key(X), leaf:value(X), 
+             leaf:meta(X)}};
 remove_hashes([H|T]) -> 
     [remove_hashes(H)|
      remove_hashes(T)];
