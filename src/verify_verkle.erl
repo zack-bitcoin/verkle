@@ -341,7 +341,7 @@ merge_find_helper(P, D) ->
 decompress_proof(
   Open0 = {Open1, Open2, OpenL, Open4, Open5}, 
   Tree0, CommitG0) ->
-    CPL = get:compressed_points_list(Tree0),
+    CPL = get_verkle:compressed_points_list(Tree0),
     false = CPL == [],
     [CommitG, Open1b |Decompressed2] = 
         ed:affine2extended(
@@ -357,7 +357,7 @@ decompress_proof(
     {Tree, Open, Root1, CommitG};
 decompress_proof(Open, Tree0, CommitG0) 
   when is_list(Open)->
-    CPL = get:compressed_points_list(Tree0),
+    CPL = get_verkle:compressed_points_list(Tree0),
     %lists:map(fun(X)-> io:fwrite(base64:encode(X)), io:fwrite("\n") end,
     %                    [CommitG0] ++ CPL),
     %1=2,
@@ -406,10 +406,10 @@ proof({Tree0, CommitG0, Open0}, CFG) ->
             io:fwrite("verify split 3 parts \n"),
             benchmark:now(),
             {Commits, Zs0, Ys} = 
-                get:split3parts(Tree2, [],[],[]),
+                get_verkle:split3parts(Tree2, [],[],[]),
             io:fwrite("veirfy index2domain \n"),
             benchmark:now(),
-            Zs1 = get:index2domain2(
+            Zs1 = get_verkle:index2domain2(
                    Zs0),
             Zs = fr:encode(Zs1),
             io:fwrite("verify multiproof \n"),

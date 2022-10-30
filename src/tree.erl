@@ -118,7 +118,7 @@ handle_call({get, Key, RootPointer}, _From, CFG) ->
     valid_key(Key),
     P = leaf_verkle:path_maker(Key, CFG),
     {RootHash, L, Proof} = 
-        get:get(P, RootPointer, CFG),
+        get_verkle:get(P, RootPointer, CFG),
     L2 = if
 	     L == empty -> empty;
 	     L == unknown -> unknown;

@@ -58,7 +58,7 @@ doit(1) ->
     T2 = erlang:timestamp(),
     io:fwrite("make proof\n"),
     Proof = 
-        get:batch(Many, NewLoc, CFG),
+        get_verkle:batch(Many, NewLoc, CFG),
     T3 = erlang:timestamp(),
     io:fwrite("verify proof\n"),
     Root = stem_verkle:root(stem_verkle:get(NewLoc, CFG)),
@@ -117,7 +117,7 @@ doit(2) ->
     T2 = erlang:timestamp(),
     io:fwrite("make proof\n"),
     Proof = 
-        get:batch(Many, NewLoc, CFG),
+        get_verkle:batch(Many, NewLoc, CFG),
     T3 = erlang:timestamp(),
     io:fwrite("verify proof\n"),
     Root = stem_verkle:root(stem_verkle:get(NewLoc, CFG)),
