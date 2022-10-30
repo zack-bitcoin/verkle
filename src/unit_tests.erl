@@ -6,7 +6,7 @@ doit(0) ->
     io:fwrite("leaf\n"),
     S = leaf:test(1),
     io:fwrite("stem\n"),
-    S = stem:test(1),
+    S = stem_verkle:test(1),
     io:fwrite("get\n"),
     S = get:test(1),
     lists:map(fun(N) ->

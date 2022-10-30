@@ -917,8 +917,8 @@ test(13) ->
     Es = affine2extended(decompress_points(Cs)),
     As = extended2affine_batch(Es),
     As = extended2affine_batch(Es0),
-    HS = stem:hash_points(Es),
-    HS = stem:hash_points(Es0),
+    HS = stem_verkle:hash_points(Es),
+    HS = stem_verkle:hash_points(Es0),
     success;
 test(14) ->
     io:fwrite(""),

@@ -68,7 +68,7 @@ test(1, CFG) ->
 
     T4 = erlang:timestamp(),
     io:fwrite("verify proof\n"),
-    Root = stem:root(stem:get(NewLoc, CFG)),
+    Root = stem_verkle:root(stem_verkle:get(NewLoc, CFG)),
     {true, Leaves2, _} = 
         verify_verkle:proof(Proof, CFG),
     T5 = erlang:timestamp(),
@@ -142,7 +142,7 @@ test(2, CFG) ->
     {Loc3, _, _} = 
         store_verkle:batch(Leaves2, 1, CFG),
     io:fwrite("test trie stored\n"),
-    RootStem = stem:get(Loc3, CFG),
+    RootStem = stem_verkle:get(Loc3, CFG),
     %io:fwrite(DecompressedTree),
     ProofTree2 = 
         verify_verkle:update(
@@ -152,25 +152,25 @@ test(2, CFG) ->
     NewRoot2 = hd(ProofTree2),
     Loc2 = store_verkle:verified(
                   NewLoc, ProofTree2, CFG),
-    RootStem4 = stem:get(Loc2, CFG),
+    RootStem4 = stem_verkle:get(Loc2, CFG),
 
-    HP3 = stem:hash(stem:get(Loc2, CFG)),
-    HP4 = stem:hash(stem:get(Loc3, CFG)),
-    CheckStem2 = stem:get(Loc2, CFG),
-    CheckStem3 = stem:get(Loc3, CFG),
+    HP3 = stem_verkle:hash(stem_verkle:get(Loc2, CFG)),
+    HP4 = stem_verkle:hash(stem_verkle:get(Loc3, CFG)),
+    CheckStem2 = stem_verkle:get(Loc2, CFG),
+    CheckStem3 = stem_verkle:get(Loc3, CFG),
     true = element(5, CheckStem3) == element(5, CheckStem2),
     true = ed:e_eq(element(2, CheckStem2), element(2, CheckStem3)),
 %    io:fwrite({HP3 == HP4, 
 %               lists:reverse(tuple_to_list(element(5, CheckStem2))),
 %               lists:reverse(tuple_to_list(element(5, CheckStem3))),
-%               stem:get(Loc2, CFG), 
-%               stem:get(Loc3, CFG)}),
+%               stem_verkle:get(Loc2, CFG), 
+%               stem_verkle:get(Loc3, CFG)}),
     HP3 = HP4,
    
     %5 is the new leaf.
     {{Proof1, Commit1, Opening1}, _} = 
         get:batch([<<5:256>>], Loc3, CFG),
-    Root1 = stem:root(stem:get(Loc3, CFG)),
+    Root1 = stem_verkle:root(stem_verkle:get(Loc3, CFG)),
     %io:fwrite({size(Root1), size(hd(Proof1))}),
     {true, _, _} = 
         verify_verkle:proof(
@@ -179,13 +179,13 @@ test(2, CFG) ->
                                  
     {{Proof2, Commit2, Opening2}, _} = 
         get:batch([<<5:256>>], Loc2, CFG),
-    Root2 = stem:root(stem:get(Loc2, CFG)),
+    Root2 = stem_verkle:root(stem_verkle:get(Loc2, CFG)),
     {true, _, _} = 
         verify_verkle:proof(
           %Root2,
           {Proof2, Commit2, Opening2}, CFG),
-    HP1 = stem:hash_point(ed:decompress_point(hd(Proof1))),
-    HP2 = stem:hash_point(ed:decompress_point(hd(Proof2))),
+    HP1 = stem_verkle:hash_point(ed:decompress_point(hd(Proof1))),
+    HP2 = stem_verkle:hash_point(ed:decompress_point(hd(Proof2))),
     HP1 = HP2,
 
     %this is for the leaf being edited.
@@ -203,8 +203,8 @@ test(2, CFG) ->
         get:batch([DeleteKey], Loc2, CFG),
 
     %io:fwrite(Proof5),
-    HP1 = stem:hash_point(ed:decompress_point(hd(Proof1))),
-    HP2 = stem:hash_point(ed:decompress_point(hd(Proof2))),
+    HP1 = stem_verkle:hash_point(ed:decompress_point(hd(Proof1))),
+    HP2 = stem_verkle:hash_point(ed:decompress_point(hd(Proof2))),
     Case2  = not(ed:a_eq(ed:decompress_point(hd(Proof3)), ed:decompress_point(hd(Proof4)))),
     Case3  = not(ed:a_eq(ed:decompress_point(hd(Proof5)), ed:decompress_point(hd(Proof6)))),
     if
@@ -377,10 +377,10 @@ test(4, CFG) ->
           {ProofTree, Commit, Opening}, CFG),
     ProofTree2 = 
         verify_verkle:update(DecompressedTree, [Leaf2], CFG),
-    RootHash2 = stem:hash_point(hd(ProofTree2)),
+    RootHash2 = stem_verkle:hash_point(hd(ProofTree2)),
 
     {Loc4, stem, _} = store_verkle:batch([Leaf2], Loc, CFG),
-    RootHash1 = stem:hash(stem:get(Loc4, CFG)),
+    RootHash1 = stem_verkle:hash(stem_verkle:get(Loc4, CFG)),
 
     RootHash2 = RootHash1,
 

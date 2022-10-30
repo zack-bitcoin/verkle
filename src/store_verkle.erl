@@ -46,7 +46,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     Leaves2 = clump_by_path(
                 Depth, Leaves),
     %depth first recursion over the sub-lists on teh sub-trees to calculate the pointers and hashes for this node.
-    RootStem = stem:get(RP, CFG),
+    RootStem = stem_verkle:get(RP, CFG),
     #stem{
            hashes = Hashes,
            pointers = Pointers,
@@ -109,21 +109,21 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
           types = list_to_tuple(Types2),
           root = NewRoot
          },
-    Loc = stem:put(NewStem, Affine, CFG), 
+    Loc = stem_verkle:put(NewStem, Affine, CFG), 
     {Loc, stem, NewStem}.
 
 %after you verify that a verkle proof is correct, and you update that verkle proof with the new data, you can use this function to store the new data into the database.
 verified(Loc, ProofTree, CFG) ->
-    RootStem = stem:get(Loc, CFG),
+    RootStem = stem_verkle:get(Loc, CFG),
     RootStem2 = verified2(tl(ProofTree), RootStem, CFG),
     RootStem3 = 
         RootStem2#stem{root = hd(ProofTree)},
     if
         ?sanity ->
-            stem:check_root_integrity(RootStem3);
+            stem_verkle:check_root_integrity(RootStem3);
         true -> ok
     end,
-    Loc2 = stem:put(RootStem3, CFG),
+    Loc2 = stem_verkle:put(RootStem3, CFG),
     Loc2.
     
 
@@ -147,21 +147,21 @@ verified2([[{N, {Key, Value}}]|T],
               leaf_hash(Leaf, CFG)),
     verified2(T, Stem2, CFG);
 verified2([[{N, B = <<_:1024>>}|T1]|T2], Stem, CFG) ->
-    Hash = stem:hash_point(B),
+    Hash = stem_verkle:hash_point(B),
     %Hash = ed:compress_point(B),
     verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG);
 verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG) 
   when is_binary(B) -> 
     1 = element(N+1, Stem#stem.types),
-    ChildStem0 = verified2(T1, stem:get(element(N+1, Stem#stem.pointers), CFG), CFG),
+    ChildStem0 = verified2(T1, stem_verkle:get(element(N+1, Stem#stem.pointers), CFG), CFG),
     ChildStem = ChildStem0#stem{root = B},
     if
         ?sanity ->
-            stem:check_root_integrity(ChildStem);
+            stem_verkle:check_root_integrity(ChildStem);
         true -> ok
     end,
     %io:fwrite(size(ChildStem#stem.root)),
-    Loc = stem:put(ChildStem, CFG),
+    Loc = stem_verkle:put(ChildStem, CFG),
     false = (Hash == uncalculated),
     Stem2 = verified3(N, Stem, 1, Loc, Hash),
     verified2(T2, Stem2, CFG).
@@ -221,7 +221,7 @@ hash_thing(_, stem, stem_not_recorded,
 hash_thing(_, leaf, L = #leaf{}, _, CFG) -> 
     leaf_hash(L, CFG);
 hash_thing(_, stem, S = #stem{}, _, _) -> 
-    stem:hash(S).
+    stem_verkle:hash(S).
 leaf_hash(L = #leaf{}, CFG) ->
     <<N:256>> = leaf:hash(L, CFG),
     fr:encode(N).

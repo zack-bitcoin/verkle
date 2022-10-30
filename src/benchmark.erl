@@ -61,7 +61,7 @@ doit(1) ->
         get:batch(Many, NewLoc, CFG),
     T3 = erlang:timestamp(),
     io:fwrite("verify proof\n"),
-    Root = stem:root(stem:get(NewLoc, CFG)),
+    Root = stem_verkle:root(stem_verkle:get(NewLoc, CFG)),
     {true, Leaves2} = 
         verify_verkle:proof(Root, Proof, CFG),
     T4 = erlang:timestamp(),
@@ -120,9 +120,9 @@ doit(2) ->
         get:batch(Many, NewLoc, CFG),
     T3 = erlang:timestamp(),
     io:fwrite("verify proof\n"),
-    Root = stem:root(stem:get(NewLoc, CFG)),
+    Root = stem_verkle:root(stem_verkle:get(NewLoc, CFG)),
 %    io:fwrite({NewLoc, 
-%               stem:get(NewLoc, CFG),
+%               stem_verkle:get(NewLoc, CFG),
 %               base64:encode(Root)}),
     {true, Leaves2} = 
         verify_verkle:proof(Root, Proof, CFG),

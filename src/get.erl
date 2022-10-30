@@ -32,7 +32,7 @@ batch(Keys, Root, CFG) ->
 
 batch(Keys, Root, CFG, Type) ->
     true = ((Type == small) or (Type == fast)),
-    RootStem0 = stem:get(Root, CFG),
+    RootStem0 = stem_verkle:get(Root, CFG),
     %io:fwrite(RootStem0#stem.hashes),
     RootStem = RootStem0#stem{
                  %hashes = 
@@ -403,10 +403,10 @@ starts_same_split2(_, Rest, Sames) ->
 
 points_values([<<Loc:?nindex>>|R], Root, CFG) ->
     % Root is a #stem{}
-    Type = stem:type(Loc+1, Root),
-    P = stem:pointer(Loc+1, Root),
-    %EllipticPoint = stem:root(Root),
-    %Hashes = stem:hashes(Root),
+    Type = stem_verkle:type(Loc+1, Root),
+    P = stem_verkle:pointer(Loc+1, Root),
+    %EllipticPoint = stem_verkle:root(Root),
+    %Hashes = stem_verkle:hashes(Root),
     V = {Loc, Root},
     case Type of
         0 -> %empty
@@ -414,7 +414,7 @@ points_values([<<Loc:?nindex>>|R], Root, CFG) ->
             %[V, {NextLoc, 0}];
             [V, 0];
         1 -> %stem
-            S0 = stem:get(P, CFG),
+            S0 = stem_verkle:get(P, CFG),
             S = S0#stem{
                   %hashes= fr:decode(S0#stem.hashes)
                   %hashes = binary2int2(

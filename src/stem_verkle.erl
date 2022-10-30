@@ -1,6 +1,6 @@
 %The purpose of this file is to define stems as a data structure in ram, and give some simple functions to operate on them.
 
--module(stem).
+-module(stem_verkle).
 -export([test/1,get/2,put/2,put/3,type/2,
          hash/1,hash_point/1,hash_points/1,
          pointers/1,
@@ -299,7 +299,7 @@ test(1) ->
     %Stem = unused_add(S, 3, 1, 5, Hash),
     %hash(Stem),
     %testing reading and writing to the hard drive.
-    Pointer = stem:put(S, CFG),
+    Pointer = stem_verkle:put(S, CFG),
     Stem2b = get(Pointer, CFG),
     io:fwrite("next equal\n"),
     true = equal(Stem2b, S),

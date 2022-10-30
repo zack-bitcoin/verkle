@@ -13,8 +13,8 @@
 init(CFG) ->
     process_flag(trap_exit, true),
     %ID = cfg:id(CFG),
-    Empty2 = stem:put(stem:new_empty(CFG), CFG),
-    %Empty = stem:put(stem:new_empty(CFG), CFG),
+    Empty2 = stem_verkle:put(stem_verkle:new_empty(CFG), CFG),
+    %Empty = stem_verkle:put(stem_verkle:new_empty(CFG), CFG),
     %CFG2 = CFG#cfg{empty = Empty},
     CFG2 = cfg:set_empty(CFG, Empty2),
     {ok, CFG2}.
@@ -33,7 +33,7 @@ handle_cast(reload_ets, CFG) ->
     A4 = ids:stem(CFG),
     dump:reload_ets(A3),
     dump:reload_ets(A4),
-    Empty = stem:put(stem:new_empty(CFG), CFG),
+    Empty = stem_verkle:put(stem_verkle:new_empty(CFG), CFG),
     CFG2 = cfg:set_empty(CFG, Empty),
     {noreply, CFG2};
 handle_cast(_, X) -> {noreply, X}.
@@ -79,7 +79,7 @@ handle_call({clean_ets, Pointer}, _, CFG) ->
 		      dump:update(Pt, Leaf, LID)
 		      end, 0, TempLID),
     
-    Empty = stem:put(stem:new_empty(CFG), CFG),
+    Empty = stem_verkle:put(stem_verkle:new_empty(CFG), CFG),
     CFG2 = cfg:set_empty(CFG, Empty),
     {reply, ok, CFG2};
 handle_call({garbage, NewRoot, OldRoot}, _From, CFG) ->%prune new
@@ -136,14 +136,14 @@ handle_call({get_all, Root}, _From, CFG) ->
 handle_call(empty, _, CFG) ->
     {reply, cfg:empty(CFG), CFG};
 handle_call({new_trie, RootStem}, _From, CFG) ->
-    %Stem = stem:empty_trie(Root, CFG),
-    Stem = stem:update_pointers(
-             RootStem, stem:empty_tuple()),
-    X = stem:put(Stem, CFG),
+    %Stem = stem_verkle:empty_trie(Root, CFG),
+    Stem = stem_verkle:update_pointers(
+             RootStem, stem_verkle:empty_tuple()),
+    X = stem_verkle:put(Stem, CFG),
     {reply, X, CFG};
 handle_call({root_hash, RootPointer}, _From, CFG) ->
-    S = stem:get(RootPointer, CFG),
-    H = stem:hash(S, CFG),
+    S = stem_verkle:get(RootPointer, CFG),
+    H = stem_verkle:hash(S, CFG),
     {reply, H, CFG};
 handle_call(cfg, _From, CFG) ->
     {reply, CFG, CFG}.
@@ -214,9 +214,9 @@ prune(OldRoot, NewRoot, ID) ->%removes old
                     {prune, OldRoot, NewRoot}).
 
 get_all_internal(Root, CFG) ->
-    S = stem:get(Root, CFG),
-    P = tuple_to_list(stem:pointers(S)),
-    T = tuple_to_list(stem:types(S)),
+    S = stem_verkle:get(Root, CFG),
+    P = tuple_to_list(stem_verkle:pointers(S)),
+    T = tuple_to_list(stem_verkle:types(S)),
     get_all_internal2(P, T, CFG).
 get_all_internal2([], [], _) -> [];
 get_all_internal2([A|AT], [T|TT], CFG) -> 
@@ -227,14 +227,14 @@ get_all_internal2([A|AT], [T|TT], CFG) ->
 	end,
     B++get_all_internal2(AT, TT, CFG).
 clean_ets_internal(Pointer, CFG, SID, LID) ->
-    S = stem:get(Pointer, CFG),
-    P = tuple_to_list(stem:pointers(S)),
-    T = tuple_to_list(stem:types(S)),
-    H = tuple_to_list(stem:hashes(S)),
+    S = stem_verkle:get(Pointer, CFG),
+    P = tuple_to_list(stem_verkle:pointers(S)),
+    T = tuple_to_list(stem_verkle:types(S)),
+    H = tuple_to_list(stem_verkle:hashes(S)),
     clean_ets_internal2(P, T, H, CFG, SID, LID),
-    SS = stem:serialize(S, CFG),
+    SS = stem_verkle:serialize(S, CFG),
     ets:insert(SID, {Pointer, SS}),
-    stem:hash(S, CFG).
+    stem_verkle:hash(S, CFG).
    
 clean_ets_internal2([], [], _, _, _, _) -> [];
 clean_ets_internal2(

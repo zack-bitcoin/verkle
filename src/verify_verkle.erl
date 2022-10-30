@@ -52,7 +52,7 @@ update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
     SubPoints = sub_points(Diffs0),
     Es = lists:map(fun({sub, X, _}) -> X end, 
                    SubPoints),
-    Cs = stem:hash_points(Es),
+    Cs = stem_verkle:hash_points(Es),
     ECs = lists:zipwith(fun(A, B) -> {A, B} end,
                         Es, Cs),
     ECdict = 
@@ -136,7 +136,7 @@ get_remove(Key, [H|L], Rest) ->
 calc_subs(Diffs, []) ->
     Diffs;
 calc_subs([{sub, _, Fr}|T], [Compressed|CT]) ->
-    [fr:sub(stem:hash_point(Compressed), Fr)|
+    [fr:sub(stem_verkle:hash_point(Compressed), Fr)|
      calc_subs(T, CT)];
 calc_subs([H|T], Cs) ->
     [H|calc_subs(T, Cs)].
@@ -190,7 +190,7 @@ update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees],
 
     {Point, Tree2} = 
         update_batch2(LH, S1, Depth+1, CFG, MEP),
-    OldN = stem:hash_point(B),
+    OldN = stem_verkle:hash_point(B),
     %NewPoint0 = fq:e_add(B, Point),
     NewPoint0 = ed:e_add(B, Point),
     {NewPoint, Diff, Hash} = 
@@ -466,7 +466,7 @@ unfold(Root, {Index, {Key, B}}, T, CFG) %leaf case
 unfold(Root, [{Index, X}|R], T, CFG) %stem case
   when (is_binary(X) and (size(X) == (32*4)))
    ->
-    <<H:256>> = stem:hash_point(X),
+    <<H:256>> = stem_verkle:hash_point(X),
     unfold(X, R, [{Root, Index, <<H:256>>}|T], CFG);
 unfold(Root, [H|J], T, CFG) ->
     unfold(Root, H, T, CFG)
