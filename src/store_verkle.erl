@@ -29,7 +29,7 @@ batch([], P, stem, _, _CFG, _) ->
     {P, stem, stem_not_recorded};
 batch([Leaf], 0, 0, _, CFG, _) ->
     %storing a leaf in a previously empty spot.
-    Loc = leaf:put(Leaf, CFG),
+    Loc = leaf_verkle:put(Leaf, CFG),
     {Loc, leaf, Leaf};
 batch(Leaves0, 0, 0, Depth, CFG, MEP) ->
     %storing multiple leaves in a previously empty spot.
@@ -37,7 +37,7 @@ batch(Leaves0, 0, 0, Depth, CFG, MEP) ->
           1, %1 is always an empty stem.
           stem, Depth, CFG, MEP);
 batch(Leaves0, RP, leaf, Depth, CFG, MEP) ->
-    RootLeaf = leaf:get(RP, CFG),
+    RootLeaf = leaf_verkle:get(RP, CFG),
     batch([RootLeaf|Leaves0], 1, stem, 
           Depth, CFG, MEP);
 batch(Leaves, RP, stem, Depth, CFG, MEP) ->
@@ -139,9 +139,9 @@ verified2([{N, 0}|T], Stem, CFG) ->
 %verified2([[{N, {Key, Value, Meta}}]|T], 
 verified2([[{N, {Key, Value}}]|T], 
           Stem, CFG) -> 
-    %Leaf = leaf:new(Key, Value, Meta, CFG),
-    Leaf = leaf:new(Key, Value, 0, CFG),
-    Loc = leaf:put(Leaf, CFG),
+    %Leaf = leaf_verkle:new(Key, Value, Meta, CFG),
+    Leaf = leaf_verkle:new(Key, Value, 0, CFG),
+    Loc = leaf_verkle:put(Leaf, CFG),
     Stem2 = verified3(
               N, Stem, 2, Loc, 
               leaf_hash(Leaf, CFG)),
@@ -185,7 +185,7 @@ clump_by_path(D, Leaves) ->
                fun(L) -> 
                        D8 = (31 - D)*8,
                       <<_:D8, B:8, _/binary>> =
-                           leaf:raw_key(L),
+                           leaf_verkle:raw_key(L),
                       {B, L} end,
               Leaves),
     Paths = lists:sort(fun({A, _}, {B, _}) ->
@@ -223,7 +223,7 @@ hash_thing(_, leaf, L = #leaf{}, _, CFG) ->
 hash_thing(_, stem, S = #stem{}, _, _) -> 
     stem_verkle:hash(S).
 leaf_hash(L = #leaf{}, CFG) ->
-    <<N:256>> = leaf:hash(L, CFG),
+    <<N:256>> = leaf_verkle:hash(L, CFG),
     fr:encode(N).
 
 path_n(_, 0, R) -> R;
@@ -238,7 +238,7 @@ sort_by_path2(L, CFG) ->
     L2 = lists:map(
            fun(X) ->
                    N = path_n(
-                         leaf:raw_key(X), 31, 0),
+                         leaf_verkle:raw_key(X), 31, 0),
                    {N, X}
            end, L),
     L3 = lists:sort(fun({N1, _}, {N2, _}) ->
@@ -256,12 +256,12 @@ test(3) ->
           fun(N) -> 
                   <<Key0:256>> = 
                       crypto:strong_rand_bytes(32),
-                  leaf:new(Key0, <<N:16>>, CFG)
+                  leaf_verkle:new(Key0, <<N:16>>, CFG)
                       %#leaf{key = Key0, value = <<N:16>>}%random version
           end, range(1, Times+1)),
     %Many = lists:map(fun(#leaf{key = K}) -> K end,
     %Many = lists:map(fun(Leaf) -> 
-    %                         leaf:raw_key(Leaf) end,
+    %                         leaf_verkle:raw_key(Leaf) end,
     %                 Leaves),
     fprof:trace(start),
     store_verkle:batch(Leaves, Loc, CFG),

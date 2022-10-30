@@ -17,7 +17,7 @@ test/1]).
 keys2paths(Keys, CFG) ->
     Paths0 = lists:map(
               fun(<<K:256>>) -> 
-                      leaf:path_maker(K, CFG) 
+                      leaf_verkle:path_maker(K, CFG) 
               end, Keys),
     lists:map(
       fun(Path) ->
@@ -331,8 +331,8 @@ remove_hashes({-1, X = #stem{}}) -> X#stem.root;
 remove_hashes({Index, X = #stem{}}) -> 
     {Index, X#stem.root};
 remove_hashes({Index, X = #leaf{}}) -> 
-    {Index, {leaf:raw_key(X), leaf:value(X), 
-             leaf:meta(X)}};
+    {Index, {leaf_verkle:raw_key(X), leaf_verkle:value(X), 
+             leaf_verkle:meta(X)}};
 remove_hashes([H|T]) -> 
     [remove_hashes(H)|
      remove_hashes(T)];
@@ -424,7 +424,7 @@ points_values([<<Loc:?nindex>>|R], Root, CFG) ->
                  },
             [V|points_values(R, S, CFG)];
         2 -> %leaf
-            L = leaf:get(P, CFG),
+            L = leaf_verkle:get(P, CFG),
             [V, L]
     end;
 points_values([H|T], Root, CFG) ->

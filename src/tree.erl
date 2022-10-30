@@ -97,7 +97,7 @@ handle_call({restore, Key, Value,
              Meta, Hash, Proof, Root}, 
             _From, CFG) -> 
     valid_key(Key),
-    Leaf = leaf:new(Key, Value, Meta, CFG),
+    Leaf = leaf_verkle:new(Key, Value, Meta, CFG),
     {Hash, NewRoot, _} = 
         store_verkle:restore(Leaf, Hash, Proof, 
                       Root, CFG),
@@ -105,7 +105,7 @@ handle_call({restore, Key, Value,
 handle_call({put, Key, Value, Meta, Root}, 
             _From, CFG) -> 
     valid_key(Key),
-    Leaf = leaf:new(Key, Value, Meta, CFG),
+    Leaf = leaf_verkle:new(Key, Value, Meta, CFG),
     %{_, NewRoot, _} = store_verkle:store(Leaf, Root, CFG),
     {_, NewRoot} = store_verkle:store(Leaf, Root, CFG),
     {reply, NewRoot, CFG};
@@ -116,14 +116,14 @@ handle_call({put_batch, Leaves, Root},
     {reply, NewRoot, CFG};
 handle_call({get, Key, RootPointer}, _From, CFG) ->
     valid_key(Key),
-    P = leaf:path_maker(Key, CFG),
+    P = leaf_verkle:path_maker(Key, CFG),
     {RootHash, L, Proof} = 
         get:get(P, RootPointer, CFG),
     L2 = if
 	     L == empty -> empty;
 	     L == unknown -> unknown;
 	     true ->
-		 Key2 = leaf:key(L),
+		 Key2 = leaf_verkle:key(L),
 		 if
 		     Key == Key2 -> L;
 		     true -> empty
@@ -182,8 +182,8 @@ root_hash(ID, RootPointer)
     gen_server:call({global, ids:main_id(ID)}, 
                     {root_hash, RootPointer}).
 restore(Leaf, Hash, Path, Root, ID) ->
-    restore(leaf:key(Leaf), 
-            leaf:value(Leaf), leaf:meta(Leaf),
+    restore(leaf_verkle:key(Leaf), 
+            leaf_verkle:value(Leaf), leaf_verkle:meta(Leaf),
 	    Hash, Path, Root, ID).
 restore(Key, Value, Meta, Hash, Path, Root, ID) ->
     gen_server:call(
@@ -223,7 +223,7 @@ get_all_internal2([A|AT], [T|TT], CFG) ->
     B = case T of
 	    0 -> [];%empty
 	    1 -> get_all_internal(A, CFG);%a stem
-	    2 -> [leaf:get(A, CFG)]%a leaf
+	    2 -> [leaf_verkle:get(A, CFG)]%a leaf
 	end,
     B++get_all_internal2(AT, TT, CFG).
 clean_ets_internal(Pointer, CFG, SID, LID) ->
@@ -246,9 +246,9 @@ clean_ets_internal2(
 	1 -> %another stem
 	    Hash = clean_ets_internal(Pointer, CFG, SID, LID);
 	2 -> %a leaf
-	    Leaf = leaf:get(Pointer, CFG),
-	    Hash = leaf:hash(Leaf, CFG),
-	    SL = leaf:serialize(Leaf, CFG),
+	    Leaf = leaf_verkle:get(Pointer, CFG),
+	    Hash = leaf_verkle:hash(Leaf, CFG),
+	    SL = leaf_verkle:serialize(Leaf, CFG),
 	    ets:insert(LID, {Pointer, SL})
     end,
     clean_ets_internal2(PT, TT, HT, CFG, SID, LID).

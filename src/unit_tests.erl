@@ -38,7 +38,7 @@ doit(0) ->
     lists:map(fun(N) ->
                       S = ipa:test(N)
               end, [1,3,5,7]),
-    S = verify2:test(),
+    S = verify_verkle:test(),
     {_, _} = multiproof:test(7),
     S.
     
