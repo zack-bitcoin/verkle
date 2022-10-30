@@ -11,12 +11,12 @@ start_link(KeyLength, Size, ID, Amount, Meta, Mode, Location) ->
     supervisor:start_link({global, cfg:id(CFG)}, ?MODULE, [CFG, Amount, Mode, Location]).
 stop(ID) -> 
     CFG = tree:cfg(ID),
-    supervisor:terminate_child({global, ID}, ids:main(CFG)),
-    dump_sup:stop(ids:stem(CFG)),
-    supervisor:terminate_child({global, ID}, ids:stem(CFG)),
-    dump_sup:stop(ids:leaf(CFG)),
-    supervisor:terminate_child({global, ID}, ids:leaf(CFG)),
-    supervisor:terminate_child({global, ID}, ids:bits(CFG)),
+    supervisor:terminate_child({global, ID}, ids_verkle:main(CFG)),
+    dump_sup:stop(ids_verkle:stem(CFG)),
+    supervisor:terminate_child({global, ID}, ids_verkle:stem(CFG)),
+    dump_sup:stop(ids_verkle:leaf(CFG)),
+    supervisor:terminate_child({global, ID}, ids_verkle:leaf(CFG)),
+    supervisor:terminate_child({global, ID}, ids_verkle:bits(CFG)),
     halt().
 
 %verkle01_main).
@@ -30,10 +30,10 @@ init([CFG, Amount, Mode, Location]) ->
     ID = cfg:id(CFG),
     IDS = atom_to_list(ID),
     A2 = list_to_atom(IDS++"_bits"),
-    A3 = ids:leaf(CFG),
-    A4 = ids:stem(CFG),
-    A5 = ids:main(CFG),
-    A6 = ids:parameters(CFG),
+    A3 = ids_verkle:leaf(CFG),
+    A4 = ids_verkle:stem(CFG),
+    A5 = ids_verkle:main(CFG),
+    A6 = ids_verkle:parameters(CFG),
     A7 = parameters,
     L2 = Location ++ "data/" ++ IDS ++ "_verkle_bits.db",
     Children = [{A3, {dump_sup, start_link, [A3, KeyLength+Size, Amount, Mode, Location]}, permanent, 5000, supervisor, [dump_sup]},

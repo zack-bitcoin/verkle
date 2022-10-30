@@ -191,7 +191,7 @@ hash_points(L) ->
               L3).
 
 update(Location, Stem, CFG) ->
-    dump:update(Location, serialize(Stem, CFG), ids:stem(CFG)).
+    dump:update(Location, serialize(Stem, CFG), ids_verkle:stem(CFG)).
 
 check_root_integrity(Stem) ->
     MEP = parameters:multi_exp(),
@@ -206,16 +206,16 @@ check_root_integrity(Stem) ->
 put(Stem, CompressedRoot, CFG) ->
     %compressed root is in affine format. 64 bytes.
     S = serialize(Stem, CompressedRoot, CFG),
-    ID = ids:stem(CFG),
+    ID = ids_verkle:stem(CFG),
     dump:put(S, ID).
 put(Stem, CFG) ->
     S = serialize(Stem, CFG),
-    ID = ids:stem(CFG),
+    ID = ids_verkle:stem(CFG),
     dump:put(S, ID).
 put_batch(Leaves, CFG) ->
     %unused
     SL = serialize_stems(Leaves, CFG),
-    dump:put_batch(SL, ids:stem(CFG)).
+    dump:put_batch(SL, ids_verkle:stem(CFG)).
 
 serialize_stems(L, CFG) when false ->
     %L is like [{N, #stem{}}, {N2, #stem{}}, ...]
@@ -252,7 +252,7 @@ serialize_stems([{N, L}| T], CFG) ->
     [{N, serialize(L, CFG)}|serialize_stems(T, CFG)].
 get(Pointer, CFG) -> 
     true = Pointer > 0,
-    S = dump:get(Pointer, ids:stem(CFG)),
+    S = dump:get(Pointer, ids_verkle:stem(CFG)),
     deserialize(S, CFG).
 empty_trie(Root, CFG) ->
     Stem = get(Root, CFG),

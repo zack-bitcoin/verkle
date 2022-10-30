@@ -19,7 +19,7 @@ init(CFG) ->
     CFG2 = cfg:set_empty(CFG, Empty2),
     {ok, CFG2}.
 start_link(CFG) -> %keylength, or M is the size outputed by hash:doit(_). 
-    gen_server:start_link({global, ids:main(CFG)}, ?MODULE, CFG, []).
+    gen_server:start_link({global, ids_verkle:main(CFG)}, ?MODULE, CFG, []).
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 terminate(_, CFG) -> 
     io:fwrite("tree "), 
@@ -29,8 +29,8 @@ terminate(_, CFG) ->
     ok.
 handle_info(_, X) -> {noreply, X}.
 handle_cast(reload_ets, CFG) -> 
-    A3 = ids:leaf(CFG),
-    A4 = ids:stem(CFG),
+    A3 = ids_verkle:leaf(CFG),
+    A4 = ids_verkle:stem(CFG),
     dump:reload_ets(A3),
     dump:reload_ets(A4),
     Empty = stem_verkle:put(stem_verkle:new_empty(CFG), CFG),
@@ -38,16 +38,16 @@ handle_cast(reload_ets, CFG) ->
     {noreply, CFG2};
 handle_cast(_, X) -> {noreply, X}.
 handle_call(quick_save, _, CFG) -> 
-    A3 = ids:leaf(CFG),
-    A4 = ids:stem(CFG),
+    A3 = ids_verkle:leaf(CFG),
+    A4 = ids_verkle:stem(CFG),
     dump:quick_save(A3),
     dump:quick_save(A4),
     {reply, ok, CFG};
 handle_call({clean_ets, Pointer}, _, CFG) -> 
-    %A3 = ids:leaf(CFG),
-    %A4 = ids:stem(CFG),
-    LID = ids:leaf(CFG),
-    SID = ids:stem(CFG),
+    %A3 = ids_verkle:leaf(CFG),
+    %A4 = ids_verkle:stem(CFG),
+    LID = ids_verkle:leaf(CFG),
+    SID = ids_verkle:stem(CFG),
     TempLID = list_to_atom(
                 atom_to_list(LID) ++ "_temp"),
     TempSID = list_to_atom(
@@ -157,29 +157,29 @@ save_table(ID, Loc) ->
 
 cfg(ID) when is_atom(ID) ->
     gen_server:call(
-      {global, ids:main_id(ID)}, cfg).
+      {global, ids_verkle:main_id(ID)}, cfg).
 new_trie(ID, RootStem) when is_atom(ID) ->
-    gen_server:call({global, ids:main_id(ID)}, 
+    gen_server:call({global, ids_verkle:main_id(ID)}, 
                     {new_trie, RootStem}).
 clean_ets(ID, Pointer) ->
     %deletes everything from the merkel tree database, except for what can be proved from this single state root.
     %used for loading a checkpoint.
-    gen_server:call({global, ids:main_id(ID)}, 
+    gen_server:call({global, ids_verkle:main_id(ID)}, 
                     {clean_ets, Pointer}).
     
 reload_ets(ID) ->
     %reloads the ram databases from the hard drive copy.
-    gen_server:cast({global, ids:main_id(ID)}, 
+    gen_server:cast({global, ids_verkle:main_id(ID)}, 
                     reload_ets).
 quick_save(ID) ->
-    gen_server:call({global, ids:main_id(ID)}, 
+    gen_server:call({global, ids_verkle:main_id(ID)}, 
                     quick_save).
 empty(ID) when is_atom(ID) ->
-    gen_server:call({global, ids:main_id(ID)}, 
+    gen_server:call({global, ids_verkle:main_id(ID)}, 
                     empty).
 root_hash(ID, RootPointer) 
   when (is_atom(ID) and is_integer(RootPointer)) ->
-    gen_server:call({global, ids:main_id(ID)}, 
+    gen_server:call({global, ids_verkle:main_id(ID)}, 
                     {root_hash, RootPointer}).
 restore(Leaf, Hash, Path, Root, ID) ->
     restore(leaf_verkle:key(Leaf), 
@@ -187,30 +187,30 @@ restore(Leaf, Hash, Path, Root, ID) ->
 	    Hash, Path, Root, ID).
 restore(Key, Value, Meta, Hash, Path, Root, ID) ->
     gen_server:call(
-      {global, ids:main_id(ID)}, 
+      {global, ids_verkle:main_id(ID)}, 
       {restore, Key, Value, Meta, 
        Hash, Path, Root}).
 put_batch([], Root, _) -> Root;
 put_batch(Leaves, Root, ID) -> 
-    gen_server:call({global, ids:main_id(ID)}, 
+    gen_server:call({global, ids_verkle:main_id(ID)}, 
                     {put_batch, Leaves, Root}).
 put(Key, Value, Meta, Root, ID) ->
-    gen_server:call({global, ids:main_id(ID)}, 
+    gen_server:call({global, ids_verkle:main_id(ID)}, 
                     {put, Key, Value, Meta, Root}).
 get(Key, Root, ID) -> 
-    gen_server:call({global, ids:main_id(ID)}, 
+    gen_server:call({global, ids_verkle:main_id(ID)}, 
                     {get, Key, Root}).
 get_all(Root, ID) -> 
-    gen_server:call({global, ids:main_id(ID)}, 
+    gen_server:call({global, ids_verkle:main_id(ID)}, 
                     {get_all, Root}).
 %delete(Key, Root, ID) -> 
-%    gen_server:call({global, ids:main_id(ID)}, 
+%    gen_server:call({global, ids_verkle:main_id(ID)}, 
 %                    {delete, Key, Root}).
 garbage(NewRoot, OldRoot, ID) ->%removes new
-    gen_server:call({global, ids:main_id(ID)}, 
+    gen_server:call({global, ids_verkle:main_id(ID)}, 
                     {garbage, NewRoot, OldRoot}).
 prune(OldRoot, NewRoot, ID) ->%removes old
-    gen_server:call({global, ids:main_id(ID)}, 
+    gen_server:call({global, ids_verkle:main_id(ID)}, 
                     {prune, OldRoot, NewRoot}).
 
 get_all_internal(Root, CFG) ->

@@ -79,16 +79,16 @@ value(#leaf{value = V}) -> V.
 meta(X) -> X#leaf.meta.
 put_batch(Leaves, CFG) ->
     SL = serialize_leaves(Leaves, CFG),
-    dump:put_batch(SL, ids:leaf(CFG)).
+    dump:put_batch(SL, ids_verkle:leaf(CFG)).
 serialize_leaves([], _) -> [];
 serialize_leaves([{N, L}| T], CFG) ->
     [{N, serialize(L, CFG)}|serialize_leaves(T, CFG)].
 
 put(Leaf, CFG) ->
     dump:put(serialize(Leaf, CFG), 
-	     ids:leaf(CFG)).
+	     ids_verkle:leaf(CFG)).
 get(Pointer, CFG) ->
-    L = dump:get(Pointer, ids:leaf(CFG)),
+    L = dump:get(Pointer, ids_verkle:leaf(CFG)),
     deserialize(L, CFG).
 hash(L, CFG) ->   
     HS = cfg:hash_size(CFG)*8,

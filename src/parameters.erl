@@ -64,7 +64,7 @@ init(ok) ->
     {ok, DB}.
 start_link(CFG) -> 
     %gen_server:start_link({local, ?MODULE}, ?MODULE, ok, []).
-    gen_server:start_link({global, ids:parameters(CFG)}, ?MODULE, ok, []).
+    gen_server:start_link({global, ids_verkle:parameters(CFG)}, ?MODULE, ok, []).
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 terminate(_, _) -> io:format("died!"), ok.
 handle_info(_, X) -> {noreply, X}.

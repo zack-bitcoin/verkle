@@ -1,4 +1,4 @@
--module(ids).
+-module(ids_verkle).
 -export([main_id/1, leaf/1, main/1, stem/1, bits/1, ram/1, parameters/1]).
 
 
