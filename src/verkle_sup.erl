@@ -6,9 +6,9 @@
 start_link(KeyLength, Size, ID, Amount, Meta, Mode, Location) -> 
     %keylength is the number of bytes to encode the path that you follow on the verkle.
     HashSize = 32,
-    CFG = cfg:new(KeyLength, Size, ID, 
+    CFG = cfg_verkle:new(KeyLength, Size, ID, 
                   Meta, HashSize, Mode),
-    supervisor:start_link({global, cfg:id(CFG)}, ?MODULE, [CFG, Amount, Mode, Location]).
+    supervisor:start_link({global, cfg_verkle:id(CFG)}, ?MODULE, [CFG, Amount, Mode, Location]).
 stop(ID) -> 
     CFG = tree:cfg(ID),
     supervisor:terminate_child({global, ID}, ids_verkle:main(CFG)),
@@ -24,10 +24,10 @@ stop(ID) ->
 init([CFG, Amount, Mode, Location]) ->
     %Size is the size of the data we store in the verkle.
     %Amount is only used for RAM mode, because we need to allocate the space used for bits.
-    KeyLength = cfg:path(CFG),
-    HashSize = cfg:hash_size(CFG),
-    Size = cfg:value(CFG)+cfg:meta(CFG),
-    ID = cfg:id(CFG),
+    KeyLength = cfg_verkle:path(CFG),
+    HashSize = cfg_verkle:hash_size(CFG),
+    Size = cfg_verkle:value(CFG)+cfg_verkle:meta(CFG),
+    ID = cfg_verkle:id(CFG),
     IDS = atom_to_list(ID),
     A2 = list_to_atom(IDS++"_bits"),
     A3 = ids_verkle:leaf(CFG),

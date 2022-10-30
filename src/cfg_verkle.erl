@@ -1,4 +1,4 @@
--module(cfg).
+-module(cfg_verkle).
 -compile(export_all).
 -export_type([cfg/0,path/0,value/0,id/0,meta/0,hash_size/0]).
 -record(cfg, { path

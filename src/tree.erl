@@ -12,18 +12,18 @@
 	 prune/3, garbage/3]).
 init(CFG) ->
     process_flag(trap_exit, true),
-    %ID = cfg:id(CFG),
+    %ID = cfg_verkle:id(CFG),
     Empty2 = stem_verkle:put(stem_verkle:new_empty(CFG), CFG),
     %Empty = stem_verkle:put(stem_verkle:new_empty(CFG), CFG),
     %CFG2 = CFG#cfg{empty = Empty},
-    CFG2 = cfg:set_empty(CFG, Empty2),
+    CFG2 = cfg_verkle:set_empty(CFG, Empty2),
     {ok, CFG2}.
 start_link(CFG) -> %keylength, or M is the size outputed by hash:doit(_). 
     gen_server:start_link({global, ids_verkle:main(CFG)}, ?MODULE, CFG, []).
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 terminate(_, CFG) -> 
     io:fwrite("tree "), 
-    ID = cfg:id(CFG),
+    ID = cfg_verkle:id(CFG),
     io:fwrite(ID),
     io:fwrite(" died \n"),
     ok.
@@ -34,7 +34,7 @@ handle_cast(reload_ets, CFG) ->
     dump:reload_ets(A3),
     dump:reload_ets(A4),
     Empty = stem_verkle:put(stem_verkle:new_empty(CFG), CFG),
-    CFG2 = cfg:set_empty(CFG, Empty),
+    CFG2 = cfg_verkle:set_empty(CFG, Empty),
     {noreply, CFG2};
 handle_cast(_, X) -> {noreply, X}.
 handle_call(quick_save, _, CFG) -> 
@@ -80,7 +80,7 @@ handle_call({clean_ets, Pointer}, _, CFG) ->
 		      end, 0, TempLID),
     
     Empty = stem_verkle:put(stem_verkle:new_empty(CFG), CFG),
-    CFG2 = cfg:set_empty(CFG, Empty),
+    CFG2 = cfg_verkle:set_empty(CFG, Empty),
     {reply, ok, CFG2};
 handle_call({garbage, NewRoot, OldRoot}, _From, CFG) ->%prune new
     X = prune:garbage(NewRoot, OldRoot, CFG),
@@ -134,7 +134,7 @@ handle_call({get_all, Root}, _From, CFG) ->
     X = get_all_internal(Root, CFG),
     {reply, X, CFG};
 handle_call(empty, _, CFG) ->
-    {reply, cfg:empty(CFG), CFG};
+    {reply, cfg_verkle:empty(CFG), CFG};
 handle_call({new_trie, RootStem}, _From, CFG) ->
     %Stem = stem_verkle:empty_trie(Root, CFG),
     Stem = stem_verkle:update_pointers(

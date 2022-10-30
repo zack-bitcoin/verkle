@@ -10,15 +10,15 @@
 
 
 is_serialized_leaf(X, CFG) ->
-    P = cfg:path(CFG),
-    M = cfg:meta(CFG),
-    S = cfg:value(CFG),
+    P = cfg_verkle:path(CFG),
+    M = cfg_verkle:meta(CFG),
+    S = cfg_verkle:value(CFG),
     size(X) == (P + M + S).
     %is_record(X, leaf).
 serialize(X, CFG) ->
-    P = cfg:path(CFG) * 8,
-    M = cfg:meta(CFG) * 8,
-    S = cfg:value(CFG),
+    P = cfg_verkle:path(CFG) * 8,
+    M = cfg_verkle:meta(CFG) * 8,
+    S = cfg_verkle:value(CFG),
     S = size(X#leaf.value),
     M = size(X#leaf.meta),
     %io:fwrite({CFG, X}),
@@ -29,9 +29,9 @@ serialize(X, CFG) ->
       (X#leaf.meta)/binary
     >>.
 deserialize(A, CFG) ->
-    L = cfg:value(CFG) * 8,
-    P = cfg:path(CFG) * 8,
-    MS = cfg:meta(CFG) * 8,
+    L = cfg_verkle:value(CFG) * 8,
+    P = cfg_verkle:path(CFG) * 8,
+    MS = cfg_verkle:meta(CFG) * 8,
     <<Key:P, 
       Value:L,
       Meta:MS
@@ -41,9 +41,9 @@ deserialize(A, CFG) ->
 new(Key, Value, Meta, CFG) when is_integer(Key) ->
     new(<<Key:256>>, Value, Meta, CFG);
 new(<<Key:256>>, Value, Meta0, CFG) ->
-    P = cfg:path(CFG),
-    L = cfg:value(CFG) * 8,
-    M = cfg:meta(CFG) * 8,
+    P = cfg_verkle:path(CFG),
+    L = cfg_verkle:value(CFG) * 8,
+    M = cfg_verkle:meta(CFG) * 8,
     Meta = if
                Meta0 == 0 -> <<0:M>>;
                is_binary(Meta0) -> Meta0
@@ -72,7 +72,7 @@ path(L = #leaf{}, CFG) ->
 path({K, 0}, CFG) ->
     path_maker(K, CFG).
 path_maker(K, CFG) ->
-    T = cfg:path(CFG)*8,
+    T = cfg_verkle:path(CFG)*8,
     lists:reverse([<<N:?nindex>>||<<N:?nindex>> <= <<K:T>>]).
 
 value(#leaf{value = V}) -> V.
@@ -91,11 +91,11 @@ get(Pointer, CFG) ->
     L = dump:get(Pointer, ids_verkle:leaf(CFG)),
     deserialize(L, CFG).
 hash(L, CFG) ->   
-    HS = cfg:hash_size(CFG)*8,
+    HS = cfg_verkle:hash_size(CFG)*8,
     case L#leaf.value of
 	empty -> <<0:HS>>;
 	V ->
-	    P = cfg:path(CFG) * 8,
+	    P = cfg_verkle:path(CFG) * 8,
             %hash:doit(<<(L#leaf.key):P, V/binary>>)
             hash:doit(<<(L#leaf.key)/binary, V/binary>>)
     end.

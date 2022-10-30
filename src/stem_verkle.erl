@@ -44,7 +44,7 @@ onify2(H, CFG) ->
     list_to_tuple(onify(tuple_to_list(H), CFG)).
 onify([], _) -> [];
 onify([H|T], CFG) ->
-    HS = cfg:hash_size(CFG)*8,
+    HS = cfg_verkle:hash_size(CFG)*8,
     <<X:HS>> = H,
     case X of
 	0 -> [0|onify(T, CFG)];
@@ -127,8 +127,8 @@ serialize2([P|PT], [H|HT], [T|TT], R) ->
 deserialize(<<R1:512, B/binary>>, CFG) -> 
 %deserialize(<<R1:(256*5), B/binary>>, CFG) -> 
     X = empty_tuple(),
-    %deserialize(1,X,X,cfg:path(CFG)*8,hash:hash_depth()*8,X, B).
-    HS = cfg:hash_size(CFG),
+    %deserialize(1,X,X,cfg_verkle:path(CFG)*8,hash:hash_depth()*8,X, B).
+    HS = cfg_verkle:hash_size(CFG),
     %Y = deserialize(1,X,X,X, B), % 50% of store and make_proof.
     Y = deserialize2([],[],[], B),
     R = ed:affine2extended(<<R1:512>>),
@@ -163,7 +163,7 @@ deserialize2(TT, PT, HT,
     deserialize2([T|TT], [P|PT], [<<H:256>>|HT], R).
 
 empty_hashes(CFG) ->
-    %HS = cfg:hash_size(CFG),
+    %HS = cfg_verkle:hash_size(CFG),
     %X = hash:hash_depth()*8,
     %X = HS * 8,
     Y = many(<<0:256>>, ?nwidth),
@@ -279,7 +279,7 @@ test(1) ->
     T = list_to_tuple(many(1, ?nwidth)),
     %P = {6,5,4,3,7,8,9,4,5,3,2,6,7,8,3,4},
     %T = {0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-    %CFG = cfg:new(1, 9, 2, trie), %path value id meta hash_size
+    %CFG = cfg_verkle:new(1, 9, 2, trie), %path value id meta hash_size
     io:fwrite("before start\n"),
     verkle_app:start(normal, []),
     CFG = tree:cfg(trie01),
