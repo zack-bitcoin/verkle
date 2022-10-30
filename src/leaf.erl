@@ -101,7 +101,7 @@ hash(L, CFG) ->
     end.
 test(1) ->
     verkle_app:start(normal, []),
-    CFG = trie:cfg(trie01),
+    CFG = tree:cfg(trie01),
 %{cfg,32,2,trie01,2,32,ram,1},[]],
     %io:fwrite(CFG),
     X = new(1, <<0:16>>, 0, CFG),

@@ -1,4 +1,4 @@
--module(trie).
+-module(tree).
 -behaviour(gen_server).
 -export([start_link/1,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2, 
          root_hash/2,cfg/1,get/3,put/5,

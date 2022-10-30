@@ -10,7 +10,7 @@ start_link(KeyLength, Size, ID, Amount, Meta, Mode, Location) ->
                   Meta, HashSize, Mode),
     supervisor:start_link({global, cfg:id(CFG)}, ?MODULE, [CFG, Amount, Mode, Location]).
 stop(ID) -> 
-    CFG = trie:cfg(ID),
+    CFG = tree:cfg(ID),
     supervisor:terminate_child({global, ID}, ids:main(CFG)),
     dump_sup:stop(ids:stem(CFG)),
     supervisor:terminate_child({global, ID}, ids:stem(CFG)),

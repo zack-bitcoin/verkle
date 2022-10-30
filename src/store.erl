@@ -248,7 +248,7 @@ sort_by_path2(L, CFG) ->
 
 test(3) ->
     io:fwrite("fprof of storing a batch"),
-    CFG = trie:cfg(trie01),
+    CFG = tree:cfg(trie01),
     Loc = 1,
     Times = 200,
     Leaves = 

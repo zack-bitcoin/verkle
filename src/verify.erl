@@ -478,7 +478,7 @@ unfold(_, {0, X}, _, _) ->
 
 
 test() ->
-    CFG = trie:cfg(trie01),
+    CFG = tree:cfg(trie01),
     Leaves = [leaf:new(999999872, <<0,0>>, 0, CFG),
               leaf:new(999999744, <<0,0>>, 0, CFG)],
     Leaves2 = store:clump_by_path(

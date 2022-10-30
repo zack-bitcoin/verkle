@@ -449,7 +449,7 @@ is_in(X, [_|T]) ->
 
 
 test(1) ->
-    CFG = trie:cfg(trie01),
+    CFG = tree:cfg(trie01),
     A = [1,2,3,4,5],
     B = [3,4,5] ++ A,
     true = same_end(B, A, CFG),

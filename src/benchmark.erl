@@ -23,7 +23,7 @@ doit(1) ->
     
 
     verkle_app:start(normal, []),
-    CFG = trie:cfg(?ID),
+    CFG = tree:cfg(?ID),
     Loc = 2,
     Times = 5000,
     %Times = 3,
@@ -81,7 +81,7 @@ doit(2) ->
 %{{load_tree,53 830 000},
 % {make_proof,24 460 000},
 % {verify,4 350 000}}
-    CFG = trie:cfg(?ID),
+    CFG = tree:cfg(?ID),
     Loc = 1,
     Times = 20000,
     %Times = 100,

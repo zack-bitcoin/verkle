@@ -6,7 +6,7 @@
 
 test() ->
     verkle_app:start(normal, []),
-    CFG = trie:cfg(?ID),
+    CFG = tree:cfg(?ID),
     V = [
          %23,
          1,
@@ -17,7 +17,7 @@ test() ->
     test_helper(V, CFG).
 test(N) ->
     verkle_app:start(normal, []),
-    CFG = trie:cfg(?ID),
+    CFG = tree:cfg(?ID),
     %test_helper([N], CFG).
     test(N, CFG).
 test_helper([], _) -> success;
@@ -393,7 +393,7 @@ range(A, A) -> [].
 
 
 load_db(Elements) ->
-    CFG = trie:cfg(?ID),
+    CFG = tree:cfg(?ID),
     Leaves = 
         lists:map(
           fun(N) -> 
@@ -410,7 +410,7 @@ load_db(Elements) ->
         store:batch(Leaves, 1, CFG),
     Loc2.
 proof_test(Loc2, UpdateMany) ->
-    CFG = trie:cfg(?ID),
+    CFG = tree:cfg(?ID),
     Updating0 = range(0, UpdateMany),
     Updating = lists:map(
                  fun(N) ->
