@@ -230,12 +230,9 @@ prove(As, %committed data
             {RIDs, G2b} = 
                 calc_G2_2(R, T, Ys, Zs),
             EVi = fr:decode(EV),
-            <<EVB:256>> = hash:list_of_ints(EVi),
             io:fwrite(integer_to_list(length(EVi))),
-            io:fwrite("\n"),
-            io:fwrite(integer_to_list(hd(EVi))),
-            io:fwrite("\n"),
-            io:fwrite(integer_to_list(EVB)),
+            %io:fwrite("\n"),
+            %io:fwrite(integer_to_list(EVB)),
             %lists:map(fun(X) -> io:fwrite(integer_to_list(X)), io:fwrite("\n") end, EVi),
             io:fwrite("\n"),
             true = ipa:verify_ipa(

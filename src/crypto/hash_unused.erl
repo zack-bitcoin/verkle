@@ -1,4 +1,4 @@
--module(hash).
+-module(hash_unused).
 -export([doit/1, list_of_ints/1]).
 
 doit(X) when is_binary(X) ->
