@@ -347,7 +347,7 @@ test(4) ->
               end, range(0, Many)),
     T2 = erlang:timestamp(),
     lists:map(fun(_) ->
-                          store:precomputed_multi_exponent(V, MEP)
+                          store_verkle:precomputed_multi_exponent(V, MEP)
               end, range(0, Many)),
     T3 = erlang:timestamp(),
     lists:map(fun(_) ->

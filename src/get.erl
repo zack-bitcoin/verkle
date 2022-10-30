@@ -178,7 +178,7 @@ batch(Keys, Root, CFG, Type) ->
     benchmark:now(),
 
     %sanity checks
-    %Tree5 = verify:unfold(Root4, Tl4, [], CFG),
+    %Tree5 = verify_verkle:unfold(Root4, Tl4, [], CFG),
     %tree5 is empty.
     %{Commitsb, Zs0b, _} = 
     %    split3parts(Tree5, [], [], []),

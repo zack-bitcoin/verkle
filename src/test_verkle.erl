@@ -1,4 +1,4 @@
--module(test_trie).
+-module(test_verkle).
 -export([test/0, test/1, load_db/1, proof_test/2]).
 
 -define(ID, trie01).
@@ -52,7 +52,7 @@ test(1, CFG) ->
     io:fwrite("load up the batch database\n"),
     T1 = erlang:timestamp(),
     {NewLoc, stem, _} = 
-        store:batch(Leaves, Loc, CFG),
+        store_verkle:batch(Leaves, Loc, CFG),
     T2 = erlang:timestamp(),
     io:fwrite("make proof\n"),
     %Keys = [<<5:256>>|Many],
@@ -70,10 +70,10 @@ test(1, CFG) ->
     io:fwrite("verify proof\n"),
     Root = stem:root(stem:get(NewLoc, CFG)),
     {true, Leaves2, _} = 
-        verify:proof(Proof, CFG),
+        verify_verkle:proof(Proof, CFG),
     T5 = erlang:timestamp(),
     {true, Leaves2, _} = 
-        verify:proof(FastProof, CFG),
+        verify_verkle:proof(FastProof, CFG),
     T6 = erlang:timestamp(),
     %io:fwrite({lists:reverse(Leaves2)}),
     %io:fwrite({length(Leaves2), length(Keys)}),
@@ -115,12 +115,12 @@ test(2, CFG) ->
                      leaf:raw_key(Leaf) end,
                      Leaves),
     {NewLoc, stem, _} = 
-        store:batch(Leaves, Loc, CFG),
+        store_verkle:batch(Leaves, Loc, CFG),
     {{ProofTree, Commit, Opening}, _} = 
         get:batch([<<5:256>>,<<6:256>>|Many], 
                    NewLoc, CFG),
     {true, _, DecompressedTree} = 
-        verify:proof(
+        verify_verkle:proof(
           {ProofTree, Commit, Opening}, CFG),
     %io:fwrite(ProofTree),
     Leaf01 = hd(Leaves),
@@ -140,17 +140,17 @@ test(2, CFG) ->
     %io:fwrite(Leaves2),
     io:fwrite("test trie to store.\n"),
     {Loc3, _, _} = 
-        store:batch(Leaves2, 1, CFG),
+        store_verkle:batch(Leaves2, 1, CFG),
     io:fwrite("test trie stored\n"),
     RootStem = stem:get(Loc3, CFG),
     %io:fwrite(DecompressedTree),
     ProofTree2 = 
-        verify:update(
+        verify_verkle:update(
           %DecompressedTree, [Leaf1, Leaf2, Leaf3],
           DecompressedTree, [Leaf1, Leaf2, Leaf3],
           CFG),
     NewRoot2 = hd(ProofTree2),
-    Loc2 = store:verified(
+    Loc2 = store_verkle:verified(
                   NewLoc, ProofTree2, CFG),
     RootStem4 = stem:get(Loc2, CFG),
 
@@ -173,7 +173,7 @@ test(2, CFG) ->
     Root1 = stem:root(stem:get(Loc3, CFG)),
     %io:fwrite({size(Root1), size(hd(Proof1))}),
     {true, _, _} = 
-        verify:proof(
+        verify_verkle:proof(
           %Root1,
           {Proof1, Commit1, Opening1}, CFG),
                                  
@@ -181,7 +181,7 @@ test(2, CFG) ->
         get:batch([<<5:256>>], Loc2, CFG),
     Root2 = stem:root(stem:get(Loc2, CFG)),
     {true, _, _} = 
-        verify:proof(
+        verify_verkle:proof(
           %Root2,
           {Proof2, Commit2, Opening2}, CFG),
     HP1 = stem:hash_point(ed:decompress_point(hd(Proof1))),
@@ -268,7 +268,7 @@ test(3, CFG) ->
     %loading the db 
     T0 = erlang:timestamp(),
     {Loc2, _, _} = 
-        store:batch(Leaves, Loc, CFG),
+        store_verkle:batch(Leaves, Loc, CFG),
     %making the verkle proof
     T1 = erlang:timestamp(),
     {{ProofTree, Commit, Opening}, _} = 
@@ -281,7 +281,7 @@ test(3, CFG) ->
 
 
     {true, _, DecompressedTree} = 
-        verify:proof(
+        verify_verkle:proof(
           {ProofTree, Commit, Opening}, CFG),
 
     %fprof:trace([stop]),
@@ -293,7 +293,7 @@ test(3, CFG) ->
     T3 = erlang:timestamp(),
 
     
-    ProofTree2 = verify:update(
+    ProofTree2 = verify_verkle:update(
                DecompressedTree, 
                    UpdatedLeaves, CFG),
     %io:fwrite({ProofTree, ProofTree2}),
@@ -301,7 +301,7 @@ test(3, CFG) ->
 
     %storing the new data in the db
     T4 = erlang:timestamp(),
-    Loc3 = store:verified(
+    Loc3 = store_verkle:verified(
                   Loc2, ProofTree2, CFG),
     T5 = erlang:timestamp(),
     
@@ -347,16 +347,16 @@ test(23, CFG) ->
                             end, Keys),
     
     {Loc2, _, _} = 
-        store:batch(Leaves, Loc, CFG),
+        store_verkle:batch(Leaves, Loc, CFG),
     {{ProofTree, Commit, Opening}, _} = 
         get:batch(Keys, Loc2, CFG),
     {true, Leaves2} = 
-        verify:proof(
+        verify_verkle:proof(
           {ProofTree, Commit, Opening}, CFG),
     %io:fwrite({Leaves2, LeafDeletes}),
-    ProofTree2 = verify:update(
+    ProofTree2 = verify_verkle:update(
                ProofTree, LeafDeletes, CFG),
-    Loc3 = store:verified(Loc2, ProofTree2, CFG),
+    Loc3 = store_verkle:verified(Loc2, ProofTree2, CFG),
     
     %io:fwrite(get:batch(Keys, Loc3, CFG)),
     
@@ -368,18 +368,18 @@ test(4, CFG) ->
     UnusedKey = 11,
     Leaf1 = leaf:new(Key, <<27:16>>, <<>>, CFG),
     Leaf2 = leaf:new(Key, <<29:16>>, <<>>, CFG),
-    {Loc2, stem, _} = store:batch([Leaf1], Loc, CFG),
+    {Loc2, stem, _} = store_verkle:batch([Leaf1], Loc, CFG),
     {{ProofTree, Commit, Opening}, _} = 
         get:batch([<<Key:256>>],
                    Loc2, CFG),
     {true, _, DecompressedTree} = 
-        verify:proof(
+        verify_verkle:proof(
           {ProofTree, Commit, Opening}, CFG),
     ProofTree2 = 
-        verify:update(DecompressedTree, [Leaf2], CFG),
+        verify_verkle:update(DecompressedTree, [Leaf2], CFG),
     RootHash2 = stem:hash_point(hd(ProofTree2)),
 
-    {Loc4, stem, _} = store:batch([Leaf2], Loc, CFG),
+    {Loc4, stem, _} = store_verkle:batch([Leaf2], Loc, CFG),
     RootHash1 = stem:hash(stem:get(Loc4, CFG)),
 
     RootHash2 = RootHash1,
@@ -407,7 +407,7 @@ load_db(Elements) ->
                   leaf:new(N2, <<N:16>>, <<>>, CFG)
           end, range(1, Elements+1)),
     {Loc2, _, _} = 
-        store:batch(Leaves, 1, CFG),
+        store_verkle:batch(Leaves, 1, CFG),
     Loc2.
 proof_test(Loc2, UpdateMany) ->
     CFG = tree:cfg(?ID),
@@ -439,7 +439,7 @@ proof_test(Loc2, UpdateMany) ->
     %verifying the verkle proof
     T2 = erlang:timestamp(),
     {true, _, DecompressedTree} = 
-        verify:proof(
+        verify_verkle:proof(
           {ProofTree, Commit, Opening}, CFG),
 
 
@@ -452,13 +452,13 @@ proof_test(Loc2, UpdateMany) ->
     T3 = erlang:timestamp(),
 
     
-    ProofTree2 = verify:update(
+    ProofTree2 = verify_verkle:update(
                %ProofTree, UpdatedLeaves, CFG),
                DecompressedTree, UpdatedLeaves, CFG),
 
     %storing the new data in the db
     T4 = erlang:timestamp(),
-    Loc3 = store:verified(
+    Loc3 = store_verkle:verified(
                   Loc2, ProofTree2, CFG),
     T5 = erlang:timestamp(),
     

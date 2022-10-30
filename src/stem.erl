@@ -196,7 +196,7 @@ update(Location, Stem, CFG) ->
 check_root_integrity(Stem) ->
     MEP = parameters:multi_exp(),
     Hashes = tuple_to_list(Stem#stem.hashes),
-    R = store:precomputed_multi_exponent(
+    R = store_verkle:precomputed_multi_exponent(
           Hashes,MEP),
     {Gs, Hs, Q} = parameters:read(),
     R2 = multi_exponent:doit(Hashes, Gs),

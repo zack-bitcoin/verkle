@@ -99,20 +99,20 @@ handle_call({restore, Key, Value,
     valid_key(Key),
     Leaf = leaf:new(Key, Value, Meta, CFG),
     {Hash, NewRoot, _} = 
-        store:restore(Leaf, Hash, Proof, 
+        store_verkle:restore(Leaf, Hash, Proof, 
                       Root, CFG),
     {reply, NewRoot, CFG};
 handle_call({put, Key, Value, Meta, Root}, 
             _From, CFG) -> 
     valid_key(Key),
     Leaf = leaf:new(Key, Value, Meta, CFG),
-    %{_, NewRoot, _} = store:store(Leaf, Root, CFG),
-    {_, NewRoot} = store:store(Leaf, Root, CFG),
+    %{_, NewRoot, _} = store_verkle:store(Leaf, Root, CFG),
+    {_, NewRoot} = store_verkle:store(Leaf, Root, CFG),
     {reply, NewRoot, CFG};
 handle_call({put_batch, Leaves, Root}, 
             _From, CFG) ->
     {Hash, NewRoot} = 
-        store:batch(Leaves, Root, CFG),
+        store_verkle:batch(Leaves, Root, CFG),
     {reply, NewRoot, CFG};
 handle_call({get, Key, RootPointer}, _From, CFG) ->
     valid_key(Key),

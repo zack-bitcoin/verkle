@@ -54,7 +54,7 @@ doit(1) ->
     io:fwrite("load up the batch database\n"),
     T1 = erlang:timestamp(),
     {NewLoc, stem, _} = 
-        store:batch(Leaves, Loc, CFG),
+        store_verkle:batch(Leaves, Loc, CFG),
     T2 = erlang:timestamp(),
     io:fwrite("make proof\n"),
     Proof = 
@@ -63,7 +63,7 @@ doit(1) ->
     io:fwrite("verify proof\n"),
     Root = stem:root(stem:get(NewLoc, CFG)),
     {true, Leaves2} = 
-        verify:proof(Root, Proof, CFG),
+        verify_verkle:proof(Root, Proof, CFG),
     T4 = erlang:timestamp(),
     true = (length(Leaves2) == length(Many)),
     io:fwrite("measured in millionths of a second. 6 decimals. \n"),
@@ -113,7 +113,7 @@ doit(2) ->
     io:fwrite("load up the batch database\n"),
     T1 = erlang:timestamp(),
     {NewLoc, stem, _} = 
-        store:batch(Leaves, Loc, CFG),
+        store_verkle:batch(Leaves, Loc, CFG),
     T2 = erlang:timestamp(),
     io:fwrite("make proof\n"),
     Proof = 
@@ -125,7 +125,7 @@ doit(2) ->
 %               stem:get(NewLoc, CFG),
 %               base64:encode(Root)}),
     {true, Leaves2} = 
-        verify:proof(Root, Proof, CFG),
+        verify_verkle:proof(Root, Proof, CFG),
     T4 = erlang:timestamp(),
     true = (length(Leaves2) == length(Many)),
     io:fwrite("measured in millionths of a second. 6 decimals. \n"),

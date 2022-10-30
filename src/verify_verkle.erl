@@ -1,4 +1,4 @@
--module(verify).
+-module(verify_verkle).
 -export([proof/2, update/3, remove_empty/1,
          test/0
         ]).
@@ -39,7 +39,7 @@ update_batch2([], Tree, _Depth, _CFG, _MEP) ->
     {0, Tree};
 update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
     %adding leaves to an existing stem.
-    Leaves2 = store:clump_by_path(
+    Leaves2 = store_verkle:clump_by_path(
                 Depth, Leaves),
     %io:fwrite({Tree, Leaves2}),
     {Diffs0, Tree2} = 
@@ -63,7 +63,7 @@ update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
     {_, Tree3} = insert_stem_hashes2(ECdict, Tree2, []),
     %Diffs = calc_subs(Diffs0, Cs),
     Diffs = calc_subs(Diffs0, Es),
-    %EllDiff = store:precomputed_multi_exponent(
+    %EllDiff = store_verkle:precomputed_multi_exponent(
     EllDiff = precomputed_multi_exponent:doit(
                 Diffs, MEP),
     {EllDiff, Tree3}.
@@ -212,7 +212,7 @@ update_merge([[{K, 0}]|Leaves],
     %deleting a leaf.
     %io:fwrite("deleting a leaf"),
     OldLeaf = leaf:new(OldK, OldV, 0, CFG),
-    OldN = store:leaf_hash(OldLeaf, CFG),
+    OldN = store_verkle:leaf_hash(OldLeaf, CFG),
     update_merge(Leaves, Subtrees, Depth, CFG, MEP,
                  [{N, 0}|R], 
                  [fr:neg(OldN)|Diffs], N+1);
@@ -232,9 +232,9 @@ update_merge([LH|Leaves],
         (B and B2) -> 
             %io:fwrite(LH),
             Leaf2 = hd(LH),
-            OldN = store:leaf_hash(
+            OldN = store_verkle:leaf_hash(
                      FL, CFG),
-            NewN = store:leaf_hash(
+            NewN = store_verkle:leaf_hash(
                      Leaf2, CFG),
             LeafDiff = 
                 if
@@ -290,7 +290,7 @@ update_merge([LH|Leaves],
     Meta = leaf:meta(hd(LH)),
     %#leaf{key = Key, value = Value} = hd(LH),
     io:fwrite("new leaf diff calculation\n"),
-    Diff = store:leaf_hash(hd(LH), CFG),
+    Diff = store_verkle:leaf_hash(hd(LH), CFG),
     %Diff = leaf:hash(hd(LH), CFG),
     update_merge(Leaves, Subtrees, Depth, CFG, 
                  %MEP, [[{N, {Key, Value, Meta}}]
@@ -461,7 +461,7 @@ unfold(Root, {Index, {Key, B}}, T, CFG) %leaf case
     %io:fwrite("verify unfold leaf\n"),
     %Leaf = leaf:new(Key, B, Meta, CFG),
     Leaf = leaf:new(Key, B, 0, CFG),
-    <<L:256>> = store:leaf_hash(Leaf, CFG),
+    <<L:256>> = store_verkle:leaf_hash(Leaf, CFG),
     lists:reverse([{Root, Index, <<L:256>>}|T]);
 unfold(Root, [{Index, X}|R], T, CFG) %stem case
   when (is_binary(X) and (size(X) == (32*4)))
@@ -481,7 +481,7 @@ test() ->
     CFG = tree:cfg(trie01),
     Leaves = [leaf:new(999999872, <<0,0>>, 0, CFG),
               leaf:new(999999744, <<0,0>>, 0, CFG)],
-    Leaves2 = store:clump_by_path(
+    Leaves2 = store_verkle:clump_by_path(
                 0, Leaves),
     %todo. each should have the same number of leaves.
     true = (length(remove_empty(Leaves))) ==

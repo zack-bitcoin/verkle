@@ -1,4 +1,4 @@
--module(store).
+-module(store_verkle).
 -export([batch/3,
          test/1,
          leaf_hash/2,
@@ -264,7 +264,7 @@ test(3) ->
     %                         leaf:raw_key(Leaf) end,
     %                 Leaves),
     fprof:trace(start),
-    store:batch(Leaves, Loc, CFG),
+    store_verkle:batch(Leaves, Loc, CFG),
     fprof:trace(stop),
     fprof:profile(file, "fprof.trace"),
     fprof:analyse().
