@@ -103,23 +103,23 @@ handle_call(a, _From,
 handle_call(_, _From, X) -> {reply, X, X}.
 
 a() ->
-    gen_server:call({global, trie01_parameters}, a).
+    gen_server:call({global, trie01_v_parameters}, a).
 da() ->
-    gen_server:call({global, trie01_parameters}, da).
+    gen_server:call({global, trie01_v_parameters}, da).
 domain() ->
-    gen_server:call({global, trie01_parameters}, domain).
+    gen_server:call({global, trie01_v_parameters}, domain).
 read() ->
-    gen_server:call({global, trie01_parameters}, ghq).
+    gen_server:call({global, trie01_v_parameters}, ghq).
 div_e(M) ->
-    gen_server:call({global, trie01_parameters}, {div_e, M}).
+    gen_server:call({global, trie01_v_parameters}, {div_e, M}).
 div_e() ->
-    gen_server:call({global, trie01_parameters}, div_e).
+    gen_server:call({global, trie01_v_parameters}, div_e).
 multi_exp() ->
-    gen_server:call({global, trie01_parameters}, multi_exp).
+    gen_server:call({global, trie01_v_parameters}, multi_exp).
 multi_exp(G) ->
-    gen_server:call({global, trie01_parameters}, {multi_exp, G}).
+    gen_server:call({global, trie01_v_parameters}, {multi_exp, G}).
 multi_exp(G, R) ->
-    gen_server:call({global, trie01_parameters}, {multi_exp, G, R}).
+    gen_server:call({global, trie01_v_parameters}, {multi_exp, G, R}).
 
 range(X, X) -> [X];
 range(X, Y) when X < Y -> 

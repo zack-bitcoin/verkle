@@ -4,7 +4,7 @@
 doit(0) ->
     S = success,
     io:fwrite("leaf\n"),
-    S = leaf:test(1),
+    S = leaf_verkle:test(1),
     io:fwrite("stem\n"),
     S = stem_verkle:test(1),
     io:fwrite("get\n"),
