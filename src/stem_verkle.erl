@@ -281,7 +281,7 @@ test(1) ->
     %T = {0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
     %CFG = cfg_verkle:new(1, 9, 2, trie), %path value id meta hash_size
     io:fwrite("before start\n"),
-    verkle_app:start(normal, []),
+    %verkle_app:start(normal, []),
     CFG = tree:cfg(trie01),
 %{cfg,5,2,trie01,2,32} path, value, id, meta, hash_size
 %596 total, average 37.25

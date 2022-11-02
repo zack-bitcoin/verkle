@@ -100,7 +100,7 @@ hash(L, CFG) ->
             hash:doit(<<(L#leaf.key)/binary, V/binary>>)
     end.
 test(1) ->
-    verkle_app:start(normal, []),
+    %verkle_app:start(normal, []),
     CFG = tree:cfg(trie01),
 %{cfg,32,2,trie01,2,32,ram,1},[]],
     %io:fwrite(CFG),

@@ -5,7 +5,6 @@
 -include("constants.hrl").
 
 test() ->
-    verkle_app:start(normal, []),
     CFG = tree:cfg(?ID),
     V = [
          %23,
@@ -16,7 +15,6 @@ test() ->
         ],
     test_helper(V, CFG).
 test(N) ->
-    verkle_app:start(normal, []),
     CFG = tree:cfg(?ID),
     %test_helper([N], CFG).
     test(N, CFG).

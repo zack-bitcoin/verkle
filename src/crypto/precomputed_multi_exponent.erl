@@ -132,7 +132,7 @@ many(A, N) when N > 0 ->
     [A|many(A, N-1)].
 
 test(1) ->
-    verkle_app:start(normal, []),
+    %verkle_app:start(normal, []),
     R1 = ([1|many(0, 255)]),
     R2 = ([0,1|many(0, 254)]),
     R3 = ([2|many(0, 255)]),

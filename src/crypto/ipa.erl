@@ -59,7 +59,7 @@ v_mul(A, Bs) ->
 
 simplify_v(X) -> ed:normalize(X).
 point_to_entropy(L) -> 
-    stem2:hash_point(L).
+    stem_verkle:hash_point(L).
 
 make_ipa(A, B, G, H, Q) ->
     %proving a statement of the form
@@ -327,7 +327,7 @@ test(3) ->
     success;
 test(4) ->
     %speed test.
-    verkle_app:start(normal, []),
+    %verkle_app:start(normal, []),
     %Gs = ?p#p.g,
     %E = ?p#p.e,
     %G2 = ok,
