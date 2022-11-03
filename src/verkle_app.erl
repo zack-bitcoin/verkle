@@ -10,7 +10,7 @@
 start(normal, []) ->
     Size = 2,
     %Max = 20000000000,
-    ID = trie01,
+    ID = tree01,
     %KeyLength = 5,%in bytes
     KeyLength = ?nwidth div ?nindex,%in bytes
     Amount = 1000000,

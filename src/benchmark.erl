@@ -1,7 +1,7 @@
 -module(benchmark).
 -export([doit/1, now/0]).
 
--define(ID, trie01).
+-define(ID, tree01).
 -include("constants.hrl").
 
 range(A, B) when (A < B) ->

@@ -282,8 +282,8 @@ test(1) ->
     %CFG = cfg_verkle:new(1, 9, 2, trie), %path value id meta hash_size
     io:fwrite("before start\n"),
     %verkle_app:start(normal, []),
-    CFG = tree:cfg(trie01),
-%{cfg,5,2,trie01,2,32} path, value, id, meta, hash_size
+    CFG = tree:cfg(tree01),
+%{cfg,5,2,tree01,2,32} path, value, id, meta, hash_size
 %596 total, average 37.25
     H = empty_hashes(CFG),
     S = #stem{types = T, pointers = P, hashes = H},

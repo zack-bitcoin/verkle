@@ -1,7 +1,7 @@
 -module(test_verkle).
 -export([test/0, test/1, load_db/1, proof_test/2]).
 
--define(ID, trie01).
+-define(ID, tree01).
 -include("constants.hrl").
 
 test() ->
