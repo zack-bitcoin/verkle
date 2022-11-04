@@ -16,8 +16,8 @@ is_serialized_leaf(X, CFG) ->
     size(X) == (P + M + S).
     %is_record(X, leaf).
 serialize(X, CFG) ->
-    P = cfg_verkle:path(CFG) * 8,
-    M = cfg_verkle:meta(CFG) * 8,
+    %P = cfg_verkle:path(CFG) * 8,
+    M = cfg_verkle:meta(CFG),
     S = cfg_verkle:value(CFG),
     S = size(X#leaf.value),
     M = size(X#leaf.meta),
