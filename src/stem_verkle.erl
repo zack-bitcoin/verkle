@@ -11,6 +11,7 @@
 	 make/3, make/2, update/3, onify2/2,
 	 put_batch/2, %serialize/2,
          root/1, check_root_integrity/1,
+         delete/2,
 	 empty_trie/2]).
 %-include("constants.hrl").
 %-export_type([stem/0,types/0,empty_t/0,stem_t/0,leaf_t/0,pointers/0,empty_p/0,hashes/0,hash/0,empty_hash/0,stem_p/0,nibble/0]).
@@ -254,6 +255,9 @@ get(Pointer, CFG) ->
     true = Pointer > 0,
     S = dump:get(Pointer, ids_verkle:stem(CFG)),
     deserialize(S, CFG).
+delete(Pointer, CFG) ->
+    true = Pointer > 0,
+    dump:delete(Pointer, ids_verkle:stem(CFG)).
 empty_trie(Root, CFG) ->
     Stem = get(Root, CFG),
     update_pointers(Stem, empty_tuple()).

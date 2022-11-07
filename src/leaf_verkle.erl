@@ -1,6 +1,7 @@
 -module(leaf_verkle).
 -export([new/4,
          key/1, value/1, meta/1, path/2, path_maker/2, hash/2, put/2, get/2, serialize/2, deserialize/2,
+         delete/2,
          raw_key/1,
 	 put_batch/2,
 	is_serialized_leaf/2, test/1]).
@@ -90,6 +91,10 @@ put(Leaf, CFG) ->
 get(Pointer, CFG) ->
     L = dump:get(Pointer, ids_verkle:leaf(CFG)),
     deserialize(L, CFG).
+
+delete(Pointer, CFG) ->
+    dump:delete(Pointer, ids_verkle:leaf(CFG)).
+
 hash(L, CFG) ->   
     HS = cfg_verkle:hash_size(CFG)*8,
     case L#leaf.value of

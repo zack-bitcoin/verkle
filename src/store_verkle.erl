@@ -28,17 +28,40 @@ batch([], P, stem, _, _CFG, _) ->
     %don't read the stem here, because we aren't changing it.
     {P, stem, stem_not_recorded};
 batch([Leaf], 0, 0, _, CFG, _) ->
-    %storing a leaf in a previously empty spot.
+    io:fwrite("storing a leaf in a previously empty spot.\n"),
     Loc = leaf_verkle:put(Leaf, CFG),
     {Loc, leaf, Leaf};
 batch(Leaves0, 0, 0, Depth, CFG, MEP) ->
-    %storing multiple leaves in a previously empty spot.
+    io:fwrite("storing multiple leaves in a previously empty spot.\n"),
     batch(Leaves0, 
           1, %1 is always an empty stem.
           stem, Depth, CFG, MEP);
-batch(Leaves0, RP, leaf, Depth, CFG, MEP) ->
+batch([Leaf0], RP, leaf, Depth, CFG, MEP) ->
+    io:fwrite("storing a leaf where there is already a leaf.\n"),
     RootLeaf = leaf_verkle:get(RP, CFG),
-    batch([RootLeaf|Leaves0], 1, stem, 
+    RootKey = leaf_verkle:key(RootLeaf),
+    Key2 = leaf_verkle:key(Leaf0),
+    B = Key2 == RootKey,
+    if
+        B -> 
+            Loc = leaf_verkle:put(Leaf0, CFG),
+            {Loc, leaf, Leaf0};
+        true ->
+            batch([Leaf0, RootLeaf], 1, stem,
+                  Depth, CFG, MEP)
+    end;
+batch(Leaves0, RP, leaf, Depth, CFG, MEP) ->
+    io:fwrite("storing leaves where there is already a leaf.\n"),
+    RootLeaf = leaf_verkle:get(RP, CFG),
+    RootKey = leaf_verkle:key(RootLeaf),
+    Keys = lists:map(fun(X) -> leaf_verkle:key(X) 
+                     end, Leaves0),
+    B = is_in(RootKey, Keys),
+    Leaves2 = if
+                  B -> Leaves0;
+                  true -> [RootLeaf|Leaves0]
+              end,
+    batch(Leaves2, 1, stem, 
           Depth, CFG, MEP);
 batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     %cut the list into sub lists that get included in each sub-branch.
@@ -62,9 +85,14 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     %io:fwrite({HPT1, Leaves2}),
     RHPT = lists:zipwith(
            fun(Leaves3, {H, P, T}) -> 
+                   T2 = case T of
+                            0 -> 0;
+                            1 -> stem;
+                            2 -> leaf
+                        end,
                    {P2, Type, Tree} = 
                        batch(Leaves3, P, 
-                             T, Depth+1, CFG, MEP),
+                             T2, Depth+1, CFG, MEP),
                    H2 = hash_thing(%  3%
                           P2, Type, Tree, H, CFG),
                    Sub = fr:sub(H2, H),
@@ -175,6 +203,13 @@ verified3(N, Stem, Type, Loc, Hash) ->
                  N+1, Stem#stem.hashes, Hash)
      },
     Stem2.
+
+is_in(X, [X|_]) -> true;
+is_in(X, [_|T]) ->
+    is_in(X, T);
+is_in(_, []) -> false.
+
+
                 
 range(X, X) -> [X];
 range(X, Y) when (X < Y) -> 
@@ -184,6 +219,8 @@ clump_by_path(D, Leaves) ->
     Paths0 = lists:map(
                fun(L) -> 
                        D8 = (31 - D)*8,
+                       io:fwrite(integer_to_list(D8 div 8)),
+                       io:fwrite("\n"),
                       <<_:D8, B:8, _/binary>> =
                            leaf_verkle:raw_key(L),
                       {B, L} end,
