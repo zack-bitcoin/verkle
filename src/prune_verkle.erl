@@ -30,13 +30,13 @@ doit([P|PointersT], [1|TypesT],
     D2 = doit_stem(P, 1, [], CFG),
     doit(PointersT, TypesT, PointersK, TypesK,
          Deleted ++ D2, CFG);
-doit([_|PointersT], [2|TypesT], 
+doit([T|PointersT], [2|TypesT], 
      [K|PointersK], [_|TypesK], 
      Deleted, CFG) ->
     io:fwrite("remove leaf\n"),
     %if a leaf was edited or removed
-    L = leaf_verkle:get(K, CFG),
-    leaf_verkle:delete(K, CFG),
+    L = leaf_verkle:get(T, CFG),
+    leaf_verkle:delete(T, CFG),
     doit(PointersT, TypesT, PointersK, TypesK,
          [L|Deleted], CFG).
 
