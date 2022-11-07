@@ -42,7 +42,12 @@ batch([Leaf0], RP, leaf, Depth, CFG, MEP) ->
     RootKey = leaf_verkle:key(RootLeaf),
     Key2 = leaf_verkle:key(Leaf0),
     B = Key2 == RootKey,
+    B2 = leaf_verkle:value(RootLeaf) == 
+        leaf_verkle:value(Leaf0),
     if
+        B2 and B -> 
+            %1=2,
+            {RP, leaf, RootLeaf};
         B -> 
             Loc = leaf_verkle:put(Leaf0, CFG),
             {Loc, leaf, Leaf0};

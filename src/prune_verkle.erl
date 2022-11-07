@@ -82,8 +82,9 @@ test(0) ->
     Leaves2 = 
         lists:map(
           fun(N) -> 
-                  Key = N,
-                  leaf_verkle:new(Key, <<(N*2):16>>, <<>>, CFG)
+                  %Key = N * 2,
+                  Key = N+1,
+                  leaf_verkle:new(Key, <<(N+5):16>>, <<>>, CFG)
           end, range(1, Times+1)),
     
     %Many = lists:map(fun(Leaf) -> 
