@@ -28,11 +28,11 @@ batch([], P, stem, _, _CFG, _) ->
     %don't read the stem here, because we aren't changing it.
     {P, stem, stem_not_recorded};
 batch([Leaf], 0, 0, _, CFG, _) ->
-    io:fwrite("storing a leaf in a previously empty spot.\n"),
+    %io:fwrite("storing a leaf in a previously empty spot.\n"),
     Loc = leaf_verkle:put(Leaf, CFG),
     {Loc, leaf, Leaf};
 batch(Leaves0, 0, 0, Depth, CFG, MEP) ->
-    io:fwrite("storing multiple leaves in a previously empty spot.\n"),
+    %io:fwrite("storing multiple leaves in a previously empty spot.\n"),
     batch(Leaves0, 
           1, %1 is always an empty stem.
           stem, Depth, CFG, MEP);
@@ -224,8 +224,8 @@ clump_by_path(D, Leaves) ->
     Paths0 = lists:map(
                fun(L) -> 
                        D8 = (31 - D)*8,
-                       io:fwrite(integer_to_list(D8 div 8)),
-                       io:fwrite("\n"),
+                       %io:fwrite(integer_to_list(D8 div 8)),
+                       %io:fwrite("\n"),
                       <<_:D8, B:8, _/binary>> =
                            leaf_verkle:raw_key(L),
                       {B, L} end,

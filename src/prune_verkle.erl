@@ -2,6 +2,7 @@
 -export([doit_stem/3, test/1]).
 
 doit([], [], [], [], D, _) ->
+    %returns the list of every leaf that was deleted.
     D;
 doit([P|PointersT], [T|TypesT], 
      [P|PointersK], [T|TypesK], 
@@ -16,18 +17,11 @@ doit([_|PointersT], [0|TypesT],
     doit(PointersT, TypesT, PointersK, TypesK, 
          Deleted, CFG);
 doit([P|PointersT], [1|TypesT], 
-     [K|PointersK], [1|TypesK], 
-     Deleted, CFG) ->
-    %if the old version was a stem, and that stem changed
-    io:fwrite("change stem\n"),
-    D2 = doit_stem(P, K, [], CFG),
-    doit(PointersT, TypesT, PointersK, TypesK,
-         Deleted ++ D2, CFG);
-doit([P|PointersT], [1|TypesT], 
      [K|PointersK], [_|TypesK], 
      Deleted, CFG) ->
-    %if the old version was a stem, and that stem was replaced by a leaf or is now empty.
-    D2 = doit_stem(P, 1, [], CFG),
+    %if the old version was a stem, and that stem was edited or removed
+    io:fwrite("change stem\n"),
+    D2 = doit_stem(P, K, [], CFG),
     doit(PointersT, TypesT, PointersK, TypesK,
          Deleted ++ D2, CFG);
 doit([T|PointersT], [2|TypesT], 
