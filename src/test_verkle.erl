@@ -40,7 +40,7 @@ test(1, CFG) ->
                   Key0 = Times + 1 - N,
                   %<<Key:256>> = <<(-Key0):256>>,
                   Key = 1000000000 - (Key0*256),
-                  leaf_verkle:new(Key, <<N:16>>, <<>>, CFG)
+                  leaf_verkle:new(Key, <<N:16>>, <<0>>, CFG)
           %end, Many),
           end, range(1, Times+1)),
     %Many = lists:map(fun(#leaf{key = K}) -> K end,
@@ -98,7 +98,7 @@ test(1, CFG) ->
     %FastProof;
 test(2, CFG) ->
     Loc = 1,
-    Times = 2,
+    Times = 3,
     Leaves = 
         lists:map(
           fun(N) -> 
@@ -106,7 +106,7 @@ test(2, CFG) ->
                   %<<Key:256>> = <<(-Key0):256>>,
                   Key = 1000000000 - (128 * N),
                   %#leaf{key = Key, value = <<N:16>>}
-                  leaf_verkle:new(Key, <<N:16>>, <<>>, CFG)
+                  leaf_verkle:new(Key, <<N:16>>, <<0>>, CFG)
           end, range(1, Times+1)),
     %Many = lists:map(fun(#leaf{key = K}) -> K end,
     Many = lists:map(fun(Leaf) -> 
@@ -124,12 +124,12 @@ test(2, CFG) ->
     Leaf01 = hd(Leaves),
     Leaf02 = hd(tl(Leaves)),
     DeleteKey = leaf_verkle:raw_key(Leaf02),
-    Leaf1 = Leaf01#leaf{value = <<0,0>>},%editing existing leaf.
-    Leaf2 = leaf_verkle:new(5, <<0,1>>, <<>>, CFG),%creating a new leaf.
+    Leaf1 = Leaf01#leaf{value = <<0,0>>, meta = <<2>>},%editing existing leaf.
+    Leaf2 = leaf_verkle:new(5, <<0,1>>, <<2>>, CFG),%creating a new leaf.
     Leaf3 = {DeleteKey, 0},
     %io:fwrite({Leaf1, Leaf2}),
     %Leaf2 = {Leaf02#leaf.key, 0},
-    %Leaf3 = leaf_verkle:new(5, <<0,0>>, <<>>, CFG),%writing to the previously empty location.
+    %Leaf3 = leaf_verkle:new(5, <<0,0>>, <<0>>, CFG),%writing to the previously empty location.
     %io:fwrite({Leaf0, Leaf1}),
     %NewRoot0 = hd(ProofTree),
     %Leaves2 = [Leaf2|Leaves],
@@ -147,6 +147,7 @@ test(2, CFG) ->
           %DecompressedTree, [Leaf1, Leaf2, Leaf3],
           DecompressedTree, [Leaf1, Leaf2, Leaf3],
           CFG),
+    %after the update, we store meta data in the tree for leaves that have been changed.
     NewRoot2 = hd(ProofTree2),
     Loc2 = store_verkle:verified(
                   NewLoc, ProofTree2, CFG),
@@ -190,9 +191,11 @@ test(2, CFG) ->
     {{Proof3, _, _}, _} = 
         get_verkle:batch([leaf_verkle:raw_key(Leaf1)], 
                    Loc3, CFG),
-    {{Proof4, _, _}, _} = 
+    {{Proof4, _, _}, Meta2} = 
         get_verkle:batch([leaf_verkle:raw_key(Leaf1)], 
                    Loc2, CFG),
+%    io:fwrite(dict:find(leaf_verkle:raw_key(Leaf1),
+%                        Meta2)),%returns <<0>>, should be <<2>>.
 
     %this is for the leaf being deleted.
     {{Proof5, _, _}, _} = 
@@ -240,7 +243,7 @@ test(3, CFG) ->
           fun(N) -> 
                   Key = crypto:strong_rand_bytes(32),
                   %Key = hash:doit(<<N:256>>),
-                  leaf_verkle:new(Key, <<N:16>>, <<>>, CFG)
+                  leaf_verkle:new(Key, <<N:16>>, <<0>>, CFG)
                   %Key0 = StartingElements + 1 - N,
                   %Key = 100000000000000000000000000000000000000000000000000000000000000000000000000000 - (Key0 * 111),
                   %leaf_verkle:new(Key, <<N:16>>, <<>>, CFG)
@@ -254,12 +257,12 @@ test(3, CFG) ->
     UpdatedLeaves = 
         lists:map(
           fun(N) -> 
-                  leaf_verkle:new(N, <<2, 7>>, <<>>, CFG)
+                  leaf_verkle:new(N, <<2, 7>>, <<0>>, CFG)
 %                  #leaf{key = N, 
 %                        value = <<2,7>>}
                   
           end, Updating),
-    %Leaf5 = leaf_verkle:new(5, <<0,0>>, <<>>, CFG),
+    %Leaf5 = leaf_verkle:new(5, <<0,0>>, <<0>>, CFG),
     %LGK = hd(NotUpdating),
     %LeafGone = {LGK, 0},
                         
@@ -334,8 +337,8 @@ test(23, CFG) ->
                   %#leaf{key = Key, 
                   %      value = <<N:16>>}
                   N2 = hash:doit(<<N:256>>),
-                  %leaf_verkle:new(Key, <<N:16>>, <<>>, CFG)
-                  leaf_verkle:new(N2, <<N:16>>, <<>>, CFG)
+                  %leaf_verkle:new(Key, <<N:16>>, <<0>>, CFG)
+                  leaf_verkle:new(N2, <<N:16>>, <<0>>, CFG)
           end, range(1, StartingElements+1)),
     Keys = lists:map(fun(Leaf) -> 
                      leaf_verkle:raw_key(Leaf) end,
@@ -364,8 +367,8 @@ test(4, CFG) ->
     Loc = 1,
     Key = 27,
     UnusedKey = 11,
-    Leaf1 = leaf_verkle:new(Key, <<27:16>>, <<>>, CFG),
-    Leaf2 = leaf_verkle:new(Key, <<29:16>>, <<>>, CFG),
+    Leaf1 = leaf_verkle:new(Key, <<27:16>>, <<0>>, CFG),
+    Leaf2 = leaf_verkle:new(Key, <<29:16>>, <<0>>, CFG),
     {Loc2, stem, _} = store_verkle:batch([Leaf1], Loc, CFG),
     {{ProofTree, Commit, Opening}, _} = 
         get_verkle:batch([<<Key:256>>],
@@ -402,7 +405,7 @@ load_db(Elements) ->
                   %      value = <<N:16>>}
                   N2 = hash:doit(<<N:256>>),
                   %N2 = crypto:strong_rand_bytes(32),
-                  leaf_verkle:new(N2, <<N:16>>, <<>>, CFG)
+                  leaf_verkle:new(N2, <<N:16>>, <<0>>, CFG)
           end, range(1, Elements+1)),
     {Loc2, _, _} = 
         store_verkle:batch(Leaves, 1, CFG),
@@ -417,10 +420,10 @@ proof_test(Loc2, UpdateMany) ->
     UpdatedLeaves = 
         lists:map(
           fun(N) ->
-                  leaf_verkle:new(N, <<2, 7>>, <<>>, CFG)
+                  leaf_verkle:new(N, <<2, 7>>, <<0>>, CFG)
           end, Updating),
     Leaf5 = leaf_verkle:new(5000000000000000000000, 
-                     <<0,0>>, <<>>, CFG),
+                     <<0,0>>, <<0>>, CFG),
     <<LGK:256>> = 
         hash:doit(<<(UpdateMany + 1):256>>),
     LeafGone = {LGK, 0},

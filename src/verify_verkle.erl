@@ -100,6 +100,9 @@ insert_stem_hashes2(ECs, [H|T], Result) ->
 insert_stem_hashes2(ECs, Tree = {_I, {_K, _V}}, 
                     []) ->
     {ECs, Tree};
+insert_stem_hashes2(ECs, Tree = {_I, {_K, _V, _M}}, 
+                    []) ->
+    {ECs, Tree};
 insert_stem_hashes2(
   ECs, Tree = {I, {mstem, _, _}}, []) ->
     {ECs, Tree};
@@ -252,9 +255,9 @@ update_merge([LH|Leaves],
               Leaves, Subtrees, Depth, CFG, 
               %MEP, [[{N, {leaf_verkle:key(Leaf2),
               MEP, [[{N, {leaf_verkle:raw_key(Leaf2),
-                          leaf_verkle:value(Leaf2)
-                          %leaf_verkle:meta(Leaf2)}}]|
-                          }}]|
+                          leaf_verkle:value(Leaf2),
+                          leaf_verkle:meta(Leaf2)}}]|
+                   %}}]|
                     R],
               [LeafDiff|Diffs], N+1);
         B -> 
@@ -288,14 +291,14 @@ update_merge([LH|Leaves],
     %Key = leaf_verkle:key(hd(LH)),
     Key = leaf_verkle:raw_key(hd(LH)),
     Value = leaf_verkle:value(hd(LH)),
-    %Meta = leaf_verkle:meta(hd(LH)),
+    Meta = leaf_verkle:meta(hd(LH)),
     %#leaf{key = Key, value = Value} = hd(LH),
     io:fwrite("new leaf diff calculation\n"),
     Diff = store_verkle:leaf_hash(hd(LH), CFG),
     %Diff = leaf_verkle:hash(hd(LH), CFG),
     update_merge(Leaves, Subtrees, Depth, CFG, 
-                 %MEP, [[{N, {Key, Value, Meta}}]
-                 MEP, [[{N, {Key, Value}}]
+                 MEP, [[{N, {Key, Value, Meta}}]
+                 %MEP, [[{N, {Key, Value}}]
                        |R], 
                  [Diff|Diffs], N+1);
 update_merge(Ls, [X|T], Depth, CFG, MEP, R, Diffs, 

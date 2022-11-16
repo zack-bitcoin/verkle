@@ -169,12 +169,21 @@ verified2([[{N, 0}]|T], Stem, CFG) ->
 verified2([{N, 0}|T], Stem, CFG) -> 
     Stem2 = verified3(N, Stem, 0, 0, <<0:256>>),
     verified2(T, Stem2, CFG);
-%verified2([[{N, {Key, Value, Meta}}]|T], 
+verified2([[{N, {Key, Value, Meta}}]|T], 
+          Stem, CFG) -> 
+    %it was updated, so we need to store the new version.
+    Leaf = leaf_verkle:new(Key, Value, Meta, CFG),
+    Loc = leaf_verkle:put(Leaf, CFG),
+    Stem2 = verified3(
+              N, Stem, 2, Loc, 
+              leaf_hash(Leaf, CFG)),
+    verified2(T, Stem2, CFG);
 verified2([[{N, {Key, Value}}]|T], 
           Stem, CFG) -> 
+    %it was unchanged.
     %Leaf = leaf_verkle:new(Key, Value, Meta, CFG),
     Leaf = leaf_verkle:new(Key, Value, 0, CFG),
-    Loc = leaf_verkle:put(Leaf, CFG),
+    Loc = element(N+1, Stem#stem.pointers),%leave it unchanged
     Stem2 = verified3(
               N, Stem, 2, Loc, 
               leaf_hash(Leaf, CFG)),
