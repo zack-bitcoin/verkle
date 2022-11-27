@@ -252,6 +252,7 @@ serialize_stems([], _) -> [];
 serialize_stems([{N, L}| T], CFG) ->
     [{N, serialize(L, CFG)}|serialize_stems(T, CFG)].
 get(Pointer, CFG) -> 
+    true = is_integer(Pointer),
     true = Pointer > 0,
     S = dump:get(Pointer, ids_verkle:stem(CFG)),
     deserialize(S, CFG).

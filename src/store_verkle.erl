@@ -74,6 +74,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     Leaves2 = clump_by_path(
                 Depth, Leaves),
     %depth first recursion over the sub-lists on teh sub-trees to calculate the pointers and hashes for this node.
+    true = is_integer(RP),
     RootStem = stem_verkle:get(RP, CFG),
     #stem{
            hashes = Hashes,
