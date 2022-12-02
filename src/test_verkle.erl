@@ -11,7 +11,8 @@ test() ->
          1,
          2,
          3,
-         4
+         4,
+         5
         ],
     test_helper(V, CFG).
 test(N) ->
@@ -385,8 +386,29 @@ test(4, CFG) ->
 
     RootHash2 = RootHash1,
 
-    success.
-    
+    success;
+test(5, CFG) ->
+    Loc = 1,
+    Times = 2000,
+    ProveMany = 3,
+    Leaves = 
+        lists:map(
+          fun(N) -> 
+                  Key0 = Times + 1 - N,
+                  Key = 1000000000 - (Key0*256),
+                  leaf_verkle:new(Key, <<N:16>>, <<0>>, CFG)
+          end, range(1, Times+1)),
+    Keys = lists:map(fun(Leaf) -> 
+                             leaf_verkle:raw_key(Leaf) 
+                     end, Leaves),
+    {NewLoc, stem, _} = 
+        store_verkle:batch(Leaves, Loc, CFG),
+
+    {First, _} = lists:split(ProveMany, Keys),
+    {Proof, _} = get_verkle:batch(
+                   First, NewLoc, CFG, small),
+    SP = get_verkle:serialize_proof(Proof),
+    {size(SP), SP}.
 
 range(A, B) when (A < B) ->
     [A|range(A+1, B)];

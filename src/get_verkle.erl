@@ -8,6 +8,7 @@ split3parts/4,
 keys2paths/2, 
 withdraw_points/1, withdraw_points2/1,
 compressed_points_list/1,
+serialize_proof/1,
 test/1]).
 -include("constants.hrl").
 
@@ -212,6 +213,114 @@ batch(Keys, Root, CFG, Type) ->
     %todo. return meta data from the leaves.
     {{Tree6, CommitG2, Opening3}, Meta}.
     %{Tree4, CommitG, Opening}.
+
+deserialize_tree(<<Root:256, S2/binary>>) ->
+    {D, Leftover} = deserialize_thing(S2),
+    %[<<Root:256>>|D].
+    %io:fwrite(D),
+    Leftover = <<>>,
+    [<<Root:256>>|D].
+
+
+
+deserialize_thing(<<>>) -> {[], <<>>};
+deserialize_thing(<<1, I, B:256, 0, R/binary>>) ->
+    {D, R2} = deserialize_thing(R),
+    case D of
+        <<>> ->
+            {{I, <<B:256>>}, R2};
+        _ ->
+            {[{I, <<B:256>>}, D], R2}
+    end;
+deserialize_thing(<<1, I, B:256, N0, R/binary>>) ->
+    NumberChildren = N0 + 1,
+    {D, R2} = deserialize_times(NumberChildren, R),
+    case D of
+        <<>> -> 
+            {{I, <<B:256>>}, R2};
+        _ ->
+            {[{I, <<B:256>>}|D], R2}
+    end;
+deserialize_thing(<<2, I, K:256, S:32, R/binary>>) ->
+    S8 = S*8,
+    <<V:S8, R2/binary>> = R,
+    {{I, {<<K:256>>, <<V:S8>>}}, R2}.
+
+deserialize_times(0, R2) -> {[], R2};
+deserialize_times(
+  N, <<2, I, K:256, S:32, R/binary>>) -> 
+    S8 = S * 8,
+    <<V:S8, R2/binary>> = R,
+    {X, <<>>} = deserialize_thing(
+                  <<2, I, K:256, S:32, V:S8>>),
+    {Y, R3} = deserialize_times(N-1, R2),
+    {[X|Y], R3};
+deserialize_times(
+  N, <<1, I, B:256, 0, R/binary>>) -> 
+    {X, R2} = deserialize_thing(
+                  <<1, I, B:256, 0, R/binary>>),
+    {Y, R3} = deserialize_times(N-1, R2),
+    {[X|Y], R3};
+deserialize_times(
+ N, <<1, I, B:256, N0, R/binary>>) -> 
+    {DT, R2} = deserialize_thing(
+                <<1, I, B:256, N0, R/binary>>),
+    {DT2, R3} = deserialize_times(N-1, R2),
+    {[[{I, <<B:256>>}|DT]|DT2], R3}.
+    
+
+
+    
+    
+
+serialize_tree([<<Root:256>>|Rest]) ->
+    S2 = serialize_thing(Rest),
+    <<Root:256, S2/binary>>.
+serialize_thing([{I, B}, L|T]) when is_list(L) ->
+    %the stem has multiple children.
+    N = length([L|T]),
+    A = lists:map(
+          fun(X) -> serialize_thing(X)
+          end, [L|T]),
+    A2 = ordered_fold(A),
+    <<_:256>> = B,
+    true = is_integer(I),
+    <<1, I, B/binary, (N-1), A2/binary>>;
+serialize_thing([{I, B}, L]) ->
+    %stem with one child.
+    A3 = serialize_thing(L),
+    <<1, I, B/binary, 0, A3/binary>>;
+serialize_thing({I, {K, V}}) 
+  when is_integer(I) and
+       is_binary(K) and
+       is_binary(V) ->
+    S = size(V),
+    <<2, I, K/binary, S:32, V/binary>>;
+serialize_thing([{I, {K, V}}]) ->
+    serialize_thing({I, {K, V}}).
+
+ordered_fold(L) ->
+    lists:foldl(
+      fun(B, A) -> 
+              <<A/binary, B/binary>> end, 
+      <<>>, L).
+    
+serialize_proof({Tree, Commit, Opening}) ->
+    %io:fwrite({size(Commit), Tree, Commit, Opening}),
+    {<<A:256>>, <<B:256>>, L3, <<C:256>>, <<D:256>>} = Opening,
+    L17 = ordered_fold(L3),
+    TreeBin = serialize_tree(Tree),
+    if
+        ?sanity ->
+            32 = size(Commit),
+            17 = length(L3),
+            lists:map(fun(X) -> <<_:256>> = X end,
+              L3),
+            Tree = deserialize_tree(TreeBin);
+        true -> ok
+    end,
+    <<Commit/binary, A:256, B:256, C:256, D:256, 
+      L17/binary, TreeBin/binary>>.
 
 strip_meta([], D) -> {[], D};
 strip_meta([H|T], D) -> 
@@ -454,3 +563,5 @@ test(1) ->
     B = [3,4,5] ++ A,
     true = same_end(B, A, CFG),
     success.
+    
+
