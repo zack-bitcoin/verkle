@@ -309,6 +309,8 @@ serialize_thing([{I, {K, V}}]) ->
 serialize_thing({I, 0}) when is_integer(I) ->
     <<3, I>>;
 serialize_thing([{I, 0}]) ->
+    serialize_thing({I, 0});
+serialize_thing([[{I, 0}]]) ->
     serialize_thing({I, 0}).
 
 
