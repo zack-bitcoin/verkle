@@ -408,6 +408,7 @@ test(5, CFG) ->
     {Proof, _} = get_verkle:batch(
                    First, NewLoc, CFG, small),
     SP = get_verkle:serialize_proof(Proof),
+    Proof = get_verkle:deserialize_proof(SP),
     {size(SP), SP}.
 
 range(A, B) when (A < B) ->

@@ -8,7 +8,7 @@ split3parts/4,
 keys2paths/2, 
 withdraw_points/1, withdraw_points2/1,
 compressed_points_list/1,
-serialize_proof/1,
+serialize_proof/1, deserialize_proof/1,
 test/1]).
 -include("constants.hrl").
 
@@ -334,23 +334,41 @@ ordered_fold(L) ->
       fun(B, A) -> 
               <<A/binary, B/binary>> end, 
       <<>>, L).
+chop_binary(Chunks, <<X:256, R/binary>>) 
+->
+    [<<X:256>>|chop_binary(Chunks-1, R)];
+chop_binary(0, <<>>) -> [].
+
+    
     
 serialize_proof({Tree, Commit, Opening}) ->
     %io:fwrite({size(Commit), Tree, Commit, Opening}),
     {<<A:256>>, <<B:256>>, L3, <<C:256>>, <<D:256>>} = Opening,
     L17 = ordered_fold(L3),
     TreeBin = serialize_tree(Tree),
-    if
-        ?sanity ->
-            32 = size(Commit),
-            17 = length(L3),
-            lists:map(fun(X) -> <<_:256>> = X end,
+    32 = size(Commit),
+    17 = length(L3),
+    lists:map(fun(X) -> <<_:256>> = X end,
               L3),
+    if
+        %?sanity ->
+        true ->
             Tree = deserialize_tree(TreeBin);
         true -> ok
     end,
+    io:fwrite("size treebin "),
+    io:fwrite(integer_to_list(size(TreeBin))),
+    io:fwrite("\n"),
     <<Commit/binary, A:256, B:256, C:256, D:256, 
       L17/binary, TreeBin/binary>>.
+deserialize_proof(<<Commit:256, A:256, B:256, C:256, D:256, L17:(256*17), TreeBin/binary>>) ->
+    io:fwrite("size treebin "),
+    io:fwrite(integer_to_list(size(TreeBin))),
+    io:fwrite("\n"),
+    Tree = deserialize_tree(TreeBin),
+    L3 = chop_binary(17, <<L17:(256*17)>>),
+    Opening = {<<A:256>>, <<B:256>>, L3, <<C:256>>, <<D:256>>},
+    {Tree, <<Commit:256>>, Opening}.
 
 strip_meta([], D) -> {[], D};
 strip_meta([H|T], D) -> 
