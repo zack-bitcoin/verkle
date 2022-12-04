@@ -246,7 +246,10 @@ deserialize_thing(<<2, I, K:256, S:32, R/binary>>) ->
     <<V:S8, R2/binary>> = R,
     {{I, {<<K:256>>, <<V:S8>>}}, R2};
 deserialize_thing(<<3, I, R/binary>>) ->
-    {{I, 0}, R}.
+    {{I, 0}, R};
+deserialize_thing(<<4, I, R/binary>>) ->
+    {{I, 1}, R}.
+
 
 deserialize_times(0, R2) -> {[], R2};
 deserialize_times(
@@ -311,7 +314,13 @@ serialize_thing({I, 0}) when is_integer(I) ->
 serialize_thing([{I, 0}]) ->
     serialize_thing({I, 0});
 serialize_thing([[{I, 0}]]) ->
-    serialize_thing({I, 0}).
+    serialize_thing({I, 0});
+serialize_thing({I, 1}) when is_integer(I) ->
+    <<4, I>>;
+serialize_thing([{I, 1}]) ->
+    serialize_thing({I, 1});
+serialize_thing([[{I, 1}]]) ->
+    serialize_thing({I, 1}).
 
 
 ordered_fold(L) ->
