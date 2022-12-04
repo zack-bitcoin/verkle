@@ -253,6 +253,12 @@ deserialize_thing(<<4, I, R/binary>>) ->
 
 deserialize_times(0, R2) -> {[], R2};
 deserialize_times(
+  N, <<4, I, R/binary>>) -> 
+    {X, <<>>} = deserialize_thing(
+                  <<4, I>>),
+    {Y, R2} = deserialize_times(N-1, R),
+    {[X|Y], R2};
+deserialize_times(
   N, <<3, I, R/binary>>) -> 
     {X, <<>>} = deserialize_thing(
                   <<3, I>>),
