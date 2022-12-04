@@ -390,12 +390,13 @@ test(4, CFG) ->
 test(5, CFG) ->
     Loc = 1,
     Times = 2000,
-    ProveMany = 3,
+    ProveMany = 10,
     Leaves = 
         lists:map(
           fun(N) -> 
                   Key0 = Times + 1 - N,
-                  Key = 1000000000 - (Key0*256),
+                  %Key = 1000000000 - (Key0*256),
+                  Key = 1000000000 - (Key0),
                   leaf_verkle:new(Key, <<N:16>>, <<0>>, CFG)
           end, range(1, Times+1)),
     Keys = lists:map(fun(Leaf) -> 

@@ -214,14 +214,17 @@ batch(Keys, Root, CFG, Type) ->
     {{Tree6, CommitG2, Opening3}, Meta}.
     %{Tree4, CommitG, Opening}.
 
-deserialize_tree(<<Root:256, S2/binary>>) ->
+deserialize_tree(<<Root:256, 0, S2/binary>>) ->
     {D, Leftover} = deserialize_thing(S2),
     %[<<Root:256>>|D].
     %io:fwrite(D),
     Leftover = <<>>,
+    [<<Root:256>>|D];
+deserialize_tree(<<Root:256, N, R/binary>>) ->
+    NumberChildren = N + 1,
+    {D, <<>>} = deserialize_times(
+                  NumberChildren, R),
     [<<Root:256>>|D].
-
-
 
 deserialize_thing(<<>>) -> {[], <<>>};
 deserialize_thing(<<1, I, B:256, 0, R/binary>>) ->
@@ -290,9 +293,18 @@ deserialize_times(
     
     
 
+serialize_tree([<<Root:256>>, L|Rest]) 
+  when is_list(L) ->
+    %first stem has more than one child.
+    N = length([L|Rest]),
+    A = lists:map(
+          fun(X) -> serialize_thing(X)
+          end, [L|Rest]),
+    A2 = ordered_fold(A),
+    <<Root:256, (N-1), A2/binary>>;
 serialize_tree([<<Root:256>>|Rest]) ->
     S2 = serialize_thing(Rest),
-    <<Root:256, S2/binary>>.
+    <<Root:256, 0, S2/binary>>.
 serialize_thing([{I, B}, L|T]) when is_list(L) ->
     %the stem has multiple children.
     N = length([L|T]),
