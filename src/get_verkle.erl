@@ -365,7 +365,11 @@ serialize_proof({Tree, Commit, Opening}) ->
     if
         %?sanity ->
         true ->
-            Tree = deserialize_tree(TreeBin);
+            Tree2 = deserialize_tree(TreeBin),
+            if
+                Tree2 == Tree -> ok;
+                true -> io:fwrite({Tree, Tree2})
+            end;
         true -> ok
     end,
     io:fwrite("size treebin "),
