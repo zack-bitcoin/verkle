@@ -65,6 +65,7 @@ batch(Keys, Root, CFG, Type) ->
     io:fwrite("get remove duplicate elliptic points\n"),
     benchmark:now(),
     Tree3 = withdraw_points(Tree2),%removing duplicate elliptic points by shifting all the points one step towards the root.
+    %io:fwrite(Tree3),
     %looks the same, just changes which elliptic point is written where.
     io:fwrite("get remove hashes\n"),
     benchmark:now(),
@@ -211,7 +212,13 @@ batch(Keys, Root, CFG, Type) ->
                end,
     {Tree6, Meta} = strip_meta(Tree5, dict:new()),
     %todo. return meta data from the leaves.
-    {{Tree6, CommitG2, Opening3}, Meta}.
+    [Root2, First|Rest] = Tree6,
+    Tree7 = if
+                is_list(First) and (Rest == []) ->
+                    [Root2|First];
+                true -> Tree6
+            end,
+    {{Tree7, CommitG2, Opening3}, Meta}.
     %{Tree4, CommitG, Opening}.
 
 deserialize_tree(<<Root:256, 0, S2/binary>>) ->

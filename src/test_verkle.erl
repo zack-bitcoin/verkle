@@ -390,7 +390,7 @@ test(4, CFG) ->
 test(5, CFG) ->
     Loc = 1,
     Times = 2000,
-    ProveMany = 10,
+    ProveMany = 1,
     Leaves = 
         lists:map(
           fun(N) -> 
@@ -410,6 +410,9 @@ test(5, CFG) ->
                    First, NewLoc, CFG, small),
     SP = get_verkle:serialize_proof(Proof),
     Proof = get_verkle:deserialize_proof(SP),
+    {true, _, _} = verify_verkle:proof(
+                     Proof, CFG),
+    %io:fwrite(Proof),
     {size(SP), SP}.
 
 range(A, B) when (A < B) ->
