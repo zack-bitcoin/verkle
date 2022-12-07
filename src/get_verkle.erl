@@ -375,7 +375,7 @@ serialize_proof({Tree, Commit, Opening}) ->
             Tree2 = deserialize_tree(TreeBin),
             if
                 Tree2 == Tree -> ok;
-                true -> io:fwrite({Tree, Tree2, size(hd(Tree)), size(hd(Tree2))})
+                true -> io:fwrite({Tree, Tree2, size(hd(Tree)), size(hd(Tree2)), hd(Tree) == (hd(Tree2)), tl(Tree) == tl(Tree2)})
             end;
         true -> ok
     end,
