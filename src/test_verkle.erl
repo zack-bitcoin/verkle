@@ -388,9 +388,16 @@ test(4, CFG) ->
 
     success;
 test(5, CFG) ->
+    {_, _} = test_batch(20, 1, CFG),
+    {_, _} = test_batch(20, 2, CFG),
+    {_, _} = test_batch(2000, 1, CFG),
+    {_, _} = test_batch(2000, 2, CFG),
+    success.
+    
+test_batch(Times, ProveMany, CFG) ->
     Loc = 1,
-    Times = 2000,
-    ProveMany = 1,
+    %Times = 20,
+    %ProveMany = 2,
     Leaves = 
         lists:map(
           fun(N) -> 

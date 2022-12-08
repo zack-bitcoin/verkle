@@ -222,12 +222,19 @@ batch(Keys, Root, CFG, Type) ->
     %{Tree4, CommitG, Opening}.
 
 deserialize_tree(<<Root:256, 0, S2/binary>>) ->
+    io:fwrite("deserialize tree 0\n"),
     {D, Leftover} = deserialize_thing(S2),
     %[<<Root:256>>|D].
     %io:fwrite(D),
     Leftover = <<>>,
-    [<<Root:256>>|D];
+    if
+        is_list(D) ->
+            [<<Root:256>>|D];
+        true ->
+            [<<Root:256>>, D]
+    end;
 deserialize_tree(<<Root:256, N, R/binary>>) ->
+    io:fwrite("deserialize tree 1\n"),
     NumberChildren = N + 1,
     {D, <<>>} = deserialize_times(
                   NumberChildren, R),
@@ -238,27 +245,27 @@ deserialize_thing(<<1, I, B:256, 0, R/binary>>) ->
     {D, R2} = deserialize_thing(R),
     case D of
         <<>> ->
-            {{I, <<B:256>>}, R2};
+            {[{I, <<B:256>>}], R2};
         _ ->
-            {[{I, <<B:256>>}, D], R2}
+            {[{I, <<B:256>>}|D], R2}
     end;
 deserialize_thing(<<1, I, B:256, N0, R/binary>>) ->
     NumberChildren = N0 + 1,
     {D, R2} = deserialize_times(NumberChildren, R),
     case D of
         <<>> -> 
-            {{I, <<B:256>>}, R2};
+            {[{I, <<B:256>>}], R2};
         _ ->
             {[{I, <<B:256>>}|D], R2}
     end;
 deserialize_thing(<<2, I, K:256, S:32, R/binary>>) ->
     S8 = S*8,
     <<V:S8, R2/binary>> = R,
-    {{I, {<<K:256>>, <<V:S8>>}}, R2};
+    {[{I, {<<K:256>>, <<V:S8>>}}], R2};
 deserialize_thing(<<3, I, R/binary>>) ->
-    {{I, 0}, R};
+    {[{I, 0}], R};
 deserialize_thing(<<4, I, R/binary>>) ->
-    {{I, 1}, R}.
+    {[{I, 1}], R}.
 
 
 deserialize_times(0, R2) -> {[], R2};
