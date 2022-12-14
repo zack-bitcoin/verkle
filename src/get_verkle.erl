@@ -300,7 +300,8 @@ deserialize_times(
     {DT, R2} = deserialize_thing(
                 <<1, I, B:256, N0, R/binary>>),
     {DT2, R3} = deserialize_times(N-1, R2),
-    {[[{I, <<B:256>>}|DT]|DT2], R3}.
+    %{[[{I, <<B:256>>}|DT]|DT2], R3}.
+    {[DT|DT2], R3}.
     
 
 
