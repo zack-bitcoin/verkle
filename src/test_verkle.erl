@@ -138,11 +138,15 @@ test(2, CFG) ->
     Leaves2 = [Leaf1, Leaf2|tl(tl(Leaves))],
     %io:fwrite(Leaves2),
     io:fwrite("test trie to store.\n"),
+
+    %in this part we are storing the new data directly. This is so we can get a root hash, and verify that updating the proof worked correctly.
     {Loc3, _, _} = 
         store_verkle:batch(Leaves2, 1, CFG),
     io:fwrite("test trie stored\n"),
     RootStem = stem_verkle:get(Loc3, CFG),
     %io:fwrite(DecompressedTree),
+
+    %notice that this proof is based on NewLoc, from before the leaves were stored. 
     ProofTree2 = 
         verify_verkle:update(
           %DecompressedTree, [Leaf1, Leaf2, Leaf3],
@@ -169,18 +173,20 @@ test(2, CFG) ->
    
     %5 is the new leaf.
     {{Proof1, Commit1, Opening1}, _} = 
-        get_verkle:batch([<<5:256>>], Loc3, CFG),
+        get_verkle:batch([<<5:256>>, DeleteKey, <<6:256>>], Loc3, CFG),
     Root1 = stem_verkle:root(stem_verkle:get(Loc3, CFG)),
     %io:fwrite({size(Root1), size(hd(Proof1))}),
-    {true, _, _} = 
+    {true, FLeaves0, _} = 
         verify_verkle:proof(
           %Root1,
           {Proof1, Commit1, Opening1}, CFG),
+
+    %io:fwrite(FLeaves0),
                                  
     {{Proof2, Commit2, Opening2}, _} = 
         get_verkle:batch([<<5:256>>], Loc2, CFG),
     Root2 = stem_verkle:root(stem_verkle:get(Loc2, CFG)),
-    {true, _, _} = 
+    {true, _FLeaves, _} = 
         verify_verkle:proof(
           %Root2,
           {Proof2, Commit2, Opening2}, CFG),
