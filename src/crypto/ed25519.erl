@@ -140,7 +140,7 @@ finv(X) ->
 
 
 faffine2extended(P = #affine{x = X, y = Y}) ->
-    io:fwrite("f affine 2 extended\n"),
+    %io:fwrite("f affine 2 extended\n"),
     %B = feq(P, ?faffine_zero),
     %B = fis_affine_zero(P),
     %if
@@ -170,12 +170,12 @@ fnormalize(L) ->
 
 fis_affine_zero(#affine{x = 0, y = 1}) -> true;
 fis_affine_zero(A = #affine{}) -> 
-    io:fwrite("f is affine zero\n"),
+    %io:fwrite("f is affine zero\n"),
     E = faffine2extended(A),
     fis_extended_zero(E).
     
 fis_extended_zero(E3) -> 
-    io:fwrite("f is extended zero\n"),
+    %io:fwrite("f is extended zero\n"),
     ZT = fextended_double(
            fextended_double(
              fextended_double(E3))),
@@ -188,7 +188,7 @@ feq(E1 = #extended{}, E2 = #extended{}) ->
     fis_extended_zero(E3).
 feq2(#extended{x = X1, y = Y1, z = Z1}, 
     #extended{x = X2, y = Y2, z = Z2}) -> 
-    io:fwrite("f eq 2\n"),
+    %io:fwrite("f eq 2\n"),
     (fmul(X1, Z2) == fmul(X2, Z1)) 
         and (fmul(Y1, Z2) == fmul(Y2, Z1)).
     
@@ -540,12 +540,6 @@ mdecode_point(<<S:1, P:255>>) ->
                 not(SB == ((V rem 2) == 0)) -> error;
                 true ->
                     %SB = ((V rem 2) == 0),
-            if
-                SB -> 
-                    io:fwrite("in ed25519, v is even\n");
-                true ->
-                    io:fwrite("in ed25519, v is odd\n")
-            end,
             %s==1 means it should be even.
 %            io:fwrite({{s, S}, {v_should_be_even, SB}, 
 %                       {v1_even, S2, 0 == (V1 rem 2)},

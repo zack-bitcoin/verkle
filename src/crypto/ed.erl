@@ -276,7 +276,7 @@ is_positive(<<Y:256/little>>) ->
 
 affine2extended(P = <<_:1024>>) -> P;%already in extended format.
 affine2extended(P = <<_:256>>) ->
-    io:fwrite("compressed to extended instead \n"),
+    %io:fwrite("compressed to extended instead \n"),
     affine2extended(decompress_point(P));
 affine2extended(P = <<X0:256, Y0:256>>) ->
 %    B = a_eq(P, ?affine_zero),
@@ -425,6 +425,7 @@ uvRatio(U, V) ->
              (UseRoot2 or NoRoot) -> Root2;%return root2 anyway, for constant-time.
              true ->
                  io:fwrite("unexepcted\n"),
+                 1=2,
                  X
          end,
     B = edIsNegative(X2),

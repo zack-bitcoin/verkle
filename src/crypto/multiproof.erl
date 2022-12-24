@@ -177,7 +177,7 @@ prove(As, %committed data
       Zs, %the slot in each commit we are reading from. A list as long as As. Made up of elements that are in the domain.
       Commits_e, Gs, Hs, Q, DA, PA, Domain) ->
 
-    io:fwrite("multiprove Ys from As \n"),
+    %io:fwrite("multiprove Ys from As \n"),
     benchmark:now(),
     Ys = lists:zipwith(
            fun(F, Z) ->
@@ -187,41 +187,41 @@ prove(As, %committed data
     %Ys [3,3,3,3]
     %As [[4,3,2,1],...]
     %Zs [2,2,2,2]
-    io:fwrite("multiprove calc random R\n"),% 4%
+    %io:fwrite("multiprove calc random R\n"),% 4%
     benchmark:now(),
     AffineCommits = 
         ed:extended2affine_batch(
           Commits_e),
     R = calc_R(AffineCommits, Zs, Ys, <<>>),
-    io:fwrite("multiprove calc G *slow* \n"),% 45%
+    %io:fwrite("multiprove calc G *slow* \n"),% 45%
     benchmark:now(),
     %the slow step.
     G = calc_G(R, As, Ys, Zs, Domain, DA),
     %G is a vector of 256 fr encoded values.
     %io:fwrite("multiprove 4\n"),
-    io:fwrite("multiprove commit to G\n"),
+    %io:fwrite("multiprove commit to G\n"),
     benchmark:now(),
     CommitG_e = ipa:commit(G, Gs),
-    io:fwrite("multiprove calc random T\n"),
+    %io:fwrite("multiprove calc random T\n"),
     benchmark:now(),
     T = calc_T(hd(ed:extended2affine_batch(
                     [CommitG_e])), R),
     %spend very little time here.
-    io:fwrite("multiprove calc polynomial h\n"), % 9%
+    %io:fwrite("multiprove calc polynomial h\n"), % 9%
     benchmark:now(),
     %a little slow.
     He = calc_H(R, T, As, Zs),%this is G1
     %io:fwrite("multiprove 7\n"),
-    io:fwrite("multiprove calc commit to G-E\n"),
+    %io:fwrite("multiprove calc commit to G-E\n"),
     benchmark:now(),
     NG2 = poly:sub(G, He),
-    io:fwrite("multiprove evaluate G-E outside the domain\n"),
+    %io:fwrite("multiprove evaluate G-E outside the domain\n"),
     benchmark:now(),
     %io:fwrite({fr:decode([T, Domain, PA, DA])}),
     %[1, [1,2,3,4], poly, [poly, poly...]]
     EV = poly:eval_outside_v(T, Domain, PA, DA),
     %io:fwrite("multiprove 9\n"),
-    io:fwrite("multiprove create ipa opening to G-E\n"), % 2%
+    %io:fwrite("multiprove create ipa opening to G-E\n"), % 2%
     benchmark:now(),
     %spend a little time here.
     IPA = ipa:make_ipa(NG2, EV, Gs, Hs, Q),
@@ -263,7 +263,7 @@ prove(As, %committed data
             ok;
         true -> ok
     end,
-    io:fwrite("multiprove finished\n"),
+    %io:fwrite("multiprove finished\n"),
     benchmark:now(),
     {CommitG_e, 
      IPA}.
@@ -276,34 +276,34 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
     DA = parameters:da(),
     PA = parameters:a(),
     Domain = parameters:domain(),
-    io:fwrite("multiproof verify calc r\n"),
+    %io:fwrite("multiproof verify calc r\n"),
     benchmark:now(),
     [ACG|AffineCommits] = 
         ed:extended2affine_batch(
           [CommitG|Commits]),
     R = calc_R(AffineCommits, Zs, 
                Ys, <<>>),
-    io:fwrite("multiproof verify calc t\n"),
+    %io:fwrite("multiproof verify calc t\n"),
     benchmark:now(),
     T = calc_T(ACG, R),
 
-    io:fwrite("multiproof verify eval outside v\n"),
+    %io:fwrite("multiproof verify eval outside v\n"),
     benchmark:now(),
     EV = poly:eval_outside_v(
            T, Domain, PA, DA),
-    io:fwrite("multiproof verify ipa\n"),
+    %io:fwrite("multiproof verify ipa\n"),
     benchmark:now(),
     true = ipa:verify_ipa(
              Open_G_E, EV, Gs, Hs, Q),
 
-    io:fwrite("multiproof verify g2\n"),
+    %io:fwrite("multiproof verify g2\n"),
     benchmark:now(),
     %io:fwrite({R, T, Ys, Zs}),%bin, bin, [int..], [bin]
     {RIDs, G2} = 
         calc_G2_2(R, T, Ys, Zs),
 
     %sum_i  Ci*(R^i/(T-Zi))
-    io:fwrite("multiproof verify commit neg *slow* e\n"),% 70% of the cost of verification is here.
+    %io:fwrite("multiproof verify commit neg *slow* e\n"),% 70% of the cost of verification is here.
     benchmark:now(),
     %the slow step.
     CommitE = 
@@ -311,15 +311,15 @@ verify({CommitG, Open_G_E}, Commits, Zs, Ys) ->
           RIDs, Commits),%this is the slowest step.
     CommitNegE = ed:e_neg(CommitE),
     
-    io:fwrite("multiproof verify commit G-E\n"),
+    %io:fwrite("multiproof verify commit G-E\n"),
     benchmark:now(),
     CommitG_sub_E = 
         ed:e_add(CommitG, CommitNegE),
-    io:fwrite("multiproof verify eq\n"),
+    %io:fwrite("multiproof verify eq\n"),
     benchmark:now(),
     AG = element(1, Open_G_E),
     true = ed:e_eq(CommitG_sub_E, AG),
-    io:fwrite("multiproof verify done\n"),
+    %io:fwrite("multiproof verify done\n"),
     benchmark:now(),
     AB = element(2, Open_G_E),
     true = (fr:encode(0) == 

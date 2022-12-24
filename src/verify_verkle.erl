@@ -78,7 +78,7 @@ insert_stem_hashes2(
   Result) ->
     D = case dict:find(P, ECs) of
             {ok, C} -> 
-                io:fwrite("insert stem update point\n"),
+                %io:fwrite("insert stem update point\n"),
                 C;
             _ -> P
         end,
@@ -244,7 +244,7 @@ update_merge([LH|Leaves],
                 if
                     OldN == NewN -> 
                         %leaf unchanged.
-                        io:fwrite("Leaf unchanged\n"),
+                        %io:fwrite("Leaf unchanged\n"),
                         <<0:256>>;
                         %fr:encode(0);
                     true ->
@@ -261,7 +261,7 @@ update_merge([LH|Leaves],
                     R],
               [LeafDiff|Diffs], N+1);
         B -> 
-            io:fwrite("adding leaves to a spot where there was a leaf, and changing the existing leaf\n"),
+            %io:fwrite("adding leaves to a spot where there was a leaf, and changing the existing leaf\n"),
             update_merge(
               [LH|Leaves], 
               [[{N, 0}]
@@ -269,7 +269,7 @@ update_merge([LH|Leaves],
               Depth, CFG, MEP, R, Diffs, N);
         true -> 
             %adding leaves to this spot where there was a leaf, without updating our leaf
-            io:fwrite("adding a leaves to this spot where there is a leaf, and not changing the existing leaf\n"),
+            %io:fwrite("adding a leaves to this spot where there is a leaf, and not changing the existing leaf\n"),
             update_merge(
               %[[NewLeaf|LH]|Leaves], 
               [[FL|LH]|Leaves], 
@@ -293,7 +293,7 @@ update_merge([LH|Leaves],
     Value = leaf_verkle:value(hd(LH)),
     Meta = leaf_verkle:meta(hd(LH)),
     %#leaf{key = Key, value = Value} = hd(LH),
-    io:fwrite("new leaf diff calculation\n"),
+    %io:fwrite("new leaf diff calculation\n"),
     Diff = store_verkle:leaf_hash(hd(LH), CFG),
     %Diff = leaf_verkle:hash(hd(LH), CFG),
     update_merge(Leaves, Subtrees, Depth, CFG, 
@@ -334,7 +334,7 @@ leaf_in_list(Leaf, [_|T]) ->
     leaf_in_list(Leaf, T).
 
 merge_find_helper(P, D) ->
-    io:fwrite("merge find helper\n"),
+    %io:fwrite("merge find helper\n"),
     case dict:find(P, D) of
 	error -> P;
 	{ok, error} -> 1=2;
@@ -391,7 +391,7 @@ proof({Tree0, CommitG0, Open0}, CFG) ->
     %io:fwrite({Tree, Commits0}),
     
     %[root, [{1, p1}, [{0, L1},{1, L2}], [{3, p2},{0,L3}]]]
-    io:fwrite("verify get parameters \n"),
+    %io:fwrite("verify get parameters \n"),
     [Root|Rest] = Tree,
     Domain = parameters:domain(),
     %B = fq:eq(Root1, Root),
@@ -401,28 +401,28 @@ proof({Tree0, CommitG0, Open0}, CFG) ->
             io:fwrite("verify fail, unequal roots\n"),
             false;
         true ->
-            io:fwrite("verify unfold \n"),
+            %io:fwrite("verify unfold \n"),
             benchmark:now(),
             %io:fwrite(Rest),
             %1=2,
             %rest is [{0, pt},[{186, pt},{115, l}], [{187, pt}, {115, l}],[{188, pt}, {115, l}]]
             Tree2 = unfold(Root, Rest, [], CFG),
-            io:fwrite("verify split 3 parts \n"),
+            %io:fwrite("verify split 3 parts \n"),
             benchmark:now(),
             {Commits, Zs0, Ys} = 
                 get_verkle:split3parts(Tree2, [],[],[]),
-            io:fwrite("veirfy index2domain \n"),
+            %io:fwrite("veirfy index2domain \n"),
             benchmark:now(),
             Zs1 = get_verkle:index2domain2(
                    Zs0),
             Zs = fr:encode(Zs1),
-            io:fwrite("verify multiproof \n"),
+            %io:fwrite("verify multiproof \n"),
             benchmark:now(),
             %io:fwrite({Zs, Ys}),
             B2 = multiproof:verify(
                    {CommitG, Open}, 
                    Commits, Zs, Ys),
-            io:fwrite("verify done \n"),
+            %io:fwrite("verify done \n"),
             benchmark:now(),
             if
                 not(B2) -> 

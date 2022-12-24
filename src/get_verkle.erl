@@ -43,31 +43,31 @@ batch(Keys, Root, CFG, Type) ->
                      %fr:decode(
                        tuple_to_list(
                          RootStem0#stem.hashes)},
-    io:fwrite("get keys2paths\n"),
+    %io:fwrite("get keys2paths\n"),
     benchmark:now(),
     Paths0 = keys2paths(Keys, CFG),
     Paths = lists:sort(fun(A, B) -> A < B end, 
                        Paths0),
     %Paths example: [[1,4,3,2],[1,1,1,2],[1,1,1,1],[2,1,1,1]]
-    io:fwrite("get paths2tree\n"),
+    %io:fwrite("get paths2tree\n"),
     benchmark:now(),
 
     Tree = paths2tree(Paths),
     %Tree example [[1|[[4,3,2], [1,1|[[1], [2]]]]], [2,1,1,1]],
     %list of lists means or. list of integers means and.
-    io:fwrite("get lookup stems and leaves\n"),% 25%
+    %io:fwrite("get lookup stems and leaves\n"),% 25%
     benchmark:now(),
     Tree2 = points_values(Tree, RootStem, CFG),
 
     %obtains the stems and leaves by reading from the database.
     %[stem, {I, stem}, [{I, leaf}], [{I, stem}, {I, leaf}], [{I, stem}, [{I, leaf}], [{I, leaf}]]]
     %list of things is AND, list of lists is OR.
-    io:fwrite("get remove duplicate elliptic points\n"),
+    %io:fwrite("get remove duplicate elliptic points\n"),
     benchmark:now(),
     Tree3 = withdraw_points(Tree2),%removing duplicate elliptic points by shifting all the points one step towards the root.
     %io:fwrite(Tree3),
     %looks the same, just changes which elliptic point is written where.
-    io:fwrite("get remove hashes\n"),
+    %io:fwrite("get remove hashes\n"),
     benchmark:now(),
     Tree4 = remove_hashes(Tree3),%the hashes in each stem aren't needed to verify the verkle proof, so they are removed.
     
@@ -77,11 +77,11 @@ batch(Keys, Root, CFG, Type) ->
     %io:fwrite(fr:decode(ed:compress_point(element(2, hd(hd(tl(Tree4))))))),%bad point!
 
 
-    io:fwrite("get flatten\n"),
+    %io:fwrite("get flatten\n"),
     benchmark:now(),
 
     Lookups = flatten(Tree2, []),
-    io:fwrite("get split3\n"),
+    %io:fwrite("get split3\n"),
     benchmark:now(),
     {Zs0, Commits, As0} = 
         split3parts(Lookups, [], [], []),
@@ -91,34 +91,34 @@ batch(Keys, Root, CFG, Type) ->
     %io:fwrite(integer_to_list(ToPrint4)), %This is the version being used when generating the proof. 
     %io:fwrite("\n"),
     %io:fwrite(integer_to_list(PHash)), 
-    io:fwrite("get lookup parameters\n"),
+    %io:fwrite("get lookup parameters\n"),
     benchmark:now(),
     Domain = parameters:domain(),
-    io:fwrite("get index to domain conversion\n"),
+    %io:fwrite("get index to domain conversion\n"),
     benchmark:now(),
     Zs = index2domain2(
            Zs0),
     As = As0,
     %io:fwrite({As}),
 
-    io:fwrite("get make multiproof\n"),% 8%
+    %io:fwrite("get make multiproof\n"),% 8%
     benchmark:now(),
     %the slow step.
-    io:fwrite("param 0\n"),% 8%
+    %io:fwrite("param 0\n"),% 8%
     {Gs, Hs, Q} = parameters:read(),
-    io:fwrite("param 1\n"),% 8%
+    %io:fwrite("param 1\n"),% 8%
     DA = parameters:da(),
-    io:fwrite("param 2\n"),% 8%
+    %io:fwrite("param 2\n"),% 8%
     PA = parameters:a(),
-    io:fwrite("param 3\n"),% 8%
+    %io:fwrite("param 3\n"),% 8%
     Domain = parameters:domain(),
-    io:fwrite("param done\n"),% 8%
+    %io:fwrite("param done\n"),% 8%
     %io:fwrite({As}),
     %FAs = fr:encode(As),%crashes here.
     FAs = As,
-    io:fwrite("Fas done\n"),% 8%
+    %io:fwrite("Fas done\n"),% 8%
     FZs = fr:encode(Zs),
-    io:fwrite("Fzs done\n"),% 8%
+    %io:fwrite("Fzs done\n"),% 8%
     %io:fwrite({length(hd(FAs)), length(FAs), length(FZs), length(Commits), hd(FAs), hd(FZs), hd(Commits)}),
     %256,1,1,1
     %FAs is list of binaries. FZs is binaries. commits is binaries
@@ -176,7 +176,7 @@ batch(Keys, Root, CFG, Type) ->
     end,
 
 
-    io:fwrite("get done\n"),
+    %io:fwrite("get done\n"),
     benchmark:now(),
 
     %sanity checks
@@ -222,7 +222,7 @@ batch(Keys, Root, CFG, Type) ->
     %{Tree4, CommitG, Opening}.
 
 deserialize_tree(<<Root:256, 0, S2/binary>>) ->
-    io:fwrite("deserialize tree 0\n"),
+    %io:fwrite("deserialize tree 0\n"),
     {D, Leftover} = deserialize_thing(S2),
     %[<<Root:256>>|D].
     %io:fwrite(D),
@@ -234,7 +234,7 @@ deserialize_tree(<<Root:256, 0, S2/binary>>) ->
             [<<Root:256>>, D]
     end;
 deserialize_tree(<<Root:256, N, R/binary>>) ->
-    io:fwrite("deserialize tree 1\n"),
+    %io:fwrite("deserialize tree 1\n"),
     NumberChildren = N + 1,
     {D, <<>>} = deserialize_times(
                   NumberChildren, R),
@@ -387,15 +387,15 @@ serialize_proof({Tree, Commit, Opening}) ->
             end;
         true -> ok
     end,
-    io:fwrite("size treebin "),
-    io:fwrite(integer_to_list(size(TreeBin))),
-    io:fwrite("\n"),
+    %io:fwrite("size treebin "),
+    %io:fwrite(integer_to_list(size(TreeBin))),
+    %io:fwrite("\n"),
     <<Commit/binary, A:256, B:256, C:256, D:256, 
       L17/binary, TreeBin/binary>>.
 deserialize_proof(<<Commit:256, A:256, B:256, C:256, D:256, L17:(256*17), TreeBin/binary>>) ->
-    io:fwrite("size treebin "),
-    io:fwrite(integer_to_list(size(TreeBin))),
-    io:fwrite("\n"),
+    %io:fwrite("size treebin "),
+    %io:fwrite(integer_to_list(size(TreeBin))),
+    %io:fwrite("\n"),
     Tree = deserialize_tree(TreeBin),
     L3 = chop_binary(17, <<L17:(256*17)>>),
     Opening = {<<A:256>>, <<B:256>>, L3, <<C:256>>, <<D:256>>},

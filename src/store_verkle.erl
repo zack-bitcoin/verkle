@@ -10,12 +10,12 @@
 
 batch(Leaves0, RP, CFG) ->%returns {location, stem/leaf, #stem{}/#leaf{}}
     %put them in an ordered list.
-    io:fwrite("store sorting 0\n"),
+    %io:fwrite("store sorting 0\n"),
     % 2%
     Leaves = sort_by_path2(Leaves0, CFG),
-    io:fwrite("store parameters 1\n"),
+    %io:fwrite("store parameters 1\n"),
     MEP = parameters:multi_exp(),
-    io:fwrite("store storing 1\n"),
+    %io:fwrite("store storing 1\n"),
     batch(Leaves, RP, stem, 0, CFG, MEP).
 
 batch([], 0, _, _, _CFG, _) ->
@@ -37,7 +37,7 @@ batch(Leaves0, 0, 0, Depth, CFG, MEP) ->
           1, %1 is always an empty stem.
           stem, Depth, CFG, MEP);
 batch([Leaf0], RP, leaf, Depth, CFG, MEP) ->
-    io:fwrite("storing a leaf where there is already a leaf.\n"),
+    %io:fwrite("storing a leaf where there is already a leaf.\n"),
     RootLeaf = leaf_verkle:get(RP, CFG),
     RootKey = leaf_verkle:key(RootLeaf),
     Key2 = leaf_verkle:key(Leaf0),
@@ -56,7 +56,7 @@ batch([Leaf0], RP, leaf, Depth, CFG, MEP) ->
                   Depth, CFG, MEP)
     end;
 batch(Leaves0, RP, leaf, Depth, CFG, MEP) ->
-    io:fwrite("storing leaves where there is already a leaf.\n"),
+    %io:fwrite("storing leaves where there is already a leaf.\n"),
     RootLeaf = leaf_verkle:get(RP, CFG),
     RootKey = leaf_verkle:key(RootLeaf),
     Keys = lists:map(fun(X) -> leaf_verkle:key(X) 

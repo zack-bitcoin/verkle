@@ -4,15 +4,24 @@
 -define(ID, tree01).
 -include("constants.hrl").
 
+-define(sanity, false).
+
 range(A, B) when (A < B) ->
     [A|range(A+1, B)];
 range(A, A) -> [].
 
 now() ->
-    {_, B, C} = erlang:timestamp(),
-    T = (1000*(B rem 1000)) + (C div 1000),
-    io:fwrite(integer_to_list(T)),
-    io:fwrite("\n").
+    if
+        ?sanity ->
+            {_, B, C} = erlang:timestamp(),
+            T = (1000*(B rem 1000)) + (C div 1000),
+            io:fwrite(integer_to_list(T)),
+            io:fwrite("\n"),
+            ok;
+        true ->
+            ok
+    end.
+    
     
 
 doit(1) ->
