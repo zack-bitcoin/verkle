@@ -398,7 +398,41 @@ test(5, CFG) ->
     {_, _} = test_batch(20, 2, CFG),
     {_, _} = test_batch(2000, 1, CFG),
     {_, _} = test_batch(2000, 2, CFG),
-    success.
+    success;
+test(6, CFG) ->
+    %try updating a proof by inserting 2 elements into the same empty slot of a stem. todo.
+    Loc = 1,
+    Leaf1 = leaf_verkle:new(
+              1, <<2:16>>, <<0>>, CFG),
+    Leaf2 = leaf_verkle:new(
+              257, <<2:16>>, <<0>>, CFG),
+    Leaf3 = leaf_verkle:new(
+              5, <<2:16>>, <<0>>, CFG),
+    Leaves = [Leaf1, Leaf2, Leaf3],
+    Keys = lists:map(
+             fun(L) ->
+                     leaf_verkle:raw_key(L) end,
+             Leaves),
+%    {Loc2, stem, _} = 
+%        store_verkle:batch(Leaves, Loc, CFG),
+    {{ProofTree, Commit, Opening}, _} =
+        get_verkle:batch(Keys, Loc, CFG),
+    {true, _, ProofTree2} = 
+        verify_verkle:proof(
+          {ProofTree, Commit, Opening}, CFG),
+    Leaf1b = Leaf1#leaf{value = <<0,0>>, meta = <<2>>},
+    Leaf2b = Leaf2#leaf{value = <<0,1>>, meta = <<3>>},
+    Leaf3b = Leaf3#leaf{value = <<0,4>>, meta = <<3>>},
+    ProofTree3 = 
+        verify_verkle:update(
+          ProofTree2, [Leaf1b, Leaf2b], CFG),%this version fails.
+          %ProofTree2, [Leaf1b, Leaf3b], CFG),%this version works
+    Root = hd(ProofTree3),
+    io:fwrite(ProofTree3).
+    
+                              
+    
+    
     
 test_batch(Times, ProveMany, CFG) ->
     Loc = 1,

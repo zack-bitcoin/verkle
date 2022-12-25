@@ -42,6 +42,8 @@ update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
     Leaves2 = store_verkle:clump_by_path(
                 Depth, Leaves),
     %io:fwrite({Tree, Leaves2}),
+    %tree is like [[{1, 0}],[{5,leaf}]]
+    %leaves is like [[],[leaf, leaf],[],[],[],...]length 256
     {Diffs0, Tree2} = 
         update_merge(Leaves2, 
                      Tree, Depth, CFG, MEP, 
@@ -158,12 +160,13 @@ update_merge([], Rest, _,_,_, Merged, Diffs, _) ->
 update_merge([[]|Leaves], [], 
              _, _, _, R, Diff, _) ->
     %the proof ended, so there is nothing left to update. checking that we aren't trying to update anyting else.
+    %io:fwrite("the proof ended\n"),
     update_merge(Leaves, [], ok, ok, ok, 
                  R, [<<0:256>>|Diff], ok);
 update_merge([[]|Leaves], 
              Tree = [[{N, _}|_]|SubTree], Depth, 
              CFG, MEP, R, Diff, N) ->
-    %not changing this element that is recorded in our proof. 
+    %io:fwrite("not changing this element that is recorded in our proof\n"),
     update_merge(
       Leaves, SubTree, Depth, CFG, MEP,
       [hd(Tree)|R], [<<0:256>>|Diff], N+1);
@@ -189,7 +192,7 @@ update_merge([LH|Leaves],
 update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees], 
              Depth, CFG, MEP, R, Diffs, N) 
   when is_binary(B) ->
-    %adding one or more leaves to an existing stem.
+    %io:fwrite("adding one or more leaves to an existing stem."),
 
     {Point, Tree2} = 
         update_batch2(LH, S1, Depth+1, CFG, MEP),
@@ -224,7 +227,7 @@ update_merge([LH|Leaves],
              %[[{N, {Key, Value, Meta}}]|Subtrees], 
              [[{N, {Key, Value}}]|Subtrees], 
              Depth, CFG, MEP, R, Diffs, N) ->
-    %io:fwrite("add a leaf to a spot with an existing leaf\n"),
+    %io:fwrite("add one or more leaves to a spot with an existing leaf\n"),
     %there is already a leaf here.
     %NewLeaf = leaf_verkle:new(Key, Value, 0, CFG),
     %FL = leaf_verkle:new(Key, Value, Meta, CFG),
@@ -277,35 +280,45 @@ update_merge([LH|Leaves],
                |Subtrees],
               Depth, CFG, MEP, R, Diffs, N)
     end;
+update_merge([[]|Leaves],
+             [[{N, 0}]|Subtrees],
+             Depth, CFG, MEP, R, Diffs, N) ->
+    %io:fwrite("left empty spot empty.\n"),
+    update_merge(Leaves, Subtrees, Depth, CFG, MEP,
+                 [{N, 0}|R], [fr:encode(0)|Diffs], 
+                 N+1);
+update_merge([LH|Leaves],
+             [[{N, 0}]|Subtrees],
+             Depth, CFG, MEP, R, Diffs, N) 
+  when (length(LH) == 1) ->
+    %io:fwrite("add a leaf to empty spot.\n"),
+    Leaf = hd(LH),
+    LeafDiff = store_verkle:leaf_hash(Leaf, CFG),
+    update_merge(
+      Leaves, Subtrees, Depth, CFG, MEP,
+      [[{N, {leaf_verkle:raw_key(Leaf),
+             leaf_verkle:value(Leaf),
+             leaf_verkle:meta(Leaf)}}]|R], 
+      [LeafDiff|Diffs], N+1);
 update_merge([LH|Leaves],
              [[{N, 0}]|Subtrees],
              Depth, CFG, MEP, R, Diffs, N) 
   when (length(LH) > 1) ->
-    update_merge([LH|Leaves],
-                 %[[{N, fq:e_zero()}]|Subtrees],
-                 [[{N, ed:extended_zero()}]|Subtrees],
+    %io:fwrite("add leaves to empty spot\n"),
+    B = ed:extended_zero(),
+    S = lists:map(fun(I) ->
+                          [{I, 0}]
+                  end, range(0, 256)),
+    update_merge([LH|Leaves], [[{N, B}|S]|Subtrees],
                  Depth, CFG, MEP, R, Diffs, N);
-update_merge([LH|Leaves],
-             [[{N, 0}]|Subtrees],
-             Depth, CFG, MEP, R, Diffs, N) ->
-    %Key = leaf_verkle:key(hd(LH)),
-    Key = leaf_verkle:raw_key(hd(LH)),
-    Value = leaf_verkle:value(hd(LH)),
-    Meta = leaf_verkle:meta(hd(LH)),
-    %#leaf{key = Key, value = Value} = hd(LH),
-    %io:fwrite("new leaf diff calculation\n"),
-    Diff = store_verkle:leaf_hash(hd(LH), CFG),
-    %Diff = leaf_verkle:hash(hd(LH), CFG),
-    update_merge(Leaves, Subtrees, Depth, CFG, 
-                 MEP, [[{N, {Key, Value, Meta}}]
-                 %MEP, [[{N, {Key, Value}}]
-                       |R], 
-                 [Diff|Diffs], N+1);
 update_merge(Ls, [X|T], Depth, CFG, MEP, R, Diffs, 
              N) when is_tuple(X)->
     update_merge(Ls, [[X|T]], Depth, CFG, MEP, R,
                  Diffs, N).
 
+range(N, N) -> [];
+range(N, M) when N < M -> 
+    [N|range(N+1, M)].
 
 %for testing only.
 remove_empty([[]|T]) ->
