@@ -161,18 +161,24 @@ verified(Loc, ProofTree, CFG) ->
     Loc2.
     
 
-verified2([], Stem, _) -> Stem;
+verified2([], %this is a lists in lists tree of the things that have changed in the consensus state. We are storing these changes.
+          Stem, %this is the current Stem stored on the hard drive. it has pointers to other stems or leaves.
+          _) -> 
+    %there is nothing left to change.
+    Stem;
 %verified2([{N, 0}], Stem, CFG) -> 
 %    verified3(N, Stem, 0, 0, <<0:256>>);
 verified2([[{N, 0}]|T], Stem, CFG) -> 
+    %there is a spot that was deleted from the stem.
     Stem2 = verified3(N, Stem, 0, 0, <<0:256>>),
     verified2(T, Stem2, CFG);
 verified2([{N, 0}|T], Stem, CFG) -> 
+    %there is a spot that was deleted from the stem.
     Stem2 = verified3(N, Stem, 0, 0, <<0:256>>),
     verified2(T, Stem2, CFG);
 verified2([[{N, {Key, Value, Meta}}]|T], 
           Stem, CFG) -> 
-    %it was updated, so we need to store the new version.
+    %a leaf was updated, so we need to store the new version.
     Leaf = leaf_verkle:new(Key, Value, Meta, CFG),
     Loc = leaf_verkle:put(Leaf, CFG),
     Stem2 = verified3(
@@ -181,23 +187,35 @@ verified2([[{N, {Key, Value, Meta}}]|T],
     verified2(T, Stem2, CFG);
 verified2([[{N, {Key, Value}}]|T], 
           Stem, CFG) -> 
-    %it was unchanged.
+    %a leaf was unchanged.
     %Leaf = leaf_verkle:new(Key, Value, Meta, CFG),
-    Leaf = leaf_verkle:new(Key, Value, 0, CFG),
-    Loc = element(N+1, Stem#stem.pointers),%leave it unchanged
-    Stem2 = verified3(
-              N, Stem, 2, Loc, 
-              leaf_hash(Leaf, CFG)),
-    verified2(T, Stem2, CFG);
+    %Leaf = leaf_verkle:new(Key, Value, 0, CFG),
+    %Loc = element(N+1, Stem#stem.pointers),%leave it unchanged
+    %Stem2 = verified3(
+    %          N, Stem, 2, Loc, 
+    %          leaf_hash(Leaf, CFG)),
+    %verified2(T, Stem2, CFG);
+    verified2(T, Stem, CFG);
 verified2([[{N, B = <<_:1024>>}|T1]|T2], Stem, CFG) ->
     Hash = stem_verkle:hash_point(B),
     %Hash = ed:compress_point(B),
     verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG);
 verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG) 
   when is_binary(B) -> 
-    1 = element(N+1, Stem#stem.types),
-    ChildStem0 = verified2(T1, stem_verkle:get(element(N+1, Stem#stem.pointers), CFG), CFG),
-    ChildStem = ChildStem0#stem{root = B},
+    ChildStem = 
+        case element(N+1, Stem#stem.types) of
+            1 ->%so we need to add the T1 elements to the child stem at position N+1
+                ChildStem0 = verified2(T1, stem_verkle:get(element(N+1, Stem#stem.pointers), CFG), CFG),
+                ChildStem0#stem{root = B};
+            0 ->%so we are creating a new stem for the T1 elements in place of this empty spot at position N+1.
+                S = stem_verkle:new_empty(CFG),
+                ChildStem0 = verified2(T1, S, CFG),
+                ChildStem0#stem{root = B};
+            2 ->%there was a leaf at position N+1. we are creating a new stem, and we need to merge the list of T1 elements with that extra leaf, and store them all in the new stem.
+                S = stem_verkle:new_empty(CFG),
+                S2 = verified2(T1, S, CFG),
+                S2#stem{root = B}
+        end,
     if
         ?sanity ->
             stem_verkle:check_root_integrity(ChildStem);
@@ -208,6 +226,8 @@ verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG)
     false = (Hash == uncalculated),
     Stem2 = verified3(N, Stem, 1, Loc, Hash),
     verified2(T2, Stem2, CFG).
+
+
 verified3(N, Stem, Type, Loc, Hash) ->
     Stem2 = Stem#stem{
       types = setelement(

@@ -428,7 +428,35 @@ test(6, CFG) ->
           ProofTree2, [Leaf1b, Leaf2b], CFG),%this version fails.
           %ProofTree2, [Leaf1b, Leaf3b], CFG),%this version works
     Root = hd(ProofTree3),
-    io:fwrite(ProofTree3).
+    %io:fwrite(ProofTree3),
+    Loc2 = store_verkle:verified(Loc, ProofTree3, CFG),
+    success;
+test(7, CFG) ->
+    %try updating a proof by updating 2 elements in the same slot of a stem
+    Loc = 1,
+    Leaf1 = leaf_verkle:new(
+              1, <<2:16>>, <<0>>, CFG),
+    Leaf2 = leaf_verkle:new(
+              257, <<2:16>>, <<0>>, CFG),
+    Leaves = [Leaf1, Leaf2],
+    {Loc2, stem, _} = store_verkle:batch(Leaves, Loc, CFG),
+    Leaves2 = lists:map(
+                fun(L) -> L#leaf{value = <<3:16>>} 
+                end, Leaves),
+    Keys = lists:map(
+             fun(L) ->
+                     leaf_verkle:raw_key(L) end,
+             Leaves),
+    {{ProofTree, Commit, Opening}, _} =
+        get_verkle:batch(Keys, Loc, CFG),
+    {true, _, ProofTree2} = 
+        verify_verkle:proof(
+          {ProofTree, Commit, Opening}, CFG),
+    ProofTree3 = verify_verkle:update(
+                   ProofTree2, Leaves2, CFG),
+    Loc3 = store_verkle:verified(
+             Loc2, ProofTree3, CFG),
+    success.
     
                               
     

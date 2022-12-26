@@ -27,7 +27,9 @@ update(PL = [OldRoot|ProofTree], Leaves, CFG) ->
     NewRoot = case Diff of
                   0 -> OldRoot;
                   %_ -> fq:e_add(Diff, OldRoot)
-                  _ -> ed:e_add(Diff, OldRoot)
+                  _ -> 
+                      %io:fwrite({size(Diff), size(OldRoot)}),%{128, 32}
+                      ed:e_add(Diff, OldRoot)
               end,
     [NewRoot|Tree2].
 
@@ -306,6 +308,8 @@ update_merge([LH|Leaves],
   when (length(LH) > 1) ->
     %io:fwrite("add leaves to empty spot\n"),
     B = ed:extended_zero(),
+
+    %todo. when generating S, we can look in LH to see what I's we need to support. So we don't have to support all 256 possibilities.
     S = lists:map(fun(I) ->
                           [{I, 0}]
                   end, range(0, 256)),
