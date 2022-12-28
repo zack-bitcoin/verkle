@@ -405,10 +405,12 @@ test(6, CFG) ->
     Leaf1 = leaf_verkle:new(
               1, <<2:16>>, <<0>>, CFG),
     Leaf2 = leaf_verkle:new(
-              257, <<2:16>>, <<0>>, CFG),
+              2, <<2:16>>, <<0>>, CFG),
     Leaf3 = leaf_verkle:new(
-              5, <<2:16>>, <<0>>, CFG),
-    Leaves = [Leaf1, Leaf2, Leaf3],
+              258, <<2:16>>, <<0>>, CFG),
+    Leaf4 = leaf_verkle:new(
+              3, <<2:16>>, <<0>>, CFG),
+    Leaves = [Leaf1, Leaf2, Leaf3, Leaf4],
     Keys = lists:map(
              fun(L) ->
                      leaf_verkle:raw_key(L) end,
@@ -434,24 +436,33 @@ test(6, CFG) ->
 test(7, CFG) ->
     %try updating a proof by updating 2 elements in the same slot of a stem
     Loc = 1,
-    Leaf1 = leaf_verkle:new(
-              1, <<2:16>>, <<0>>, CFG),
+%    Leaf1 = leaf_verkle:new(
+%              1, <<2:16>>, <<0>>, CFG),
     Leaf2 = leaf_verkle:new(
-              257, <<2:16>>, <<0>>, CFG),
-    Leaves = [Leaf1, Leaf2],
+              2, <<2:16>>, <<0>>, CFG),
+%    Leaf3 = leaf_verkle:new(
+%              258+3, <<2:16>>, <<0>>, CFG),
+%    Leaf4 = leaf_verkle:new(
+%              3, <<2:16>>, <<0>>, CFG),
+    Leaf5 = leaf_verkle:new(
+              258, <<2:16>>, <<0>>, CFG),
+%    Leaf6 = leaf_verkle:new(
+%              770, <<2:16>>, <<0>>, CFG),
+    Leaves = [Leaf2],
     {Loc2, stem, _} = store_verkle:batch(Leaves, Loc, CFG),
     Leaves2 = lists:map(
                 fun(L) -> L#leaf{value = <<3:16>>} 
-                end, Leaves),
+                end, Leaves++[Leaf5]),
     Keys = lists:map(
              fun(L) ->
                      leaf_verkle:raw_key(L) end,
-             Leaves),
+             Leaves2),
     {{ProofTree, Commit, Opening}, _} =
-        get_verkle:batch(Keys, Loc, CFG),
-    {true, _, ProofTree2} = 
+        get_verkle:batch(Keys, Loc2, CFG),
+    {true, Leaves3, ProofTree2} = 
         verify_verkle:proof(
           {ProofTree, Commit, Opening}, CFG),
+    %true = length(Keys) == length(Leaves3),
     ProofTree3 = verify_verkle:update(
                    ProofTree2, Leaves2, CFG),
     Loc3 = store_verkle:verified(

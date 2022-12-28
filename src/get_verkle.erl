@@ -58,6 +58,7 @@ batch(Keys, Root, CFG, Type) ->
     %io:fwrite("get lookup stems and leaves\n"),% 25%
     benchmark:now(),
     Tree2 = points_values(Tree, RootStem, CFG),
+    %io:fwrite({RootStem}),
 
     %obtains the stems and leaves by reading from the database.
     %[stem, {I, stem}, [{I, leaf}], [{I, stem}, {I, leaf}], [{I, stem}, [{I, leaf}], [{I, leaf}]]]
@@ -65,7 +66,6 @@ batch(Keys, Root, CFG, Type) ->
     %io:fwrite("get remove duplicate elliptic points\n"),
     benchmark:now(),
     Tree3 = withdraw_points(Tree2),%removing duplicate elliptic points by shifting all the points one step towards the root.
-    %io:fwrite(Tree3),
     %looks the same, just changes which elliptic point is written where.
     %io:fwrite("get remove hashes\n"),
     benchmark:now(),
@@ -81,6 +81,7 @@ batch(Keys, Root, CFG, Type) ->
     benchmark:now(),
 
     Lookups = flatten(Tree2, []),
+    %io:fwrite({Lookups}),
     %io:fwrite("get split3\n"),
     benchmark:now(),
     {Zs0, Commits, As0} = 
@@ -589,33 +590,33 @@ starts_same_split2(_, Rest, Sames) ->
     {lists:reverse(Sames), Rest}.
 
 
+%we are looking up the elliptic points from the database to incude with the proof. 
 points_values([<<Loc:?nindex>>|R], Root, CFG) ->
     % Root is a #stem{}
     Type = stem_verkle:type(Loc+1, Root),
     P = stem_verkle:pointer(Loc+1, Root),
-    %EllipticPoint = stem_verkle:root(Root),
-    %Hashes = stem_verkle:hashes(Root),
     V = {Loc, Root},
-    case Type of
+    E = case Type of
         0 -> %empty
-            %[<<NextLoc:?nindex>>|_] = R,
-            %[V, {NextLoc, 0}];
-            [V, 0];
+                %io:fwrite("point values empty\n"),
+                [V, 0];
         1 -> %stem
-            S0 = stem_verkle:get(P, CFG),
-            S = S0#stem{
-                  %hashes= fr:decode(S0#stem.hashes)
-                  %hashes = binary2int2(
-                  hashes = %fr:decode(
-                             tuple_to_list(
-                               S0#stem.hashes)%)
-                 },
-            [V|points_values(R, S, CFG)];
+                %io:fwrite("point values stem\n"),
+                S0 = stem_verkle:get(P, CFG),
+                S = S0#stem{
+                      hashes = tuple_to_list(
+                                 S0#stem.hashes)
+                     },
+                [V|points_values(R, S, CFG)];
+                %V;
         2 -> %leaf
-            L = leaf_verkle:get(P, CFG),
-            [V, L]
-    end;
+                %io:fwrite("point values leaf\n"),
+                L = leaf_verkle:get(P, CFG),
+                [V, L]
+    end,
+    E;
 points_values([H|T], Root, CFG) ->
+    %io:fwrite("point values branching \n"),
     [points_values(H, Root, CFG)|
      points_values(T, Root, CFG)];
 points_values([], _, _) -> [].

@@ -446,7 +446,8 @@ proof({Tree0, CommitG0, Open0}, CFG) ->
                     io:fwrite("verify fail, multiproof verify\n"),
                     false;
                 true ->
-                    {true, leaves2(Rest, []), Tree}
+                    %io:fwrite({Rest}),
+                    {true, leaves2(Rest, [], 0), Tree}
             end
     end.
     
@@ -473,19 +474,20 @@ leaves(X) ->
     %leaf getter error.
     io:fwrite({X}).
 
-leaves2([], _SubPath) -> [];
-leaves2([{N, B}|T], SubPath) when is_binary(B) ->
-    leaves2(T, [N|SubPath]);
-leaves2([[H|T]|T2], SubPath) ->
-    leaves2([H|T], SubPath) ++ 
-        leaves2(T2, SubPath);
-leaves2([{N, X = {K, V}}], _) 
+leaves2([], _SubPath, _) -> [];
+leaves2([{N, B}|T], SubPath, D) 
+  when is_binary(B) ->
+    leaves2(T, [N|SubPath], D+1);
+leaves2([[H|T]|T2], SubPath, D) ->
+    leaves2([H|T], SubPath, D) ++ 
+        leaves2(T2, SubPath, D);
+leaves2([{N, X = {K, V}}], _, D) 
   when is_binary(K) and is_binary(V) ->
-    [X];
-leaves2([{N, 0}], SubPath) -> 
+    [{D, X}];
+leaves2([{N, 0}], SubPath, D) -> 
     [{[N|SubPath], 0}];
-leaves2(X, SubPath) -> 
-    io:fwrite({X, SubPath}),
+leaves2(X, SubPath, D) -> 
+    io:fwrite({X, SubPath, D}),
     1=2.
 
 
