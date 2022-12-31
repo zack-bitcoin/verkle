@@ -28,6 +28,7 @@ keys2paths(Keys, CFG) ->
       end, Paths0),
     Paths0.
 
+%returns a verkle proof, and a dictionary of meta data from each leaf.
 batch(Keys, Root, CFG) ->
     batch(Keys, Root, CFG, small).
 
@@ -167,7 +168,7 @@ batch(Keys, Root, CFG, Type) ->
         ?sanity ->
             Ys = lists:zipwith(
                     fun(F, Z) ->
-                            poly2:eval_e(Z, F, Domain)
+                            poly:eval_e(Z, F, Domain)
                     end, FAs, FZs),
             true = multiproof:verify(
                      {CommitG, Opening}, 

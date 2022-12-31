@@ -392,6 +392,9 @@ test(4, CFG) ->
 
     RootHash2 = RootHash1,
 
+    Loc5 = store_verkle:verified(Loc2, ProofTree2, CFG),
+    RootHash1 = stem_verkle:hash(stem_verkle:get(Loc5, CFG)),
+
     success;
 test(5, CFG) ->
     {_, _} = test_batch(20, 1, CFG),
@@ -439,13 +442,13 @@ test(7, CFG) ->
 %    Leaf1 = leaf_verkle:new(
 %              1, <<2:16>>, <<0>>, CFG),
     Leaf2 = leaf_verkle:new(
-              2, <<2:16>>, <<0>>, CFG),
+              2, <<2:16>>, <<3>>, CFG),
 %    Leaf3 = leaf_verkle:new(
 %              258+3, <<2:16>>, <<0>>, CFG),
 %    Leaf4 = leaf_verkle:new(
 %              3, <<2:16>>, <<0>>, CFG),
     Leaf5 = leaf_verkle:new(
-              258, <<2:16>>, <<0>>, CFG),
+              258, <<2:16>>, <<4>>, CFG),
 %    Leaf6 = leaf_verkle:new(
 %              770, <<2:16>>, <<0>>, CFG),
     Leaves = [Leaf2],
@@ -453,6 +456,11 @@ test(7, CFG) ->
     Leaves2 = lists:map(
                 fun(L) -> L#leaf{value = <<3:16>>} 
                 end, Leaves++[Leaf5]),
+    {Loc4, stem, _} = 
+        store_verkle:batch(Leaves2, Loc, CFG),
+    Root2Loc = element(3, stem_verkle:pointers(stem_verkle:get(Loc4, CFG))),
+    Root2Hash = stem_verkle:hash(stem_verkle:get(Root2Loc, CFG)),
+    RootHash = stem_verkle:hash(stem_verkle:get(Loc4, CFG)),
     Keys = lists:map(
              fun(L) ->
                      leaf_verkle:raw_key(L) end,
@@ -465,13 +473,29 @@ test(7, CFG) ->
     %true = length(Keys) == length(Leaves3),
     ProofTree3 = verify_verkle:update(
                    ProofTree2, Leaves2, CFG),
+    Roothash = stem_verkle:hash_point(hd(ProofTree3)),
+    %Root2Hash = element(2, element(2, hd(hd(tl(ProofTree3))))),
     Loc3 = store_verkle:verified(
-             Loc2, ProofTree3, CFG),
+             Loc2, ProofTree3, CFG),%crashes here.
+    RootHash = stem_verkle:hash(stem_verkle:get(Loc3, CFG)),
+
+    {Proof2, _As2} = 
+        get_verkle:batch(Keys, Loc3, CFG),
+    {true, _, _} = 
+        verify_verkle:proof(Proof2, CFG),
+
     success.
     
-                              
-    
-    
+   
+stem_many_elements(X = #stem{}) -> 
+    Y = element(3, X),
+    Y2 = tuple_to_list(Y),
+    stem_many_elements2(Y2).
+stem_many_elements2([]) -> 0;
+stem_many_elements2([0|T]) -> 
+    stem_many_elements2(T);
+stem_many_elements2([_|T]) -> 
+    1 + stem_many_elements2(T).
     
 test_batch(Times, ProveMany, CFG) ->
     Loc = 1,

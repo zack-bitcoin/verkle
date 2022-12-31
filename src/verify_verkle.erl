@@ -22,7 +22,7 @@ update(PL = [OldRoot|ProofTree], Leaves, CFG) ->
 
     MEP = parameters:multi_exp(),
     {Diff, Tree2} = 
-        update_batch2(Leaves, tl(PL),
+        update_batch2(Leaves, ProofTree,
                       0, CFG, MEP),
     NewRoot = case Diff of
                   0 -> OldRoot;
@@ -40,7 +40,7 @@ empty_stem() ->
 update_batch2([], Tree, _Depth, _CFG, _MEP) ->
     {0, Tree};
 update_batch2(Leaves, Tree, Depth, CFG, MEP) ->
-    %adding leaves to an existing stem.
+    %adding leaves to the database.
     Leaves2 = store_verkle:clump_by_path(
                 Depth, Leaves),
     %io:fwrite({Tree, Leaves2}),
@@ -239,6 +239,7 @@ update_merge([LH|Leaves],
     B2 = (1 == length(LH)),
     if
         (B and B2) -> 
+            %updating a leaf.
             %io:fwrite(LH),
             Leaf2 = hd(LH),
             OldN = store_verkle:leaf_hash(
@@ -266,15 +267,26 @@ update_merge([LH|Leaves],
                     R],
               [LeafDiff|Diffs], N+1);
         B -> 
-            %io:fwrite("adding leaves to a spot where there was a leaf, and changing the existing leaf\n"),
+            io:fwrite("adding leaves to a spot where there was a leaf, and changing the existing leaf\n"),
+            %todo. we need to somehow subtract this leaf's diff before adding the new stem or leaves.
+            OldN = store_verkle:leaf_hash(FL, CFG),
+            %EmptyStem = stem_verkle:new_empty(CFG),
+            {Point, Tree2} = 
+                update_batch2(LH, all_empties(),
+                              Depth+1, CFG, MEP),
+            NewPoint = Point,
+            Diff = {sub, NewPoint, OldN},
+            Hash = uncalculated,
+
             update_merge(
-              [LH|Leaves], 
-              [[{N, 0}]
-               |Subtrees],
-              Depth, CFG, MEP, R, Diffs, N);
+              Leaves, Subtrees, Depth, CFG, MEP,
+              [[{N, {mstem, Hash, NewPoint}}|Tree2]|R], [Diff|Diffs], N+1);
+              %[[{N, 0}]
+              % |Subtrees],
+              %Depth, CFG, MEP, R, Diffs, N);
         true -> 
             %adding leaves to this spot where there was a leaf, without updating our leaf
-            %io:fwrite("adding a leaves to this spot where there is a leaf, and not changing the existing leaf\n"),
+            io:fwrite("adding leaves to this spot where there is a leaf, and not changing the existing leaf\n"),
             update_merge(
               %[[NewLeaf|LH]|Leaves], 
               [[FL|LH]|Leaves], 
@@ -310,9 +322,7 @@ update_merge([LH|Leaves],
     B = ed:extended_zero(),
 
     %todo. when generating S, we can look in LH to see what I's we need to support. So we don't have to support all 256 possibilities.
-    S = lists:map(fun(I) ->
-                          [{I, 0}]
-                  end, range(0, 256)),
+    S = all_empties(),
     update_merge([LH|Leaves], [[{N, B}|S]|Subtrees],
                  Depth, CFG, MEP, R, Diffs, N);
 update_merge(Ls, [X|T], Depth, CFG, MEP, R, Diffs, 
@@ -320,6 +330,10 @@ update_merge(Ls, [X|T], Depth, CFG, MEP, R, Diffs,
     update_merge(Ls, [[X|T]], Depth, CFG, MEP, R,
                  Diffs, N).
 
+all_empties() ->
+    lists:map(fun(I) ->
+                      [{I, 0}]
+              end, range(0, 256)).
 range(N, N) -> [];
 range(N, M) when N < M -> 
     [N|range(N+1, M)].

@@ -148,7 +148,9 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
 
 %after you verify that a verkle proof is correct, and you update that verkle proof with the new data, you can use this function to store the new data into the database.
 verified(Loc, ProofTree, CFG) ->
+    io:fwrite("verified start\n"),
     RootStem = stem_verkle:get(Loc, CFG),
+    
     RootStem2 = verified2(tl(ProofTree), RootStem, CFG),
     RootStem3 = 
         RootStem2#stem{root = hd(ProofTree)},
@@ -164,21 +166,27 @@ verified(Loc, ProofTree, CFG) ->
 verified2([], %this is a lists in lists tree of the things that have changed in the consensus state. We are storing these changes.
           Stem, %this is the current Stem stored on the hard drive. it has pointers to other stems or leaves.
           _) -> 
+    io:fwrite("verified2 finished\n"),
     %there is nothing left to change.
     Stem;
 %verified2([{N, 0}], Stem, CFG) -> 
 %    verified3(N, Stem, 0, 0, <<0:256>>);
 verified2([[{N, 0}]|T], Stem, CFG) -> 
     %there is a spot that was deleted from the stem.
+    %io:fwrite("verified2 delete a spot 0\n"),
     Stem2 = verified3(N, Stem, 0, 0, <<0:256>>),
     verified2(T, Stem2, CFG);
 verified2([{N, 0}|T], Stem, CFG) -> 
     %there is a spot that was deleted from the stem.
+    %io:fwrite("verified2 delete a spot 1\n"),
     Stem2 = verified3(N, Stem, 0, 0, <<0:256>>),
     verified2(T, Stem2, CFG);
 verified2([[{N, {Key, Value, Meta}}]|T], 
           Stem, CFG) -> 
     %a leaf was updated, so we need to store the new version.
+    io:fwrite("verified2 update a leaf\n"),
+    io:fwrite(integer_to_list(N)),
+    io:fwrite("\n"),
     Leaf = leaf_verkle:new(Key, Value, Meta, CFG),
     Loc = leaf_verkle:put(Leaf, CFG),
     Stem2 = verified3(
@@ -187,6 +195,7 @@ verified2([[{N, {Key, Value, Meta}}]|T],
     verified2(T, Stem2, CFG);
 verified2([[{N, {Key, Value}}]|T], 
           Stem, CFG) -> 
+    io:fwrite("verified2 leaf unchanged\n"),
     %a leaf was unchanged.
     %Leaf = leaf_verkle:new(Key, Value, Meta, CFG),
     %Leaf = leaf_verkle:new(Key, Value, 0, CFG),
@@ -202,16 +211,28 @@ verified2([[{N, B = <<_:1024>>}|T1]|T2], Stem, CFG) ->
     verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG);
 verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG) 
   when is_binary(B) -> 
+    io:fwrite("verified2 stem\n"),
     ChildStem = 
         case element(N+1, Stem#stem.types) of
             1 ->%so we need to add the T1 elements to the child stem at position N+1
+                io:fwrite("adding elements to a cihld stem\n"),
                 ChildStem0 = verified2(T1, stem_verkle:get(element(N+1, Stem#stem.pointers), CFG), CFG),
                 ChildStem0#stem{root = B};
             0 ->%so we are creating a new stem for the T1 elements in place of this empty spot at position N+1.
+                io:fwrite("there was an empty spot, possibly creating a stem at that spot\n"),
                 S = stem_verkle:new_empty(CFG),
                 ChildStem0 = verified2(T1, S, CFG),
                 ChildStem0#stem{root = B};
             2 ->%there was a leaf at position N+1. we are creating a new stem, and we need to merge the list of T1 elements with that extra leaf, and store them all in the new stem.
+                io:fwrite("there was a leaf, possibly creating a stem at that spot\n"),
+                %Leaf = leaf_verkle:get(
+                %         element(
+                %           N+1, 
+                %           Stem#stem.pointers), CFG),
+                %LeafKey = leaf_verkle:key(Leaf),
+                %<<_:240, _LeafA, LeafB>> = 
+                %    <<LeafKey:256>>,
+                %io:fwrite({Stem, Leaf, LeafB, T1}),
                 S = stem_verkle:new_empty(CFG),
                 S2 = verified2(T1, S, CFG),
                 S2#stem{root = B}

@@ -100,7 +100,8 @@ serialize(S, CompressedRoot, CFG) ->
 serialize(S, CFG) ->
     if
         ?sanity ->
-            check_root_integrity(S);
+            %check_root_integrity(S);
+            ok;
         true -> ok
     end,
     #stem{
@@ -197,13 +198,21 @@ update(Location, Stem, CFG) ->
 check_root_integrity(Stem) ->
     MEP = parameters:multi_exp(),
     Hashes = tuple_to_list(Stem#stem.hashes),
-    R = store_verkle:precomputed_multi_exponent(
+    %R = store_verkle:precomputed_multi_exponent(
+    %      Hashes,MEP),
+    R = precomputed_multi_exponent:doit(
           Hashes,MEP),
     {Gs, Hs, Q} = parameters:read(),
     R2 = multi_exponent:doit(Hashes, Gs),
-    true = ed:e_eq(R, R2),
-    true = ed:e_eq(R, Stem#stem.root),
-    true = ed:e_eq(R2, Stem#stem.root).
+    B1 = ed:e_eq(R, R2),
+    B2 = ed:e_eq(R, Stem#stem.root),
+    B3 = ed:e_eq(R2, Stem#stem.root),
+    if
+        not(B1 and B2 and B3) ->
+            io:fwrite({B1, B2, B3, Stem}),
+            1=2;
+        true -> ok
+    end.
 put(Stem, CompressedRoot, CFG) ->
     %compressed root is in affine format. 64 bytes.
     S = serialize(Stem, CompressedRoot, CFG),
