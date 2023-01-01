@@ -332,7 +332,7 @@ serialize_thing([{I, B}, L|T]) when is_list(L) ->
     <<_:256>> = B,
     true = is_integer(I),
     <<1, I, B/binary, (N-1), A2/binary>>;
-serialize_thing([{I, B}, L]) ->
+serialize_thing([{I, B}|L]) ->
     %stem with one child.
     A3 = serialize_thing(L),
     <<1, I, B/binary, 0, A3/binary>>;

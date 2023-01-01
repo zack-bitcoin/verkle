@@ -214,7 +214,7 @@ verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG)
     ChildStem = 
         case element(N+1, Stem#stem.types) of
             1 ->%so we need to add the T1 elements to the child stem at position N+1
-                io:fwrite("adding elements to a cihld stem\n"),
+                %io:fwrite("adding elements to a cihld stem\n"),
                 ChildStem0 = verified2(T1, stem_verkle:get(element(N+1, Stem#stem.pointers), CFG), CFG),
                 ChildStem0#stem{root = B};
             0 ->%so we are creating a new stem for the T1 elements in place of this empty spot at position N+1.

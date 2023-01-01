@@ -267,7 +267,7 @@ update_merge([LH|Leaves],
                     R],
               [LeafDiff|Diffs], N+1);
         B -> 
-            io:fwrite("adding leaves to a spot where there was a leaf, and changing the existing leaf\n"),
+            %io:fwrite("adding leaves to a spot where there was a leaf, and changing the existing leaf\n"),
             %todo. we need to somehow subtract this leaf's diff before adding the new stem or leaves.
             OldN = store_verkle:leaf_hash(FL, CFG),
             %EmptyStem = stem_verkle:new_empty(CFG),
@@ -286,7 +286,7 @@ update_merge([LH|Leaves],
               %Depth, CFG, MEP, R, Diffs, N);
         true -> 
             %adding leaves to this spot where there was a leaf, without updating our leaf
-            io:fwrite("adding leaves to this spot where there is a leaf, and not changing the existing leaf\n"),
+            %io:fwrite("adding leaves to this spot where there is a leaf, and not changing the existing leaf\n"),
             update_merge(
               %[[NewLeaf|LH]|Leaves], 
               [[FL|LH]|Leaves], 
