@@ -9,6 +9,7 @@ keys2paths/2,
 withdraw_points/1, withdraw_points2/1,
 compressed_points_list/1,
 serialize_proof/1, deserialize_proof/1,
+unverified/3,
 test/1]).
 -include("constants.hrl").
 
@@ -28,6 +29,45 @@ keys2paths(Keys, CFG) ->
       end, Paths0),
     Paths0.
 
+remove_stems_from_straight_branches(L) ->
+    lists:map(fun(X) -> lists:last(hd(X)) end, L).
+
+%returns the consensus state and meta values for each leaf. Does not create any proof.
+unverified(Keys, Root, CFG) ->
+    RootStem0 = stem_verkle:get(Root, CFG),
+    RootStem = RootStem0#stem{
+                 hashes = 
+                       tuple_to_list(
+                         RootStem0#stem.hashes)},
+    Paths0 = keys2paths(Keys, CFG),
+    Paths = lists:sort(fun(A, B) -> A < B end, 
+                       Paths0),
+    Tree3 = lists:map(fun(P) ->
+                              Tree = paths2tree([P]),
+                              Tree2 = points_values(Tree, RootStem, CFG)
+                      end, Paths),
+    Leaves0 = remove_stems_from_straight_branches(Tree3),
+    Leaves = lists:zipwith(fun(L, K) ->
+                                   {K, L}
+                           end, Leaves0, 
+                           depth_order(Keys)),
+    Leaves.
+
+depth_order(Keys) ->
+    K2 = lists:map(fun(K) ->
+                           <<A:256/little>> = K,
+                           <<B:256>> = 
+                               <<A:256/big>>,
+                           {K, B}
+                   end, Keys),
+    K3 = lists:sort(fun({K, B}, {K2, B2}) ->
+                            B < B2
+                    end, K2),
+    lists:map(fun({K, _}) ->
+                      K end, K3).
+    
+    
+
 %returns a verkle proof, and a dictionary of meta data from each leaf.
 batch(Keys, Root, CFG) ->
     batch(Keys, Root, CFG, small).
@@ -35,13 +75,8 @@ batch(Keys, Root, CFG) ->
 batch(Keys, Root, CFG, Type) ->
     true = ((Type == small) or (Type == fast)),
     RootStem0 = stem_verkle:get(Root, CFG),
-    %io:fwrite(RootStem0#stem.hashes),
     RootStem = RootStem0#stem{
-                 %hashes = 
-                 %      RootStem0#stem.hashes},
                  hashes = 
-                     %binary2int2(
-                     %fr:decode(
                        tuple_to_list(
                          RootStem0#stem.hashes)},
     %io:fwrite("get keys2paths\n"),

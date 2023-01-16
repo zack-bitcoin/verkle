@@ -484,7 +484,33 @@ test(7, CFG) ->
     {true, _, _} = 
         verify_verkle:proof(Proof2, CFG),
 
+    success;
+test(8, CFG) ->
+    io:fwrite("testing get_verkle:unverified, which is used to look things up from the consensus state, without making a proof.\n"),
+    Loc = 1,
+    Times = 3,
+    Leaves = 
+        lists:map(
+          fun(N) ->
+                  leaf_verkle:new(
+                    N*256, <<N:16>>, <<0>>, CFG)
+          end, range(1, Times+1)),
+    RawKeys = 
+        lists:map(
+          fun(L) ->
+                  leaf_verkle:raw_key(L) 
+          end, Leaves),
+    {NewLoc, stem, _} = 
+        store_verkle:batch(Leaves, Loc, CFG),
+    
+
+    X = get_verkle:unverified([hash:doit(1)|RawKeys], NewLoc, CFG),
+
+    io:fwrite({X}),
+
     success.
+
+
     
    
 stem_many_elements(X = #stem{}) -> 
