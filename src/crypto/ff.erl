@@ -22,6 +22,7 @@ neg(A, Base) ->
 add(A, B, Base) ->
     mod(A + B, Base).
 mul(A, B, Base) ->
+    %io:fwrite("mul ff\n"),
     mod(A * B, Base).
 divide(A, B, N) ->
     B2 = inverse(B, N),

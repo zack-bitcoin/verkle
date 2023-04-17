@@ -9,7 +9,7 @@
          empty_hashes/1, 
 	 update_pointers/2, empty_tuple/0,
 	 make/3, make/2, update/3, onify2/2,
-	 put_batch/2, %serialize/2,
+	 put_batch/2, serialize/2,
          root/1, check_root_integrity/1,
          delete/2,
 	 empty_trie/2]).

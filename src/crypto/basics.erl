@@ -86,9 +86,11 @@ lrpow(B, E, N) ->
     lrpow2(A, B, tl(E2), N).
 lrpow2(A, _, [], _) -> A;
 lrpow2(A, B, [H|T], N) -> 
+    %io:fwrite("square\n"),
     A2 = (A * A) rem N,
     A3 = if
              (H == 1) ->
+                 %io:fwrite("mul\n"),
                  (A2 * B) rem N;
              true -> A2
          end,

@@ -47,6 +47,7 @@ unverified(Keys, Root, CFG) ->
                               Tree2 = points_values(Tree, RootStem, CFG)
                       end, Paths),
     Leaves0 = remove_stems_from_straight_branches(Tree3),
+    %true = (length(Leaves0) == length(Keys)),
     Leaves = lists:zipwith(fun(L, K) ->
                                    {K, L}
                            end, Leaves0, 
