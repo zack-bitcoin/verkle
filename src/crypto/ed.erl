@@ -319,7 +319,9 @@ extended2affine_batch(L) ->
     Zs = lists:map(fun(<<X:256, Y:256, Z:256, T:256>>) ->
                            if
                                (Z == 0) ->
-                                   io:fwrite({X, Y, Z, T});
+                                   io:fwrite("Z cannot be zero in extended coordinates."),
+                                   io:fwrite({X, Y, Z, T}),
+                                   1=2;
                                true -> ok
                            end,
                            <<Z:256>>

@@ -1,5 +1,5 @@
 -module(test_verkle).
--export([test/0, test/1, load_db/1, proof_test/2]).
+-export([test/0, test/1, load_db/1, proof_test/2, clean_ets_test/0]).
 
 -define(ID, tree01).
 -include("constants.hrl").
@@ -645,7 +645,37 @@ proof_test(Loc2, UpdateMany) ->
 
     success.
     
+clean_ets_test() ->
+    CFG = tree:cfg(?ID),
+    Loc = 1,
 
+    Times = 10,
+    Leaves1 = 
+        lists:map(
+          fun(N) ->
+                  Key = N,
+                  leaf_verkle:new(
+                    Key, <<N:16>>, <<0>>, CFG)
+          end, range(1, Times+1)),
+    Leaves2 = 
+        lists:map(
+          fun(N) ->
+                  Key = N,
+                  leaf_verkle:new(
+                    Key, <<(N+1):16>>, <<0>>, CFG)
+          end, range(Times div 2, (Times * 3) div 2)),
+
+    {Loc2, stem, _} = store_verkle:batch(
+                        Leaves1, Loc, CFG),
+    {Loc3, stem, _} = store_verkle:batch(
+                        Leaves2, Loc2, CFG),
+    
+
+    S = stem_verkle:get(Loc3, CFG),
+    stem_verkle:hash(S),
+    tree:clean_ets(?ID, Loc3),
+    stem_verkle:get(Loc2, CFG).
+    
 
 
     

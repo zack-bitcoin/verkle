@@ -247,7 +247,8 @@ clean_ets_internal2(
 	    Hash = clean_ets_internal(Pointer, CFG, SID, LID);
 	2 -> %a leaf
 	    Leaf = leaf_verkle:get(Pointer, CFG),
-	    Hash = leaf_verkle:hash(Leaf, CFG),
+	    %Hash = leaf_verkle:hash(Leaf, CFG),
+	    Hash = store_verkle:leaf_hash(Leaf, CFG),
 	    SL = leaf_verkle:serialize(Leaf, CFG),
 	    ets:insert(LID, {Pointer, SL})
     end,
@@ -256,4 +257,5 @@ clean_ets_internal2(
 valid_key(Key) ->
     true = is_integer(Key),
     true = Key > 0.
-    
+
+
