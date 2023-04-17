@@ -143,7 +143,7 @@ handle_call({new_trie, RootStem}, _From, CFG) ->
     {reply, X, CFG};
 handle_call({root_hash, RootPointer}, _From, CFG) ->
     S = stem_verkle:get(RootPointer, CFG),
-    H = stem_verkle:hash(S, CFG),
+    H = stem_verkle:hash(S),
     {reply, H, CFG};
 handle_call(cfg, _From, CFG) ->
     {reply, CFG, CFG}.
@@ -234,7 +234,7 @@ clean_ets_internal(Pointer, CFG, SID, LID) ->
     clean_ets_internal2(P, T, H, CFG, SID, LID),
     SS = stem_verkle:serialize(S, CFG),
     ets:insert(SID, {Pointer, SS}),
-    stem_verkle:hash(S, CFG).
+    stem_verkle:hash(S).
    
 clean_ets_internal2([], [], _, _, _, _) -> [];
 clean_ets_internal2(
