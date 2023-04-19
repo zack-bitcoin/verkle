@@ -15,7 +15,7 @@
 	 empty_trie/2]).
 %-include("constants.hrl").
 %-export_type([stem/0,types/0,empty_t/0,stem_t/0,leaf_t/0,pointers/0,empty_p/0,hashes/0,hash/0,empty_hash/0,stem_p/0,nibble/0]).
--define(sanity, false).
+-define(sanity, true).
 -record(stem, { root = ed:extended_zero()
                 , types
                 , pointers
