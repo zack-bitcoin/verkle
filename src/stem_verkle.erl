@@ -128,6 +128,7 @@ serialize2([P|PT], [H|HT], [T|TT], R) ->
 
 deserialize(<<R1:512, B/binary>>, CFG) -> 
 %deserialize(<<R1:(256*5), B/binary>>, CFG) -> 
+    true = ed:is_on_curve(<<R1:512>>),
     X = empty_tuple(),
     %deserialize(1,X,X,cfg_verkle:path(CFG)*8,hash:hash_depth()*8,X, B).
     HS = cfg_verkle:hash_size(CFG),
