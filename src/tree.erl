@@ -31,9 +31,10 @@ handle_info(_, X) -> {noreply, X}.
 handle_cast(reload_ets, CFG) -> 
     A3 = ids_verkle:leaf(CFG),
     A4 = ids_verkle:stem(CFG),
-    dump:reload_ets(A3),
-    dump:reload_ets(A4),
-    Empty = stem_verkle:put(stem_verkle:new_empty(CFG), CFG),
+    dump:reload(A3),
+    dump:reload(A4),
+    Empty = stem_verkle:put(
+              stem_verkle:new_empty(CFG), CFG),
     CFG2 = cfg_verkle:set_empty(CFG, Empty),
     {noreply, CFG2};
 handle_cast(_, X) -> {noreply, X}.
