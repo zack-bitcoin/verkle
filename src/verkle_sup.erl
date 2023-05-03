@@ -16,7 +16,7 @@ stop(ID) ->
     supervisor:terminate_child({global, ID}, ids_verkle:stem(CFG)),
     dump_sup:stop(ids_verkle:leaf(CFG)),
     supervisor:terminate_child({global, ID}, ids_verkle:leaf(CFG)),
-    supervisor:terminate_child({global, ID}, ids_verkle:bits(CFG)),
+    %supervisor:terminate_child({global, ID}, ids_verkle:bits(CFG)),
     halt().
 
 %verkle01_main).
@@ -28,14 +28,14 @@ init([CFG, Amount, Mode, Location]) ->
     HashSize = cfg_verkle:hash_size(CFG),
     Size = cfg_verkle:value(CFG)+cfg_verkle:meta(CFG),
     ID = cfg_verkle:id(CFG),
-    IDS = atom_to_list(ID),
-    A2 = list_to_atom(IDS++"_bits"),
+    %IDS = atom_to_list(ID),
+    %A2 = list_to_atom(IDS++"_bits"),
     A3 = ids_verkle:leaf(CFG),
     A4 = ids_verkle:stem(CFG),
     A5 = ids_verkle:main(CFG),
     A6 = ids_verkle:parameters(CFG),
     A7 = parameters,
-    L2 = Location ++ "data/" ++ IDS ++ "_verkle_bits.db",
+    %L2 = Location ++ "data/" ++ IDS ++ "_verkle_bits.db",
     Children = [{A3, {dump_sup, start_link, [A3, KeyLength+Size, Amount, Mode, Location]}, permanent, 5000, supervisor, [dump_sup]},
 		%{A4, {dump_sup, start_link, [A4, (?nwidth div 4)+(?nwidth*(HashSize + KeyLength)) + (2*HashSize), Amount, Mode, Location]}, permanent, 5000, supervisor, [dump_sup]},
 		{A4, {dump_sup, start_link, [A4, (?nwidth)+(?nwidth*(HashSize + KeyLength)) + (2*HashSize), Amount, Mode, Location]}, permanent, 5000, supervisor, [dump_sup]},%256 + (256 * (32 + 32)) + (2*32) = 16704

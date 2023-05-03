@@ -508,8 +508,43 @@ test(8, CFG) ->
 
     io:fwrite({X}),
 
-    success.
+    success;
+test(9, CFG) ->
+    %testing storing to the hard disk, and restoring from the hard disk. Like if the node got turned off and back on.
+    %there are 2 dumps getting shut down, and one tree.
+    %ids_verkle:main (a tree), stem (a dump sup), leaf (a dump sup), bits
+    
+    Loc = 1,
+    Key = 27,
+    Val = <<1:16>>,
+    Val2 = <<2:16>>,
+    Leaf = leaf_verkle:new(Key, Val, <<0>>, CFG),
+    Leaf2 = leaf_verkle:new(Key, Val2, <<0>>, CFG),
+    Leaves = [Leaf],
+    Leaves2 = [Leaf2],
 
+    ID = cfg_verkle:id(CFG),
+    %MainID = ids_verkle:main(CFG),
+    LeafID = ids_verkle:leaf(CFG),
+    StemID = ids_verkle:stem(CFG),
+
+    %store something, and verify it is still there.
+    {Loc2, stem, _} = store_verkle:batch(Leaves, Loc, CFG),
+    {{A, _, _}, _} = get_verkle:batch([leaf_verkle:raw_key(Leaf)], Loc2, CFG),
+    [_, {Key, {_, Val}}] = A,
+
+    tree:quick_save(ID),
+
+    dump:delete_all(LeafID),
+    dump:delete_all(StemID),
+
+    1 = bits:top(LeafID),
+    1 = bits:top(StemID),
+
+    tree:reload_ets(ID),
+
+    {{A, _, _}, _} = get_verkle:batch([leaf_verkle:raw_key(Leaf)], Loc2, CFG),
+    success.
 
     
    
