@@ -537,9 +537,10 @@ test(9, CFG) ->
 
     dump:delete_all(LeafID),
     dump:delete_all(StemID),
+    timer:sleep(100),
 
-    1 = bits:top(LeafID),
     1 = bits:top(StemID),
+    1 = bits:top(LeafID),
 
     tree:reload_ets(ID),
 
