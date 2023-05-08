@@ -513,15 +513,15 @@ test(9, CFG) ->
     %testing storing to the hard disk, and restoring from the hard disk. Like if the node got turned off and back on.
     %there are 2 dumps getting shut down, and one tree.
     %ids_verkle:main (a tree), stem (a dump sup), leaf (a dump sup), bits
-    
+    %os:cmd("rm data/*.db"),
     Loc = 1,
     Key = 27,
-    Val = <<1:16>>,
-    Val2 = <<2:16>>,
+    Val = <<3:16>>,
+    %Val2 = <<4:16>>,
     Leaf = leaf_verkle:new(Key, Val, <<0>>, CFG),
-    Leaf2 = leaf_verkle:new(Key, Val2, <<0>>, CFG),
+    %Leaf2 = leaf_verkle:new(Key, Val2, <<0>>, CFG),
     Leaves = [Leaf],
-    Leaves2 = [Leaf2],
+    %Leaves2 = [Leaf2],
 
     ID = cfg_verkle:id(CFG),
     %MainID = ids_verkle:main(CFG),
@@ -530,24 +530,37 @@ test(9, CFG) ->
 
     %store something, and verify it is still there.
     {Loc2, stem, _} = store_verkle:batch(Leaves, Loc, CFG),
+    2 = Loc2,
     {{A, _, _}, _} = get_verkle:batch([leaf_verkle:raw_key(Leaf)], Loc2, CFG),
     [_, {Key, {_, Val}}] = A,
 
+    io:fwrite("test 9 about to quick save\n"),
     tree:quick_save(ID),
-
     dump:delete_all(LeafID),
     dump:delete_all(StemID),
     timer:sleep(100),
 
-    1 = bits:top(StemID),
-    1 = bits:top(LeafID),
-
+    1 = dump:top(StemID),
+    1 = dump:top(LeafID),
     tree:reload_ets(ID),
+    timer:sleep(100),
 
     {{A, _, _}, _} = get_verkle:batch([leaf_verkle:raw_key(Leaf)], Loc2, CFG),
+    success;
+test(10, CFG) ->
+    %after running test 9 and restarting the node.
+    Key = 27,
+    Val = <<3:16>>,
+    ID = cfg_verkle:id(CFG),
+    Loc2 = 2,
+    tree:reload_ets(ID),%dies here...
+    Leaf = leaf_verkle:new(Key, Val, <<0>>, CFG),
+    {{A, _, _}, _} = get_verkle:batch([leaf_verkle:raw_key(Leaf)], Loc2, CFG),
+    [_, {Key, {_, Val}}] = A,
     success.
-
     
+
+ 
    
 stem_many_elements(X = #stem{}) -> 
     Y = element(3, X),
@@ -711,8 +724,4 @@ clean_ets_test() ->
     stem_verkle:hash(S),
     tree:clean_ets(?ID, Loc3),
     stem_verkle:get(Loc2, CFG).
-    
-
-
-    
     

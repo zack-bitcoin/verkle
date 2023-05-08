@@ -31,8 +31,10 @@ handle_info(_, X) -> {noreply, X}.
 handle_cast(reload_ets, CFG) -> 
     A3 = ids_verkle:leaf(CFG),
     A4 = ids_verkle:stem(CFG),
-    dump:reload(A3),
     dump:reload(A4),
+    io:fwrite("dump tree about to reload leaf bits\n"),
+    dump:reload(A3),
+    io:fwrite("dump tree reloaded leaf bits\n"),
     Empty = stem_verkle:put(
               stem_verkle:new_empty(CFG), CFG),
     CFG2 = cfg_verkle:set_empty(CFG, Empty),
