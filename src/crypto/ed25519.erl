@@ -17,6 +17,7 @@
          fnormalize/1,
          feq/2,
          fhash_point/1,
+         fis_on_curve/1,
 
          %montgomery encoded version
          encode/1,

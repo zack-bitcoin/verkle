@@ -28,7 +28,7 @@ terminate(_, CFG) ->
     io:fwrite(" died \n"),
     ok.
 handle_info(_, X) -> {noreply, X}.
-handle_cast(reload_ets, CFG) -> 
+handle_cast(reload, CFG) -> 
     A3 = ids_verkle:leaf(CFG),
     A4 = ids_verkle:stem(CFG),
     dump:reload(A4),
@@ -47,6 +47,7 @@ handle_call(quick_save, _, CFG) ->
     dump:quick_save(A4),
     {reply, ok, CFG};
 handle_call({clean_ets, Pointer}, _, CFG) -> 
+    %removes everything not connected to a single pointer.
     %A3 = ids_verkle:leaf(CFG),
     %A4 = ids_verkle:stem(CFG),
     LID = ids_verkle:leaf(CFG),
@@ -86,7 +87,8 @@ handle_call({clean_ets, Pointer}, _, CFG) ->
     CFG2 = cfg_verkle:set_empty(CFG, Empty),
     {reply, ok, CFG2};
 handle_call({garbage, NewRoot, OldRoot}, _From, CFG) ->%prune new
-    X = prune:garbage(NewRoot, OldRoot, CFG),
+    %X = prune:garbage(NewRoot, OldRoot, CFG),
+    X = prune_verkle:doit_stem(NewRoot, OldRoot, CFG),
     {reply, X, CFG};
 %handle_call({prune, OldRoot, NewRoot}, _From, CFG) ->%prune old
 %    1=2,
@@ -151,12 +153,12 @@ handle_call({root_hash, RootPointer}, _From, CFG) ->
 handle_call(cfg, _From, CFG) ->
     {reply, CFG, CFG}.
 
-save_table(ID, Loc) ->
-    case ets:tab2file(ID, Loc, [{sync, true}]) of
-        ok -> ok;
-        {error, R} ->
-            save_table(ID, Loc)
-    end.
+%save_table(ID, Loc) ->
+%    case ets:tab2file(ID, Loc, [{sync, true}]) of
+%        ok -> ok;
+%        {error, R} ->
+%            save_table(ID, Loc)
+%    end.
 
 cfg(ID) when is_atom(ID) ->
     gen_server:call(
@@ -173,7 +175,7 @@ clean_ets(ID, Pointer) ->
 reload_ets(ID) ->
     %reloads the ram databases from the hard drive copy.
     gen_server:cast({global, ids_verkle:main_id(ID)}, 
-                    reload_ets).
+                    reload).
 quick_save(ID) ->
     gen_server:call({global, ids_verkle:main_id(ID)}, 
                     quick_save).

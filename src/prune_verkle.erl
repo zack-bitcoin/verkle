@@ -71,23 +71,29 @@ test(0) ->
         lists:map(
           fun(N) -> 
                   Key = N,
-                  leaf_verkle:new(Key, <<N:16>>, <<>>, CFG)
+                  leaf_verkle:new(Key, <<N:16>>, <<0>>, CFG)
           end, range(1, Times+1)),
     Leaves2 = 
         lists:map(
           fun(N) -> 
                   %Key = N * 2,
                   Key = N+1,
-                  leaf_verkle:new(Key, <<(N+5):16>>, <<>>, CFG)
+                  leaf_verkle:new(Key, <<(N+5):16>>, <<1>>, CFG)
           end, range(1, Times+1)),
     
     %Many = lists:map(fun(Leaf) -> 
     %                 leaf_verkle:raw_key(Leaf) end,
     %                 Leaves),
+    T1 = bits:top(tree01_v_stem),
     {Loc2, stem, _} = 
         store_verkle:batch(Leaves, Loc, CFG),
+    T2 = bits:top(tree01_v_stem),
     {Loc3, stem, _} = 
         store_verkle:batch(Leaves2, Loc2, CFG),
-    doit_stem(Loc2, Loc3, CFG).
+    T3 = bits:top(tree01_v_stem),
+    Result = doit_stem(Loc2, Loc3, CFG),
+    io:fwrite({Loc, Loc2, Loc3, Result}),
+    
+    Result.
     
             

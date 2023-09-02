@@ -58,6 +58,7 @@ var multiproof = (function(){
         //for the fast version of verkle proofs, that include all 256 elements of the vector commitment, no bullet proof.
         var commitg = co[0];
         var ng2 = co[1];
+        //precomputes are slow the first time, after that they are cached.
         var gs = precomputes.ghq()[0];
         var da = precomputes.da();
         var pa = precomputes.a();

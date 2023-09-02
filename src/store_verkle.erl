@@ -265,10 +265,16 @@ clump_by_path(D, Leaves) ->
     Paths0 = lists:map(
                fun(L) -> 
                        D8 = (31 - D)*8,
-                      <<_:D8, B:8, _/binary>> =
-                           leaf_verkle:raw_key(L),
-                      {B, L} end,
-              Leaves),
+                       case leaf_verkle:raw_key(L) of
+
+                           <<_:D8, B:8, _/binary>> ->
+                               %leaf_verkle:raw_key(L),
+                               {B, L};
+                           _ -> 
+                               io:fwrite("failure because it tried to store two leaves with the same key.\n"),
+                               1=2
+                       end
+               end, Leaves),
     Paths = lists:sort(fun({A, _}, {B, _}) ->
                                A < B
                        end, Paths0),

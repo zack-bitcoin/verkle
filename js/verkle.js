@@ -182,7 +182,7 @@ var verkle = (function(){
         var root1 = decompressed[0];
         return([tree, open0, root1, commitg]);
     };
-    function verify(root, proof){
+    function verify(proof){
         var [tree0, commitg0, open0] = proof;
         var [tree, open0, root1, commitg] =
             decompress_proof(open0, tree0, commitg0);
@@ -191,15 +191,25 @@ var verkle = (function(){
         var rest = tree.slice(1);
 
         var domain = precomputes.domain();
+//        if(typeof(root0) === "string"){
+//            root0 = points.affine2extended(
+//                points.compressed2affine(root0));
+//        };
         if(!(points.eq(root1, root))){
             console.log("verify fail unequal roots");
             return(false);
         };
+        
+//        if(!(points.eq(root0, root))){
+//            console.log("verify fail unequal roots2");
+//            return(false);
+//        };
             //rest should be [{0, pt},[{186, pt},{115, l}], [{187, pt}, {115, l}],[{188, pt}, {115, l}]]
         //return(0);
         var tree2 = unfold(root, rest, []);
         var [commits, zs0, ys] = split3parts(tree2);
         var zs1 = index2domain(zs0);
+        console.log("multi verify");
         var b2 = multiproof.verify(
             [commitg, open0], commits, zs1, ys);
         if(!(b2)){
@@ -524,7 +534,7 @@ var verkle = (function(){
   "oc7KG5r9pAOSeAypV+sMv4mpY6eZb/FlwRqoIcw9+QA="]];
         var opening =
             multiproof.decode_helper(proof[2]);
-        return(verify(root, [proof[0], proof[1], opening]));
+        return(verify([proof[0], proof[1], opening]));
 
     };
     return({
