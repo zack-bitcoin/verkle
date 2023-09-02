@@ -101,7 +101,7 @@ doit_stem(Trash, Keep, Deleted, CFG) ->
                  tuple_to_list(TypesK), 
                           Deleted, CFG),
             case Result of
-                error -> io:fwrite({Keep, Trash});
+                error -> io:fwrite({Keep, Trash, K1, T1});
                 _ -> ok
             end,
             Result
