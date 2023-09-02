@@ -88,7 +88,7 @@ handle_call({clean_ets, Pointer}, _, CFG) ->
     {reply, ok, CFG2};
 handle_call({garbage, NewRoot, OldRoot}, _From, CFG) ->%prune new
     %X = prune:garbage(NewRoot, OldRoot, CFG),
-    X = prune_verkle:doit_stem(NewRoot, OldRoot, CFG),
+    X = prune_verkle:doit_stem(OldRoot, NewRoot, CFG),
     {reply, X, CFG};
 %handle_call({prune, OldRoot, NewRoot}, _From, CFG) ->%prune old
 %    1=2,
