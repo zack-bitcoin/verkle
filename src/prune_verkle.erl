@@ -30,7 +30,7 @@ doit([P|PointersT], [1|TypesT],
     %if the old version was a stem, and that stem was deleted
     io:fwrite("a stem was somehow deleted. should be impossible.\n"),
     doit(PointersT, TypesT, PointersK, TypesK,
-         Deleted ++ D2, CFG);
+         Deleted, CFG);
     %io:fwrite("change stem\n"),
     %D2 = doit_stem(P, 1, [], CFG),
     %doit(PointersT, TypesT, PointersK, TypesK,
