@@ -43,8 +43,9 @@ doit_stem(Trash, Keep, Deleted, CFG) ->
     %trash and keep are pointers to consecutive root stems.
     %return a list of every leaf that got deleted, along with their meta data.
     %walk down the tree. if things are different, you can delete the trash side. if they are the same, then don't delete anything.
-    %io:fwrite(integer_to_list(Keep)),
-    %io:fwrite("\n"),
+    io:fwrite("prune verkle doit_Stem keep: "),
+    io:fwrite(integer_to_list(Keep)),
+    io:fwrite("\n"),
     T1 = stem_verkle:get(Trash, CFG),
     K1 = stem_verkle:get(Keep, CFG),
     if
