@@ -17,28 +17,46 @@ doit([_|PointersT], [0|TypesT],
     doit(PointersT, TypesT, PointersK, TypesK, 
          Deleted, CFG);
 doit([P|PointersT], [1|TypesT], 
-     [K|PointersK], [_|TypesK], 
+     [K|PointersK], [1|TypesK], 
      Deleted, CFG) ->
-    %if the old version was a stem, and that stem was edited or removed
+    %if the old version was a stem, and that stem was edited
     %io:fwrite("change stem\n"),
     D2 = doit_stem(P, K, [], CFG),
     doit(PointersT, TypesT, PointersK, TypesK,
          Deleted ++ D2, CFG);
-doit([T|PointersT], [2|TypesT], 
-     [K|PointersK], [_|TypesK], 
+doit([P|PointersT], [1|TypesT], 
+     [_|PointersK], [0|TypesK], 
      Deleted, CFG) ->
+    %if the old version was a stem, and that stem was deleted
+    %io:fwrite("change stem\n"),
+    D2 = doit_stem(P, 1, [], CFG),
+    doit(PointersT, TypesT, PointersK, TypesK,
+         Deleted ++ D2, CFG);
+doit([_P|PointersT], [1|TypesT], 
+     [_K|PointersK], [2|TypesK], 
+     Deleted, CFG) ->
+    %if the old version was a stem, and all but one was deleted, so now it is a leaf.
+    %there is a leak here, but it is uncalled because we never delete anything, so the leak doesn't happen.
+    doit(PointersT, TypesT, PointersK, TypesK, Deleted, CFG);
+doit([T|PointersT], [2|TypesT], 
+     [K|PointersK], [T2|TypesK], 
+     Deleted, CFG) when ((T2 == 0) or (T2 == 2))->
     %io:fwrite("remove leaf\n"),
     %if a leaf was edited or removed
     L = leaf_verkle:get(T, CFG),
     leaf_verkle:delete(T, CFG),
     doit(PointersT, TypesT, PointersK, TypesK,
-         [L|Deleted], CFG).
+         [L|Deleted], CFG);
+doit([T|PointersT], [2|TypesT], 
+     [K|PointersK], [1|TypesK], 
+     Deleted, CFG) ->
+    %the old version was a leaf, but it got expanded to being a stem.
+    %there is a leak here. if the old leaf was deleted, it is leaked.
+    doit(PointersT, TypesT, PointersK, TypesK, Deleted, CFG).
+
 
 doit_stem(Trash, Keep, CFG) ->
     doit_stem(Trash, Keep, [], CFG).
-doit_stem(Trash, 0, Deleted, CFG) ->
-    %a stem was completely erased.
-    doit_stem(Trash, 1, Deleted, CFG);
 doit_stem(Trash, Keep, Deleted, CFG) ->
     %trash and keep are pointers to consecutive root stems.
     %return a list of every leaf that got deleted, along with their meta data.
