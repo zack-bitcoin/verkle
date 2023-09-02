@@ -28,15 +28,19 @@ doit([P|PointersT], [1|TypesT],
      [_|PointersK], [0|TypesK], 
      Deleted, CFG) ->
     %if the old version was a stem, and that stem was deleted
-    %io:fwrite("change stem\n"),
-    D2 = doit_stem(P, 1, [], CFG),
+    io:fwrite("a stem was somehow deleted. should be impossible.\n"),
     doit(PointersT, TypesT, PointersK, TypesK,
          Deleted ++ D2, CFG);
+    %io:fwrite("change stem\n"),
+    %D2 = doit_stem(P, 1, [], CFG),
+    %doit(PointersT, TypesT, PointersK, TypesK,
+    %     Deleted ++ D2, CFG);
 doit([_P|PointersT], [1|TypesT], 
      [_K|PointersK], [2|TypesK], 
      Deleted, CFG) ->
     %if the old version was a stem, and all but one was deleted, so now it is a leaf.
     %there is a leak here, but it is uncalled because we never delete anything, so the leak doesn't happen.
+    io:fwrite("a stem became a leaf. this should be impossible\n"),
     doit(PointersT, TypesT, PointersK, TypesK, Deleted, CFG);
 doit([T|PointersT], [2|TypesT], 
      [K|PointersK], [T2|TypesK], 
