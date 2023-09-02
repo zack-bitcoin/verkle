@@ -50,7 +50,7 @@ doit([T|PointersT], [2|TypesT],
      [K|PointersK], [0|TypesK], 
      Deleted, CFG)->
     io:fwrite("leaf got deleted. should be impossible."),
-    io:fwrite({T, K}),
+    %io:fwrite({T, K}),
     error;
 doit([T|PointersT], [2|TypesT], 
      [K|PointersK], [2|TypesK], 
