@@ -59,7 +59,8 @@ doit([T|PointersT], [2|TypesT],
 doit([T|PointersT], [2|TypesT], 
      [K|PointersK], [2|TypesK], 
      Deleted, CFG) ->
-    %io:fwrite("remove leaf\n"),
+    io:fwrite("remove leaf\n"),
+    io:fwrite(integer_to_list(T)),
     %if a leaf was edited or removed
     L = leaf_verkle:get(T, CFG),
     leaf_verkle:delete(T, CFG),
@@ -76,7 +77,7 @@ doit([T|PointersT], [2|TypesT],
 doit_stem(Trash, Keep, CFG) ->
     doit_stem(Trash, Keep, [], CFG).
 doit_stem(Trash, Keep, Deleted, CFG) ->
-    %trash and keep are pointers to consecutive root stems.
+    %trash and keep are pointers to consecutive stems.
     %return a list of every leaf that got deleted, along with their meta data.
     %walk down the tree. if things are different, you can delete the trash side. if they are the same, then don't delete anything.
     %io:fwrite("prune verkle doit_Stem keep: "),
@@ -91,6 +92,9 @@ doit_stem(Trash, Keep, Deleted, CFG) ->
             Deleted;
         true -> 
             stem_verkle:delete(Trash, CFG),
+            io:fwrite("remove stem: "),
+            io:fwrite(integer_to_list(Trash)),
+            io:fwrite("\n"),
             PointersT = stem_verkle:pointers(T1),
             PointersK = stem_verkle:pointers(K1),
             TypesT = stem_verkle:types(T1),
