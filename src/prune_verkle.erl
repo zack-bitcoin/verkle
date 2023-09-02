@@ -36,6 +36,9 @@ doit([T|PointersT], [2|TypesT],
 
 doit_stem(Trash, Keep, CFG) ->
     doit_stem(Trash, Keep, [], CFG).
+doit_stem(Trash, 0, Deleted, CFG) ->
+    %a stem was completely erased.
+    doit_stem(Trash, 1, Deleted, CFG);
 doit_stem(Trash, Keep, Deleted, CFG) ->
     %trash and keep are pointers to consecutive root stems.
     %return a list of every leaf that got deleted, along with their meta data.
