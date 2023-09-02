@@ -29,9 +29,10 @@ doit([P|PointersT], [1|TypesT],
      Deleted, CFG) ->
     %if the old version was a stem, and that stem was deleted
     io:fwrite("a stem was somehow deleted. should be impossible.\n"),
-    1=2,
-    doit(PointersT, TypesT, PointersK, TypesK,
-         Deleted, CFG);
+    error;
+%    1=2,
+%    doit(PointersT, TypesT, PointersK, TypesK,
+%         Deleted, CFG);
     %io:fwrite("change stem\n"),
     %D2 = doit_stem(P, 1, [], CFG),
     %doit(PointersT, TypesT, PointersK, TypesK,
@@ -42,15 +43,15 @@ doit([_P|PointersT], [1|TypesT],
     %if the old version was a stem, and all but one was deleted, so now it is a leaf.
     %there is a leak here, but it is uncalled because we never delete anything, so the leak doesn't happen.
     io:fwrite("a stem became a leaf. this should be impossible\n"),
-    1=2,
-    doit(PointersT, TypesT, PointersK, TypesK, Deleted, CFG);
+    error;
+%    1=2,
+%    doit(PointersT, TypesT, PointersK, TypesK, Deleted, CFG);
 doit([T|PointersT], [2|TypesT], 
      [K|PointersK], [0|TypesK], 
      Deleted, CFG)->
     io:fwrite("leaf got deleted. should be impossible."),
     io:fwrite({T, K}),
-    1=2,
-    ok;
+    error;
 doit([T|PointersT], [2|TypesT], 
      [K|PointersK], [2|TypesK], 
      Deleted, CFG) ->
@@ -87,11 +88,16 @@ doit_stem(Trash, Keep, Deleted, CFG) ->
             PointersK = stem_verkle:pointers(K1),
             TypesT = stem_verkle:types(T1),
             TypesK = stem_verkle:types(K1),
-            doit(tuple_to_list(PointersT), 
+            Result = doit(tuple_to_list(PointersT), 
                  tuple_to_list(TypesT), 
                  tuple_to_list(PointersK), 
                  tuple_to_list(TypesK), 
-                 Deleted, CFG)
+                          Deleted, CFG),
+            case Result of
+                error -> io:fwrite({Keep, Trash});
+                _ -> ok
+            end,
+            Result
     end.
 
 range(A, B) when (A < B) ->
