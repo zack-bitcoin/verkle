@@ -29,6 +29,7 @@ doit([P|PointersT], [1|TypesT],
      Deleted, CFG) ->
     %if the old version was a stem, and that stem was deleted
     io:fwrite("a stem was somehow deleted. should be impossible.\n"),
+    1=2,
     doit(PointersT, TypesT, PointersK, TypesK,
          Deleted, CFG);
     %io:fwrite("change stem\n"),
@@ -41,10 +42,17 @@ doit([_P|PointersT], [1|TypesT],
     %if the old version was a stem, and all but one was deleted, so now it is a leaf.
     %there is a leak here, but it is uncalled because we never delete anything, so the leak doesn't happen.
     io:fwrite("a stem became a leaf. this should be impossible\n"),
+    1=2,
     doit(PointersT, TypesT, PointersK, TypesK, Deleted, CFG);
 doit([T|PointersT], [2|TypesT], 
-     [K|PointersK], [T2|TypesK], 
-     Deleted, CFG) when ((T2 == 0) or (T2 == 2))->
+     [K|PointersK], [0|TypesK], 
+     Deleted, CFG)->
+    io:fwrite("leaf got deleted. should be impossible."),
+    1=2,
+    ok;
+doit([T|PointersT], [2|TypesT], 
+     [K|PointersK], [2|TypesK], 
+     Deleted, CFG) ->
     %io:fwrite("remove leaf\n"),
     %if a leaf was edited or removed
     L = leaf_verkle:get(T, CFG),
