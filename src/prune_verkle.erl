@@ -59,8 +59,8 @@ doit([T|PointersT], [2|TypesT],
 doit([T|PointersT], [2|TypesT], 
      [K|PointersK], [2|TypesK], 
      Deleted, CFG) ->
-    io:fwrite("remove leaf\n"),
-    io:fwrite(integer_to_list(T)),
+    %io:fwrite("remove leaf\n"),
+    %io:fwrite(integer_to_list(T)),
     %if a leaf was edited or removed
     L = leaf_verkle:get(T, CFG),
     leaf_verkle:delete(T, CFG),
@@ -92,9 +92,9 @@ doit_stem(Trash, Keep, Deleted, CFG) ->
             Deleted;
         true -> 
             stem_verkle:delete(Trash, CFG),
-            io:fwrite("remove stem: "),
-            io:fwrite(integer_to_list(Trash)),
-            io:fwrite("\n"),
+            %io:fwrite("remove stem: "),
+            %io:fwrite(integer_to_list(Trash)),
+            %io:fwrite("\n"),
             PointersT = stem_verkle:pointers(T1),
             PointersK = stem_verkle:pointers(K1),
             TypesT = stem_verkle:types(T1),
