@@ -81,7 +81,10 @@ doit_stem(Trash, Keep, Deleted, CFG) ->
     T1 = stem_verkle:get(Trash, CFG),
     K1 = stem_verkle:get(Keep, CFG),
     if
-        T1 == K1 -> Deleted;
+        T1 == K1 -> 
+            io:fwrite("adjacent blocks had same tree pointer error\n"),
+            io:fwrite({T1}),
+            Deleted;
         true -> 
             stem_verkle:delete(Trash, CFG),
             PointersT = stem_verkle:pointers(T1),
