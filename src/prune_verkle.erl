@@ -88,7 +88,7 @@ doit_stem(Trash, Keep, Deleted, CFG) ->
     if
         T1 == K1 -> 
             io:fwrite("adjacent blocks had same tree pointer error\n"),
-            io:fwrite({T1}),
+            %io:fwrite({T1}),
             Deleted;
         true -> 
             stem_verkle:delete(Trash, CFG),
@@ -100,9 +100,9 @@ doit_stem(Trash, Keep, Deleted, CFG) ->
             TypesT = stem_verkle:types(T1),
             TypesK = stem_verkle:types(K1),
             Result = doit(tuple_to_list(PointersT), 
-                 tuple_to_list(TypesT), 
-                 tuple_to_list(PointersK), 
-                 tuple_to_list(TypesK), 
+                          tuple_to_list(TypesT), 
+                          tuple_to_list(PointersK), 
+                          tuple_to_list(TypesK), 
                           Deleted, CFG),
             case Result of
                 error -> io:fwrite(
