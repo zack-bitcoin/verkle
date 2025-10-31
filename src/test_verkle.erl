@@ -32,7 +32,7 @@ test(1, CFG) ->
     %making a proof, and not editing it.
     %compares fast proofs with normal proofs.
     %so this gives an idea of how it is for a light node.
-    Loc = 1,
+    Loc = cfg_verkle:empty(tree:cfg(tree01)),
     Times = 10000,
     Prove = 3,
     Leaves = 

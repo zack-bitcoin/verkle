@@ -1,13 +1,17 @@
 -module(tree).
 -behaviour(gen_server).
 -export([start_link/1,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2, 
-         root_hash/2,cfg/1,get/3,put/5,
+         root_hash/2,cfg/1,
+	 quick_save/1, %the copy of the ets currently in ram, it uses this to update the copy stored on the hard drive.
+	 reload_ets/1, %grabs the copy of the ets from the hard drive, loads it into ram
+
+
+         %all unused below here
          put_batch/3,%delete/3,%garbage/2,garbage_leaves/2,
 	 get_all/2,new_trie/2, 
          restore/5,restore/7, 
 	 empty/1, 
-	 quick_save/1, %the copy of the ets currently in ram, it uses this to update the copy stored on the hard drive.
-	 reload_ets/1, %grabs the copy of the ets from the hard drive, loads it into ram
+get/3,put/5,
 	 clean_ets/2, %deletes everything from the merkel tree database, except for what can be proved from this single state root.
 	 prune/3, garbage/3]).
 init(CFG) ->

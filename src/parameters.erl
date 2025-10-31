@@ -143,23 +143,3 @@ calc_domain(Many) ->
 make_ghq() ->
     ipa:basis(256).
 
-make_ghq_old() ->
-    %p{g, h, q, domain, a, da}
-    Many = 256,
-    %Many = 4,
-    R = range(1, Many),
-    io:fwrite("generating 256 G generator points\n"),
-    G = lists:map(fun(X) ->
-                          io:fwrite(integer_to_list(X)),
-                          io:fwrite("\n"),
-                          det_point(X)
-                  end, R),
-    io:fwrite("generating 256 H generator points\n"),
-    H = lists:map(fun(X) ->
-                          io:fwrite(integer_to_list(X)),
-                          io:fwrite("\n"),
-                          det_point(X+256)
-                  end, R),
-    io:fwrite("generating Q generator point"),
-    Q = det_point(513),
-    {G, H, Q}.
