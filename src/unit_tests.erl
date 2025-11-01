@@ -8,7 +8,7 @@ doit(0) ->
     io:fwrite("stem\n"),
     S = stem_verkle:test(1),
     io:fwrite("get\n"),
-    S = get_verkle:test(1),
+    %S = get_verkle:test(1),
     lists:map(fun(N) ->
                       io:fwrite("fr "),
                       io:fwrite(integer_to_list(N)),

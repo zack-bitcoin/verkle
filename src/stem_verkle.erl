@@ -31,13 +31,16 @@ root(X) ->
 empty_tuple() -> 
     X = many(0, ?nwidth),
     list_to_tuple(X).
+empty_tuple(Y) -> 
+    X = many(Y, ?nwidth),
+    list_to_tuple(X).
 many(_, 0) -> [];
 many(X, N) when (N > 0) -> 
     [X|many(X, N-1)].
 new_empty(CFG) -> 
     #stem{hashes = empty_hashes(CFG),
          types = empty_tuple(),
-         pointers = empty_tuple(),
+         pointers = empty_tuple({0,0}),
          root = ed:extended_zero()}.
 %unused_recover(M, T, P, H, Hashes, CFG) ->
 %    Types = onify2(Hashes, CFG),
@@ -60,7 +63,7 @@ onify([H|T], CFG) ->
 make(Hashes, ID) ->
     CFG = tree:cfg(ID),
     Types = onify2(Hashes, CFG),
-    Pointers = empty_tuple(),
+    Pointers = empty_tuple({0,0}),
     make(Types, Pointers, Hashes).
 make(Types, Pointers, Hashes) ->
     #stem{types = Types,
@@ -120,13 +123,20 @@ serialize(S, _CFG) ->
                    tuple_to_list(H), 
                    tuple_to_list(T), 
                    []),
-    <<R1:512, X/binary>>.
+    Result = <<R1:512, X/binary>>,
+    %io:fwrite("in serialize " ++ integer_to_list(size(Result)) ++ "\n"),
+    %in serialize 16704
+    Result.
 
 serialize2([], [], [], R) -> 
     erlang:iolist_to_binary(
       lists:reverse(R));
-serialize2([P|PT], [H|HT], [T|TT], R) -> 
-    N = <<T, P:256, H/binary>>,
+serialize2([{P, Plength}|PT], [H|HT], [T|TT], R) -> 
+    %10 billion people
+    %each one wants to have 10 ongoing relationships with the chain
+    %io:fwrite({P, Plength}),
+    %N = <<T, P:256, H/binary>>,
+    N = <<T, P:48, Plength:40, 0:168, H/binary>>,
     serialize2(PT, HT, TT, [N|R]).
 
 deserialize(<<R1:512, B/binary>>, _CFG) -> 
@@ -284,7 +294,7 @@ get(Pointer, CFG) ->
 %    dump:delete(Pointer, ids_verkle:stem(CFG)).
 empty_trie(Root, CFG) ->
     Stem = get(Root, CFG),
-    update_pointers(Stem, empty_tuple()).
+    update_pointers(Stem, empty_tuple({0,0})).
 
 equal(S, T) ->
     %[R2, R3] = fq:e_simplify_batch(
@@ -296,14 +306,16 @@ equal(S, T) ->
     T2 = T#stem{
            root = R3
           },
-    S2 == T2.
+    %io:fwrite({S, T}),
+    %S2 == T2.
+    ((R2 == R3) and (S#stem.hashes == T#stem.hashes)).
 
 range(N, N) -> [N];
 range(A, B) when A < B -> 
     [A|range(A+1, B)].
     
 test(1) ->
-    P = list_to_tuple(many(5, ?nwidth)),
+    P = list_to_tuple(many({5, 0}, ?nwidth)),
     T = list_to_tuple(many(1, ?nwidth)),
     %P = {6,5,4,3,7,8,9,4,5,3,2,6,7,8,3,4},
     %T = {0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
@@ -318,6 +330,8 @@ test(1) ->
     S2 = serialize(S, CFG),
     Sb = deserialize(S2, CFG),
     %io:fwrite({size(?p)}),%9
+    <<A:(8*128)>> = S#stem.root,
+    <<B:(8*128)>> = Sb#stem.root,
     %io:fwrite({S#stem.root, Sb#stem.root}),
     true = equal(S, Sb),
     %true = fq:eq(S#stem.root, Sb#stem.root),

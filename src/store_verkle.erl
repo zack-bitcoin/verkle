@@ -7,6 +7,8 @@
         ]).
 -include("constants.hrl").
 -define(sanity, false).
+-define(stem_size, 16704).
+%-define(stem_size, 11328).
 
 batch(Leaves0, RP, CFG) ->%returns {location, stem/leaf, #stem{}/#leaf{}}
     %put them in an ordered list.
@@ -18,23 +20,23 @@ batch(Leaves0, RP, CFG) ->%returns {location, stem/leaf, #stem{}/#leaf{}}
     %io:fwrite("store storing 1\n"),
     batch(Leaves, RP, stem, 0, CFG, MEP).
 
-batch([], 0, _, _, _CFG, _) ->
+batch([], {0, S}, _, _, _CFG, _) ->
     %type 0 is empty
-    {0, 0, empty};
+    {{0,S}, 0, empty};
 batch([], P, leaf, _, _CFG, _) ->
     %don't read the leaf here, because we aren't changing it.
     {P, leaf, leaf_not_recorded};
 batch([], P, stem, _, _CFG, _) ->
     %don't read the stem here, because we aren't changing it.
     {P, stem, stem_not_recorded};
-batch([Leaf], 0, 0, _, CFG, _) ->
+batch([Leaf], {0, _}, 0, _, CFG, _) ->
     %io:fwrite("storing a leaf in a previously empty spot.\n"),
     Loc = leaf_verkle:put(Leaf, CFG),
     {Loc, leaf, Leaf};
-batch(Leaves0, 0, 0, Depth, CFG, MEP) ->
+batch(Leaves0, {0, _}, 0, Depth, CFG, MEP) ->
     %io:fwrite("storing multiple leaves in a previously empty spot.\n"),
     batch(Leaves0, 
-          1, %1 is always an empty stem.
+          {1, ?stem_size}, %1 is always an empty stem.
           stem, Depth, CFG, MEP);
 batch([Leaf0], RP, leaf, Depth, CFG, MEP) ->
     %io:fwrite("storing a leaf where there is already a leaf.\n"),
@@ -52,7 +54,7 @@ batch([Leaf0], RP, leaf, Depth, CFG, MEP) ->
             Loc = leaf_verkle:put(Leaf0, CFG),
             {Loc, leaf, Leaf0};
         true ->
-            batch([Leaf0, RootLeaf], 1, stem,
+            batch([Leaf0, RootLeaf], {1, ?stem_size}, stem,
                   Depth, CFG, MEP)
     end;
 batch(Leaves0, RP, leaf, Depth, CFG, MEP) ->
@@ -66,7 +68,7 @@ batch(Leaves0, RP, leaf, Depth, CFG, MEP) ->
                   B -> Leaves0;
                   true -> [RootLeaf|Leaves0]
               end,
-    batch(Leaves2, 1, stem, 
+    batch(Leaves2, {1, ?stem_size}, stem, 
           Depth, CFG, MEP);
 batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     %cut the list into sub lists that get included in each sub-branch.
@@ -74,7 +76,9 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
     Leaves2 = clump_by_path(
                 Depth, Leaves),
     %depth first recursion over the sub-lists on teh sub-trees to calculate the pointers and hashes for this node.
-    true = is_integer(RP),
+    {RP1, RP2} = RP,
+    true = is_integer(RP1),
+    true = is_integer(RP2),
     RootStem = stem_verkle:get(RP, CFG),
     #stem{
            hashes = Hashes,
@@ -97,7 +101,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
                             2 -> leaf
                         end,
                    {P2, Type, Tree} = 
-                       batch(Leaves3, P, 
+                       batch(Leaves3, {P, ?stem_size},
                              T2, Depth+1, CFG, MEP),
                    H2 = hash_thing(%  3%
                           P2, Type, Tree, H, CFG),
@@ -298,7 +302,7 @@ split4ways([], A, B, C, D) ->
 split4ways([{A, B, C, D}|T], W, X, Y, Z) -> 
     split4ways(T, [A|W], [B|X], [C|Y], [D|Z]).
 
-hash_thing(0, 0, empty, _, _) ->
+hash_thing({0, _}, 0, empty, _, _) ->
     %type 0 is empty
     <<0:256>>;
 hash_thing(_, leaf, leaf_not_recorded, 
@@ -336,14 +340,14 @@ sort_by_path2(L, CFG) ->
 test(3) ->
     io:fwrite("fprof of storing a batch"),
     CFG = tree:cfg(tree01),
-    Loc = 1,
+    Loc = {1, ?stem_size},
     Times = 200,
     Leaves = 
         lists:map(
           fun(N) -> 
                   <<Key0:256>> = 
                       crypto:strong_rand_bytes(32),
-                  leaf_verkle:new(Key0, <<N:16>>, CFG)
+                  leaf_verkle:new(Key0, <<N:16>>, 0, CFG)
                       %#leaf{key = Key0, value = <<N:16>>}%random version
           end, range(1, Times+1)),
     %Many = lists:map(fun(#leaf{key = K}) -> K end,

@@ -9,8 +9,7 @@ keys2paths/2,
 withdraw_points/1, withdraw_points2/1,
 compressed_points_list/1,
 serialize_proof/1, deserialize_proof/1,
-unverified/3,
-test/1]).
+unverified/3]).
 -include("constants.hrl").
 
 -define(pipe, false).
@@ -658,15 +657,6 @@ points_values([H|T], Root, CFG) ->
      points_values(T, Root, CFG)];
 points_values([], _, _) -> [].
 
-same_end(LPath, Path, _CFG) ->
-    S = length(Path)*4,
-    LS = (length(LPath)*4) - S,
-    Path2 = tl_times(LS div 4, LPath),
-    Path2 == Path.
-tl_times(N, L) when N < 1 -> L;
-tl_times(N, L) ->
-    tl_times(N-1, tl(L)).
-
 is_in(X, [X|_]) -> true;
 is_in(_, []) -> false;
 is_in(X, [_|T]) -> 
@@ -674,11 +664,5 @@ is_in(X, [_|T]) ->
 
 
 
-test(1) ->
-    CFG = tree:cfg(tree01),
-    A = [1,2,3,4,5],
-    B = [3,4,5] ++ A,
-    true = same_end(B, A, CFG),
-    success.
     
 
