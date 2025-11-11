@@ -216,7 +216,8 @@ check_root_integrity(Stem) ->
     if
         %not(B1 and B2 and B3) ->
         not(B2) ->
-            io:fwrite({B1, B2, B3, Stem}),
+            %io:fwrite({B1, B2, B3, Stem}),
+            io:fwrite({B2, Stem}),
             1=2;
         true -> ok
     end.
