@@ -3,10 +3,9 @@
          key/1, value/1, meta/1, path/2, path_maker/2, hash/2, put/2, get/2, serialize/2, deserialize/2,
          delete/2,
          raw_key/1,
-	 put_batch/2,
+%	 put_batch/2,
 	is_serialized_leaf/2, test/1]).
 -include("constants.hrl").
-%-export_type([leaf/0,key/0,value/0,meta/0,leaf_p/0,path/0]).
 
 
 
@@ -78,9 +77,9 @@ path_maker(K, CFG) ->
 
 value(#leaf{value = V}) -> V.
 meta(X) -> X#leaf.meta.
-put_batch(Leaves, CFG) ->
-    SL = serialize_leaves(Leaves, CFG),
-    dump:put_batch(SL, ids_verkle:leaf(CFG)).
+%put_batch(Leaves, CFG) ->
+%    SL = serialize_leaves(Leaves, CFG),
+%    dump:put_batch(SL, ids_verkle:leaf(CFG)).
 serialize_leaves([], _) -> [];
 serialize_leaves([{N, L}| T], CFG) ->
     [{N, serialize(L, CFG)}|serialize_leaves(T, CFG)].

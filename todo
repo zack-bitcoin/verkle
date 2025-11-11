@@ -1,4 +1,12 @@
-meta should be bytes, not an integer.
+
+
+* no more fixed sized. use compession to store stems especially.
+* store everything on the same file. length prefix.
+* no more option to use ram. only hd is supported.
+* no more option to delete. get rid of the bits datastructure.
+
+
+
 
 
 use the batched version of hash_points.

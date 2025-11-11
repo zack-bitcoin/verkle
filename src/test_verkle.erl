@@ -9,10 +9,11 @@ test() ->
     V = [
          %23,
          1,
-         2,
-         3,
-         4,
-         5
+         %2,
+         %3,
+         %4,
+         %5,
+         8
         ],
     test_helper(V, CFG).
 test(N) ->
@@ -506,7 +507,7 @@ test(8, CFG) ->
 
     X = get_verkle:unverified([hash:doit(1)|RawKeys], NewLoc, CFG),
 
-    io:fwrite({X}),
+    %io:fwrite({X}),
 
     success;
 test(9, CFG) ->

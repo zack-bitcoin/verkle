@@ -47,7 +47,7 @@ unverified(Keys, Root, CFG) ->
                               Tree2 = points_values(Tree, RootStem, CFG)
                       end, Paths),
     Leaves0 = remove_stems_from_straight_branches(Tree3),
-    %true = (length(Leaves0) == length(Keys)),
+    %true = (length(Leaves0) == length(Keys)),%unnecessary.
     Leaves = lists:zipwith(fun(L, K) ->
                                    {K, L}
                            end, Leaves0, 
@@ -95,6 +95,7 @@ batch(Keys, Root, CFG, Type) ->
     %io:fwrite("get lookup stems and leaves\n"),% 25%
     benchmark:now(),
     Tree2 = points_values(Tree, RootStem, CFG),
+    %io:fwrite({Tree, Tree2}),
     %io:fwrite({RootStem}),
 
     %obtains the stems and leaves by reading from the database.

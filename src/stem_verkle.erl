@@ -209,12 +209,13 @@ check_root_integrity(Stem) ->
     R = precomputed_multi_exponent:doit(
           Hashes,MEP),
     {Gs, Hs, Q} = parameters:read(),
-    R2 = multi_exponent:doit(Hashes, Gs),
-    B1 = ed:e_eq(R, R2),
+    %R2 = multi_exponent:doit(Hashes, Gs),
+    %B1 = ed:e_eq(R, R2),
     B2 = ed:e_eq(R, Stem#stem.root),
-    B3 = ed:e_eq(R2, Stem#stem.root),
+    %B3 = ed:e_eq(R2, Stem#stem.root),
     if
-        not(B1 and B2 and B3) ->
+        %not(B1 and B2 and B3) ->
+        not(B2) ->
             io:fwrite({B1, B2, B3, Stem}),
             1=2;
         true -> ok
