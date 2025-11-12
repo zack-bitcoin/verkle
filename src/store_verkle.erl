@@ -154,6 +154,7 @@ verified(Loc, ProofTree, CFG) ->
     RootStem2 = verified2(tl(ProofTree), RootStem, CFG),
     RootStem3 = 
         RootStem2#stem{root = hd(ProofTree)},
+    stem_verkle:check_root_integrity(RootStem3),
     if
         ?sanity ->
             stem_verkle:check_root_integrity(RootStem3);
