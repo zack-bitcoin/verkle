@@ -189,9 +189,9 @@ verified2([{N, 0}|T], Stem, CFG) ->
 verified2([[{N, {Key, Value, Meta}}]|T], 
           Stem, CFG) -> 
     %a leaf was updated, so we need to store the new version.
-    io:fwrite("verified2 update a leaf\n"),
-    io:fwrite(integer_to_list(N)),
-    io:fwrite("\n"),
+    %io:fwrite("verified2 update a leaf\n"),
+    %io:fwrite(integer_to_list(N)),
+    %io:fwrite("\n"),
     Leaf = leaf_verkle:new(Key, Value, Meta, CFG),
     Loc = leaf_verkle:put(Leaf, CFG),
     Stem2 = verified3(
@@ -200,7 +200,7 @@ verified2([[{N, {Key, Value, Meta}}]|T],
     verified2(T, Stem2, CFG);
 verified2([[{N, {Key, Value}}]|T], 
           Stem, CFG) -> 
-    io:fwrite("verified2 leaf unchanged\n"),
+    %io:fwrite("verified2 leaf unchanged\n"),
     %a leaf was unchanged.
     %Leaf = leaf_verkle:new(Key, Value, Meta, CFG),
     %Leaf = leaf_verkle:new(Key, Value, 0, CFG),
@@ -215,7 +215,7 @@ verified2([[{N, B = <<_:1024>>}|T1]|T2], Stem, CFG) ->
     verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG);
 verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG) 
   when is_binary(B) -> 
-    io:fwrite("verified2 stem\n"),
+    %io:fwrite("verified2 stem\n"),
     ChildStem = 
         case element(N+1, Stem#stem.types) of
             1 ->%so we need to add the T1 elements to the child stem at position N+1
@@ -342,6 +342,7 @@ sort_by_path2(L, CFG) ->
 test(3) ->
     io:fwrite("fprof of storing a batch"),
     CFG = tree:cfg(tree01),
+    M = cfg_verkle:meta(CFG) * 8,
     Loc = 1,
     Times = 200,
     Leaves = 
@@ -349,7 +350,7 @@ test(3) ->
           fun(N) -> 
                   <<Key0:256>> = 
                       crypto:strong_rand_bytes(32),
-                  leaf_verkle:new(Key0, <<N:16>>, CFG)
+                  leaf_verkle:new(Key0, <<N:16>>, <<0:M>>, CFG)
                       %#leaf{key = Key0, value = <<N:16>>}%random version
           end, range(1, Times+1)),
     %Many = lists:map(fun(#leaf{key = K}) -> K end,
