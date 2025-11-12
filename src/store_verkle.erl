@@ -157,7 +157,7 @@ verified(Loc, ProofTree, CFG) ->
         RootStem2#stem{root = hd(ProofTree)},
     case stem_verkle:check_root_integrity(RootStem3) of%todo remove this check once we solve the issue
         success -> ok;
-        error -> io:fwrite({{good, RootStem}, {bad, RootStem3}})
+        error -> io:fwrite({{good, RootStem#stem.pointers}, {bad, RootStem3#stem.pointers}})
     end,
     if
         ?sanity ->
