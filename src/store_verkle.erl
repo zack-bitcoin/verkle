@@ -154,8 +154,12 @@ verified(Loc, ProofTree, CFG) ->
     
     RootStem2 = verified2(tl(ProofTree), RootStem, CFG),
     RootStem3 = 
-        RootStem2#stem{root = hd(ProofTree)},
-    success = stem_verkle:check_root_integrity(RootStem3),%todo remove this check once we solve the issue
+        %RootStem2#stem{root = hd(ProofTree)},
+        RootStem2#stem{root = stem_verkle:hash_point(hd(ProofTree))},
+    case stem_verkle:check_root_integrity(RootStem3) of%todo remove this check once we solve the issue
+        success -> ok;
+        error -> io:fwrite({{good, RootStem}, {bad, RootStem3}})
+    end,
     if
         ?sanity ->
             success = stem_verkle:check_root_integrity(RootStem3);
@@ -186,9 +190,9 @@ verified2([{N, 0}|T], Stem, CFG) ->
 verified2([[{N, {Key, Value, Meta}}]|T], 
           Stem, CFG) -> 
     %a leaf was updated, so we need to store the new version.
-    %io:fwrite("verified2 update a leaf\n"),
-    %io:fwrite(integer_to_list(N)),
-    %io:fwrite("\n"),
+    io:fwrite("verified2 update a leaf\n"),
+    io:fwrite(integer_to_list(N)),
+    io:fwrite("\n"),
     Leaf = leaf_verkle:new(Key, Value, Meta, CFG),
     Loc = leaf_verkle:put(Leaf, CFG),
     Stem2 = verified3(
@@ -197,7 +201,7 @@ verified2([[{N, {Key, Value, Meta}}]|T],
     verified2(T, Stem2, CFG);
 verified2([[{N, {Key, Value}}]|T], 
           Stem, CFG) -> 
-    %io:fwrite("verified2 leaf unchanged\n"),
+    io:fwrite("verified2 leaf unchanged\n"),
     %a leaf was unchanged.
     %Leaf = leaf_verkle:new(Key, Value, Meta, CFG),
     %Leaf = leaf_verkle:new(Key, Value, 0, CFG),
@@ -212,7 +216,7 @@ verified2([[{N, B = <<_:1024>>}|T1]|T2], Stem, CFG) ->
     verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG);
 verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG) 
   when is_binary(B) -> 
-    %io:fwrite("verified2 stem\n"),
+    io:fwrite("verified2 stem\n"),
     ChildStem = 
         case element(N+1, Stem#stem.types) of
             1 ->%so we need to add the T1 elements to the child stem at position N+1
