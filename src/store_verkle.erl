@@ -150,6 +150,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
 verified(Loc, ProofTree, CFG) ->
     %io:fwrite("verified start\n"),
     RootStem = stem_verkle:get(Loc, CFG),
+    stem_verkle:check_root_integrity(RootStem),
     
     RootStem2 = verified2(tl(ProofTree), RootStem, CFG),
     RootStem3 = 
