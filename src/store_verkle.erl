@@ -150,15 +150,15 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
 verified(Loc, ProofTree, CFG) ->
     %io:fwrite("verified start\n"),
     RootStem = stem_verkle:get(Loc, CFG),
-    stem_verkle:check_root_integrity(RootStem),
+    success = stem_verkle:check_root_integrity(RootStem),%todo remove this check once we solve the issue.
     
     RootStem2 = verified2(tl(ProofTree), RootStem, CFG),
     RootStem3 = 
         RootStem2#stem{root = hd(ProofTree)},
-    stem_verkle:check_root_integrity(RootStem3),
+    success = stem_verkle:check_root_integrity(RootStem3),%todo remove this check once we solve the issue
     if
         ?sanity ->
-            stem_verkle:check_root_integrity(RootStem3);
+            success = stem_verkle:check_root_integrity(RootStem3);
         true -> ok
     end,
     Loc2 = stem_verkle:put(RootStem3, CFG),

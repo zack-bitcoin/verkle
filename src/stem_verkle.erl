@@ -82,7 +82,7 @@ type(N, R) ->
 serialize(S, CompressedRoot, CFG) ->
     if
         ?sanity ->
-            check_root_integrity(S);
+            success = check_root_integrity(S);
         true -> ok
     end,
     #stem{
@@ -100,7 +100,7 @@ serialize(S, CompressedRoot, CFG) ->
 serialize(S, CFG) ->
     if
         ?sanity ->
-            %check_root_integrity(S);
+            %success = check_root_integrity(S);
             ok;
         true -> ok
     end,
@@ -145,7 +145,7 @@ deserialize(<<R1:512, B/binary>>, CFG) ->
     Result = Y#stem{root = R},
     if
         ?sanity ->
-            check_root_integrity(Result);
+            success = check_root_integrity(Result);
         true -> ok
     end,
     Result.
@@ -180,7 +180,7 @@ empty_hashes(CFG) ->
 hash(S) ->
     if
         ?sanity ->
-            check_root_integrity(S);
+            success = check_root_integrity(S);
         true -> ok
     end,
     P = S#stem.root,
@@ -218,8 +218,8 @@ check_root_integrity(Stem) ->
         not(B2) ->
             %io:fwrite({B1, B2, B3, Stem}),
             io:fwrite({B2, Stem}),
-            1=2;
-        true -> ok
+            error;
+        true -> success
     end.
 put(Stem, CompressedRoot, CFG) ->
     %compressed root is in affine format. 64 bytes.
@@ -252,7 +252,7 @@ serialize_stems(L, CFG) when false ->
                            types = T}}, R) ->
                      if
                          ?sanity ->
-                             check_root_integrity(Stem);
+                             success = check_root_integrity(Stem);
                          true -> ok
                      end,
                      B = serialize2(
