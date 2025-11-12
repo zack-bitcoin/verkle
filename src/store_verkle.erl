@@ -154,8 +154,7 @@ verified(Loc, ProofTree, CFG) ->
     
     RootStem2 = verified2(tl(ProofTree), RootStem, CFG),
     RootStem3 = 
-        %RootStem2#stem{root = hd(ProofTree)},
-        RootStem2#stem{root = stem_verkle:hash_point(hd(ProofTree))},
+        RootStem2#stem{root = hd(ProofTree)},
     case stem_verkle:check_root_integrity(RootStem3) of%todo remove this check once we solve the issue
         success -> ok;
         error -> io:fwrite({{good, RootStem}, {bad, RootStem3}})
