@@ -232,9 +232,10 @@ verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, CFG)
         end,
     if
         ?sanity ->
-            stem_verkle:check_root_integrity(ChildStem);
+            success = stem_verkle:check_root_integrity(ChildStem);
         true -> ok
     end,
+    success = stem_verkle:check_root_integrity(ChildStem),
     Loc = stem_verkle:put(ChildStem, CFG),
     false = (Hash == uncalculated),
     Stem2 = verified3(N, Stem, 1, Loc, Hash),
