@@ -93,7 +93,7 @@ calc_R([], [], [], B) ->
     %deterministically generated random number. 
     %io:fwrite(base64:encode(B)),
     %io:fwrite("\n"),
-    <<R:256>> = hash:doit(B),
+    <<R:256>> = sha256:doit(B),
     fr:encode(R rem fr:prime());
 calc_R([<<C1:256, C2:256>>|CT], 
        [<<Z:256>>|ZT], [<<Y:256>>|YT], B) -> 
@@ -109,7 +109,7 @@ calc_R(A, B, C, D) ->
 calc_T(<<C1:256, C2:256>>, <<R:256>>) ->
     %deterministically generated random number. 
     B = <<C1:256, C2:256, R:256>>,
-    <<R2:256>> = hash:doit(B),
+    <<R2:256>> = sha256:doit(B),
     fr:encode(R2 rem fr:prime()).
 
 dot(A, B) ->

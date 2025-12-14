@@ -127,7 +127,7 @@ range(X, Y) when X < Y ->
 
 det_point(X) ->
     %deterministicly generated point.
-    <<Y:256>> = hash:doit(<<X:256>>),
+    <<Y:256>> = sha256:doit(<<X:256>>),
     %Z = Y rem fr:prime(),
     ed:gen_point(<<Y:256>>).
 %    Z = Y rem fr:prime(),

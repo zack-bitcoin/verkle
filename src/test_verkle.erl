@@ -50,6 +50,7 @@ test(1, CFG) ->
                      end, Leaves),
     io:fwrite("load up the batch database\n"),
     T1 = erlang:timestamp(),
+    %io:write({Loc}),
     {NewLoc, stem, _} = 
         store_verkle:batch(Leaves, Loc, CFG),
     T2 = erlang:timestamp(),
@@ -249,7 +250,7 @@ test(3, CFG) ->
         lists:map(
           fun(N) -> 
                   Key = crypto:strong_rand_bytes(32),
-                  %Key = hash:doit(<<N:256>>),
+                  %Key = sha256:doit(<<N:256>>),
                   leaf_verkle:new(Key, <<N:16>>, <<0>>, CFG)
                   %Key0 = StartingElements + 1 - N,
                   %Key = 100000000000000000000000000000000000000000000000000000000000000000000000000000 - (Key0 * 111),
@@ -343,7 +344,7 @@ test(23, CFG) ->
                   Key = 100000000000000000000000000000000000000000000000000000000000000000000000000000 - (Key0 * 128),
                   %#leaf{key = Key, 
                   %      value = <<N:16>>}
-                  N2 = hash:doit(<<N:256>>),
+                  N2 = sha256:doit(<<N:256>>),
                   %leaf_verkle:new(Key, <<N:16>>, <<0>>, CFG)
                   leaf_verkle:new(N2, <<N:16>>, <<0>>, CFG)
           end, range(1, StartingElements+1)),
@@ -504,9 +505,9 @@ test(8, CFG) ->
         store_verkle:batch(Leaves, Loc, CFG),
     
 
-    X = get_verkle:unverified([hash:doit(1)|RawKeys], NewLoc, CFG),
+    X = get_verkle:unverified([sha256:doit(1)|RawKeys], NewLoc, CFG),
 
-    io:fwrite({X}),
+    %io:fwrite({X}),
 
     success;
 test(9, CFG) ->
@@ -615,7 +616,7 @@ load_db(Elements) ->
                   %Key = 100000000000000000000000000000000000000000000000000000000000000000000000000000 - (Key0 * 111),
                   %#leaf{key = Key, 
                   %      value = <<N:16>>}
-                  N2 = hash:doit(<<N:256>>),
+                  N2 = sha256:doit(<<N:256>>),
                   %N2 = crypto:strong_rand_bytes(32),
                   leaf_verkle:new(N2, <<N:16>>, <<0>>, CFG)
           end, range(1, Elements+1)),
@@ -627,7 +628,7 @@ proof_test(Loc2, UpdateMany) ->
     Updating0 = range(0, UpdateMany),
     Updating = lists:map(
                  fun(N) ->
-                         hash:doit(<<N:256>>)
+                         sha256:doit(<<N:256>>)
                  end, Updating0),
     UpdatedLeaves = 
         lists:map(
@@ -637,7 +638,7 @@ proof_test(Loc2, UpdateMany) ->
     Leaf5 = leaf_verkle:new(5000000000000000000000, 
                      <<0,0>>, <<0>>, CFG),
     <<LGK:256>> = 
-        hash:doit(<<(UpdateMany + 1):256>>),
+        sha256:doit(<<(UpdateMany + 1):256>>),
     LeafGone = {LGK, 0},
     
     %making the verkle proof

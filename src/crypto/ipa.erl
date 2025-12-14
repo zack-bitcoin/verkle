@@ -189,7 +189,7 @@ verify_ipa({AG0, AB, Cs0, AN, BN}, %the proof
 
 gen_point(I) ->
     A = <<I:256/little>>,
-    H = hash:doit(A),
+    H = sha256:doit(A),
     ed:gen_point(H).
 basis(S) ->
     G = lists:map(fun(R) -> gen_point(R)

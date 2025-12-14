@@ -22,3 +22,4 @@ rebar3.crashdump
 .#*
 rebar.lock
 database
+fprof.trace

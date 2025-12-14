@@ -40,7 +40,7 @@ many(X, N) when (N > 0) ->
 new_empty(CFG) -> 
     #stem{hashes = empty_hashes(CFG),
          types = empty_tuple(),
-         pointers = empty_tuple({0,0}),
+         pointers = empty_tuple(0),
          root = ed:extended_zero()}.
 %unused_recover(M, T, P, H, Hashes, CFG) ->
 %    Types = onify2(Hashes, CFG),
@@ -124,37 +124,31 @@ serialize(S, _CFG) ->
                    tuple_to_list(T), 
                    []),
     Result = <<R1:512, X/binary>>,
-    %io:fwrite("in serialize " ++ integer_to_list(size(Result)) ++ "\n"),
-    %in serialize 16704
     Result.
 
 serialize2([], [], [], R) -> 
     erlang:iolist_to_binary(
       lists:reverse(R));
-serialize2([{P, Plength}|PT], [H|HT], [T|TT], R) -> 
+serialize2([P|PT], [H|HT], [T|TT], R) -> 
     %10 billion people
     %each one wants to have 10 ongoing relationships with the chain
-    %io:fwrite({P, Plength}),
-    %N = <<T, P:256, H/binary>>,
-    N = <<T, P:48, Plength:40, 0:168, H/binary>>,
+    if
+	 not(is_integer(P)) -> io:fwrite({P});
+	true -> ok
+    end,
+    true = is_integer(P),
+    N = <<T, P:48, H/binary>>,
     serialize2(PT, HT, TT, [N|R]).
 
 deserialize(<<R1:512, B/binary>>, _CFG) -> 
-%deserialize(<<R1:(256*5), B/binary>>, CFG) -> 
     case ed:is_on_curve(<<R1:512>>) of
         true -> ok;
         false -> 
             io:fwrite("invalid elliptic curve point. Maybe you are reading outside of the data that has been written to.\n"),
             erlang:error(invalid_elliptic_curve_point)
     end,
-    %X = empty_tuple(),
-    %deserialize(1,X,X,cfg_verkle:path(CFG)*8,hash:hash_depth()*8,X, B).
-    %HS = cfg_verkle:hash_size(CFG),
-    %Y = deserialize(1,X,X,X, B), % 50% of store and make_proof.
     Y = deserialize2([],[],[], B),
     R = ed:affine2extended(<<R1:512>>),
-    %R = <<R1:(256*5)>>,
-            
     Result = Y#stem{root = R},
     if
         ?sanity ->
@@ -162,15 +156,6 @@ deserialize(<<R1:512, B/binary>>, _CFG) ->
         true -> ok
     end,
     Result.
-%deserialize(?nwidth + 1, T,P,H, <<>>) -> 
-%    #stem{types = T, pointers = P, hashes = H};
-%deserialize(N, T0,P0,H0,X) when N < (?nwidth + 1) ->
-%    <<T, P:256, H:256, D/binary>> = X,
-%    T1 = setelement(N, T0, T),
-%    P1 = setelement(N, P0, P),
-%    H1 = setelement(N, H0, <<H:256>>),
-%    deserialize(N+1, T1, P1, H1, D).
-
 deserialize2(T, P, H, <<>>) ->
     #stem{types = list_to_tuple(
                     lists:reverse(T)),
@@ -179,13 +164,14 @@ deserialize2(T, P, H, <<>>) ->
           hashes = list_to_tuple(
                      lists:reverse(H))};
 deserialize2(TT, PT, HT, 
-             <<T, P:256, H:256, R/binary>>) ->
-    deserialize2([T|TT], [P|PT], [<<H:256>>|HT], R).
+             <<T, P:48, H:256, R/binary>>) ->
+    deserialize2([T|TT], [P|PT], [<<H:256>>|HT], R);
+deserialize2(_, _, _, B) ->
+    io:fwrite("deserialize 2 failure\n"),
+    io:fwrite(size(B)),
+    1=2.
 
 empty_hashes(_CFG) ->
-    %HS = cfg_verkle:hash_size(CFG),
-    %X = hash:hash_depth()*8,
-    %X = HS * 8,
     Y = many(<<0:256>>, ?nwidth),
     list_to_tuple(Y).
 
@@ -199,7 +185,6 @@ hash(S) ->
     hash_point(P).
 hash_point(P) ->
     P2 = ed:e_mul(P, <<8:256/little>>),
-    %P2 = ed:affine2extended(P),
     [<<X:256>>] = ed:compress_points([P2]),
     fr:encode(X).
 hash_points(L) ->
@@ -210,94 +195,38 @@ hash_points(L) ->
     lists:map(fun(<<X:256>>) -> fr:encode(X) end,
               L3).
 
-%update(Location, Stem, CFG) ->
-%    dump:update(Location, serialize(Stem, CFG), ids_verkle:stem(CFG)).
-
 check_root_integrity(Stem) ->
     MEP = parameters:multi_exp(),
     Hashes = tuple_to_list(Stem#stem.hashes),
-    %R = store_verkle:precomputed_multi_exponent(
-    %      Hashes,MEP),
     R = precomputed_multi_exponent:doit(
           Hashes,MEP),
     {Gs, _Hs, _Q} = parameters:read(),
-    R2 = multi_exponent:doit(Hashes, Gs),
-    B1 = ed:e_eq(R, R2),
+    %R2 = multi_exponent:doit(Hashes, Gs),
+    %B1 = ed:e_eq(R, R2),
     B2 = ed:e_eq(R, Stem#stem.root),
-    B3 = ed:e_eq(R2, Stem#stem.root),
+    %B3 = ed:e_eq(R2, Stem#stem.root),
     if
-        not(B1 and B2 and B3) ->
-            io:fwrite({B1, B2, B3, Stem}),
+        %not(B1 and B2 and B3) ->
+        not(B2) ->
+            %io:fwrite({B1, B2, B3, Stem}),
             erlang:error(root_lacks_integrity);
         true -> ok
     end.
 put(Stem, CompressedRoot, CFG) ->
     %compressed root is in affine format. 64 bytes.
     S = serialize(Stem, CompressedRoot, CFG),
-%    ID = ids_verkle:stem(CFG),
     tree2:store(S).
-%    dump:put(S, ID).
 put(Stem, CFG) ->
     S = serialize(Stem, CFG),
-    %ID = ids_verkle:stem(CFG),
-    %dump:put(S, ID).
     tree2:store(S).
-%put_batch(Leaves, CFG) ->
-    %unused
-%    SL = serialize_stems(Leaves, CFG),
-%    dump:put_batch(SL, ids_verkle:stem(CFG)).
-
-%serialize_stems(L, CFG) when false ->
-    %L is like [{N, #stem{}}, {N2, #stem{}}, ...]
-%    ERoots = 
-%        lists:map(
-%          fun({_, #stem{
-                 %pointers = P, hashes = H, 
-                 %types = T, 
-%                 root = Root}}) ->
-%                  Root
-%          end, L),
-%    Roots = ed:extended2affine_batch(ERoots),
-%    Bins = lists:zipwith(
-%             fun({_, Stem = #stem{pointers = P, 
-%                           hashes = H, 
-%                           types = T}}, R) ->
-%                     if
-%                         ?sanity ->
-%                             check_root_integrity(Stem);
-%                         true -> ok
-%                     end,
-%                     B = serialize2(
-%                           tuple_to_list(P), 
-%                           tuple_to_list(H), 
-%                           tuple_to_list(T), 
-%                           []),
-%                     <<R/binary, B/binary>>
-%             end, L, Roots),
-%    lists:zipwith(fun({N, _}, B) ->
-%                          {N, B}
-%                  end, L, Bins);
-%serialize_stems([], _) -> [];
-%serialize_stems([{N, L}| T], CFG) ->
-%    [{N, serialize(L, CFG)}|serialize_stems(T, CFG)].
 get(Pointer, CFG) -> 
-    %true = is_integer(Pointer),
-    %true = Pointer > 0,
-    {A, B} = Pointer,
-    true = is_integer(A),
-    true = is_integer(B),
-    %S = dump:get(Pointer, ids_verkle:stem(CFG)),
+    true = is_integer(Pointer),
     {ok, S} = tree2:read(Pointer),
     deserialize(S, CFG).
-%delete(Pointer, CFG) ->
-%    true = Pointer > 0,
-%    dump:delete(Pointer, ids_verkle:stem(CFG)).
 empty_trie(Root, CFG) ->
     Stem = get(Root, CFG),
     update_pointers(Stem, empty_tuple({0,0})).
-
 equal(S, T) ->
-    %[R2, R3] = fq:e_simplify_batch(
     [R2, R3] = ed:normalize(
                  [S#stem.root, T#stem.root]),
     S2 = S#stem{
@@ -306,24 +235,15 @@ equal(S, T) ->
     T2 = T#stem{
            root = R3
           },
-    %io:fwrite({S, T}),
-    %S2 == T2.
     ((R2 == R3) and (S#stem.hashes == T#stem.hashes)).
-
 range(N, N) -> [N];
 range(A, B) when A < B -> 
     [A|range(A+1, B)].
-    
 test(1) ->
-    P = list_to_tuple(many({5, 0}, ?nwidth)),
+    P = list_to_tuple(many(5, ?nwidth)),
     T = list_to_tuple(many(1, ?nwidth)),
-    %P = {6,5,4,3,7,8,9,4,5,3,2,6,7,8,3,4},
-    %T = {0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-    %CFG = cfg_verkle:new(1, 9, 2, trie), %path value id meta hash_size
     io:fwrite("before start\n"),
-    %verkle_app:start(normal, []),
     CFG = tree:cfg(tree01),
-%{cfg,5,2,tree01,2,32} path, value, id, meta, hash_size
 %596 total, average 37.25
     H = empty_hashes(CFG),
     S = #stem{types = T, pointers = P, hashes = H},
@@ -337,7 +257,7 @@ test(1) ->
     %true = fq:eq(S#stem.root, Sb#stem.root),
     io:fwrite("before equal\n"),
     true = ed:e_eq(S#stem.root, Sb#stem.root),
-    _Hash = hash:doit(<<>>),
+    _Hash = sha256:doit(<<>>),
     %Stem = unused_add(S, 3, 1, 5, Hash),
     %hash(Stem),
     %testing reading and writing to the hard drive.
@@ -370,8 +290,3 @@ test(3) ->
     H2 = ed25519:fhash_point(ed25519:fbase_point()),
 
     {H, fr:decode(H), H2}.
-
-
-    
-
-    

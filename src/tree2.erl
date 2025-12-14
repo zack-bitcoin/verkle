@@ -4,6 +4,8 @@
          read/1, store/1, test/0, root_hash/1, 
          reset/0, quick_save/0, reload/0]).
 
+%Stores variables sized bytes onto the hard drive. returns the position in the file where the data is stored. 
+
 -record(d, {name, file, top}).
 
 init(Name) ->
@@ -31,15 +33,20 @@ handle_cast(reset, X) ->
     {noreply, X#d{top = 1}};
 handle_cast(_, X) -> 
     {noreply, X}.
-handle_call({read, Pointer, Size}, _From, 
+handle_call({read, Pointer}, _From, 
             X = #d{file = File}) -> 
-    {reply, file:pread(File, Pointer, Size), X};
+    true = is_integer(Pointer),
+    %io:fwrite("tree2 read pointer " ++ integer_to_list(Pointer) ++ "\n"),
+    {ok, <<Size:16>>} = file:pread(File, Pointer, 2),
+    R = file:pread(File, Pointer+2, Size),
+    {reply, R, X};
 handle_call({store, Bytes}, _From, 
             X = #d{top = Top, file = File}) -> 
-    file:pwrite(File, Top, Bytes),
     S = size(Bytes),
-    NewTop = Top + S,
-    {reply, {Top, S}, X#d{top = NewTop}};
+    Bytes2 = <<S:16, Bytes/binary>>,
+    file:pwrite(File, Top, Bytes2),
+    NewTop = Top + S+2,
+    {reply, Top, X#d{top = NewTop}};
 handle_call(file, _From, X) -> 
     {reply, X#d.file, X};
 handle_call(quick_save, _From, X) -> 
@@ -67,8 +74,8 @@ root_hash(Pointer) ->
 store(Bytes) -> 
     gen_server:call(?MODULE, {store, Bytes}).
 
-read({P, Size}) ->
-    gen_server:call(?MODULE, {read, P, Size}).
+read(P) ->
+    gen_server:call(?MODULE, {read, P}).
 
 reset() ->
     gen_server:cast(?MODULE, reset).
