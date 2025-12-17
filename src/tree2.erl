@@ -1,7 +1,7 @@
 -module(tree2).
 -behaviour(gen_server).
 -export([start_link/1,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2, 
-         read/1, store/1, test/0, root_hash/1, 
+         read/1, store/1, test/0, root_hash/1, empty/0,
          reset/0, quick_save/0, reload/0]).
 
 %Stores variables sized bytes onto the hard drive. returns the position in the file where the data is stored. 
@@ -9,11 +9,21 @@
 -record(d, {name, file, top}).
 
 init(Name) ->
-    io:fwrite("tree2 init\n"),
     process_flag(trap_exit, true),
     {ok, F} = file:open(Name, [write, read, raw, binary]),
     Top = read_top_from_file(Name),
-    {ok, #d{name = Name, file = F, top = Top}}.
+    Top2 = if
+	       (Top == 1) -> 
+		   Bytes = stem_verkle:serialize(stem_verkle:new_empty()),
+		   S = size(Bytes),
+		   Bytes2 = <<S:16, Bytes/binary>>,
+		   file:pwrite(F, Top, Bytes2),
+		   NewTop = Top + S+2,
+		   NewTop;
+	       true ->
+		   Top
+	   end,
+    {ok, #d{name = Name, file = F, top = Top2}}.
 start_link([Name]) -> %keylength, or M is the size outputed by hash:doit(_). 
     gen_server:start_link({local, ?MODULE}, ?MODULE, Name, []).
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
@@ -60,7 +70,9 @@ read_top_from_file(Name) ->
     case file:read_file(Name++"top") of
         {ok, <<>>} -> 1;
         {ok, Out} -> binary_to_term(Out);
-        {error, enoent} -> 1;
+        {error, enoent} -> 
+	    %stem_verkle:put(stem_verkle:new_empty()),%empty is always stored in 1. we don't need to record this in a database, it can be hardcoded in the software.
+	    1;
         {error, Reason} ->
             io:fwrite(Reason),
             1=2
@@ -85,6 +97,8 @@ quick_save() ->
 
 reload() ->
     gen_server:call(?MODULE, reload).
+
+empty() -> 1.
 
 
 test() ->

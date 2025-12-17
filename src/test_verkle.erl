@@ -1,11 +1,10 @@
 -module(test_verkle).
--export([test/0, test/1, load_db/1, proof_test/2, clean_ets_test/0]).
+-export([test/0, test/1, load_db/1, proof_test/2]).
 
 -define(ID, tree01).
 -include("constants.hrl").
 
 test() ->
-    CFG = tree:cfg(?ID),
     V = [
          %23,
          1,
@@ -17,25 +16,26 @@ test() ->
 	 7,
 	 8
         ],
-    test_helper(V, CFG).
-test(N) ->
-    CFG = tree:cfg(?ID),
+    test_helper(V).
+%test(N) ->
+    %CFG = tree:cfg(?ID),
     %test_helper([N], CFG).
-    test(N, CFG).
-test_helper([], _) -> success;
-test_helper([N|T], CFG) -> 
+%    test(N).
+test_helper([]) -> success;
+test_helper([N|T]) -> 
     io:fwrite("test "),
     io:fwrite(integer_to_list(N)),
     io:fwrite("\n"),
-    success = test(N, CFG),
-    test_helper(T, CFG).
+    success = test(N),
+    test_helper(T).
 
-test(1, CFG) ->
+test(1) ->
 
     %making a proof, and not editing it.
     %compares fast proofs with normal proofs.
     %so this gives an idea of how it is for a light node.
-    Loc = cfg_verkle:empty(tree:cfg(tree01)),
+    %Loc = cfg_verkle:empty(tree:cfg(?ID)),
+    Loc = tree2:empty(),
     Times = 10000,
     Prove = 3,
     Leaves = 
@@ -101,7 +101,7 @@ test(1, CFG) ->
     end,
     success;
     %FastProof;
-test(2, CFG) ->
+test(2) ->
     Loc = 1,
     Times = 3,
     Leaves = 
@@ -154,12 +154,11 @@ test(2, CFG) ->
     ProofTree2 = 
         verify_verkle:update(
           %DecompressedTree, [Leaf1, Leaf2, Leaf3],
-          DecompressedTree, [Leaf1, Leaf2, Leaf3],
-          CFG),
+          DecompressedTree, [Leaf1, Leaf2, Leaf3]),
     %after the update, we store meta data in the tree for leaves that have been changed.
     NewRoot2 = hd(ProofTree2),
     Loc2 = store_verkle:verified(
-                  NewLoc, ProofTree2, CFG),
+                  NewLoc, ProofTree2),
     RootStem4 = stem_verkle:get(Loc2),
 
     HP3 = stem_verkle:hash(stem_verkle:get(Loc2)),
@@ -245,7 +244,7 @@ test(2, CFG) ->
     %true = fq:eq(RootStem#stem.root, RootStem4#stem.root),
 
     success;
-test(3, CFG) ->
+test(3) ->
     Loc = 1,
     StartingElements = 10000,
     UpdateElements = 3000,
@@ -307,14 +306,14 @@ test(3, CFG) ->
     
     ProofTree2 = verify_verkle:update(
                DecompressedTree, 
-                   UpdatedLeaves, CFG),
+                   UpdatedLeaves),
     %io:fwrite({ProofTree, ProofTree2}),
 
 
     %storing the new data in the db
     T4 = erlang:timestamp(),
     Loc3 = store_verkle:verified(
-                  Loc2, ProofTree2, CFG),
+                  Loc2, ProofTree2),
     T5 = erlang:timestamp(),
     
 
@@ -336,7 +335,7 @@ test(3, CFG) ->
     io:fwrite("\n\n"),
 
     success;
-test(23, CFG) ->
+test(23) ->
     Loc = 1,
     StartingElements = 2000,
     Leaves = 
@@ -367,13 +366,13 @@ test(23, CFG) ->
           {ProofTree, Commit, Opening}),
     %io:fwrite({Leaves2, LeafDeletes}),
     ProofTree2 = verify_verkle:update(
-               ProofTree, LeafDeletes, CFG),
-    Loc3 = store_verkle:verified(Loc2, ProofTree2, CFG),
+               ProofTree, LeafDeletes),
+    Loc3 = store_verkle:verified(Loc2, ProofTree2),
     
     %io:fwrite(get_verkle:batch(Keys, Loc3)),
     
     success;
-test(4, CFG) ->
+test(4) ->
     %test of updating a point.
     Loc = 1,
     Key = 27,
@@ -388,7 +387,7 @@ test(4, CFG) ->
         verify_verkle:proof(
           {ProofTree, Commit, Opening}),
     ProofTree2 = 
-        verify_verkle:update(DecompressedTree, [Leaf2], CFG),
+        verify_verkle:update(DecompressedTree, [Leaf2]),
     RootHash2 = stem_verkle:hash_point(hd(ProofTree2)),
 
     {Loc4, stem, _} = store_verkle:batch([Leaf2], Loc),
@@ -396,17 +395,17 @@ test(4, CFG) ->
 
     RootHash2 = RootHash1,
 
-    Loc5 = store_verkle:verified(Loc2, ProofTree2, CFG),
+    Loc5 = store_verkle:verified(Loc2, ProofTree2),
     RootHash1 = stem_verkle:hash(stem_verkle:get(Loc5)),
 
     success;
-test(5, CFG) ->
-    {_, _} = test_batch(20, 1, CFG),
-    {_, _} = test_batch(20, 2, CFG),
-    {_, _} = test_batch(2000, 1, CFG),
-    {_, _} = test_batch(2000, 2, CFG),
+test(5) ->
+    {_, _} = test_batch(20, 1),
+    {_, _} = test_batch(20, 2),
+    {_, _} = test_batch(2000, 1),
+    {_, _} = test_batch(2000, 2),
     success;
-test(6, CFG) ->
+test(6) ->
     %try updating a proof by inserting 2 elements into the same empty slot of a stem. todo.
     Loc = 1,
     Leaf1 = leaf_verkle:new(
@@ -434,13 +433,13 @@ test(6, CFG) ->
     Leaf3b = Leaf3#leaf{value = <<0,4>>, meta = <<3>>},
     ProofTree3 = 
         verify_verkle:update(
-          ProofTree2, [Leaf1b, Leaf2b], CFG),%this version fails.
+          ProofTree2, [Leaf1b, Leaf2b]),%this version fails.
           %ProofTree2, [Leaf1b, Leaf3b], CFG),%this version works
     Root = hd(ProofTree3),
     %io:fwrite(ProofTree3),
-    Loc2 = store_verkle:verified(Loc, ProofTree3, CFG),
+    Loc2 = store_verkle:verified(Loc, ProofTree3),
     success;
-test(7, CFG) ->
+test(7) ->
     %try updating a proof by updating 2 elements in the same slot of a stem
     Loc = 1,
 %    Leaf1 = leaf_verkle:new(
@@ -476,11 +475,11 @@ test(7, CFG) ->
           {ProofTree, Commit, Opening}),
     %true = length(Keys) == length(Leaves3),
     ProofTree3 = verify_verkle:update(
-                   ProofTree2, Leaves2, CFG),
+                   ProofTree2, Leaves2),
     Roothash = stem_verkle:hash_point(hd(ProofTree3)),
     %Root2Hash = element(2, element(2, hd(hd(tl(ProofTree3))))),
     Loc3 = store_verkle:verified(
-             Loc2, ProofTree3, CFG),%crashes here.
+             Loc2, ProofTree3),%crashes here.
     RootHash = stem_verkle:hash(stem_verkle:get(Loc3)),
 
     {Proof2, _As2} = 
@@ -489,7 +488,7 @@ test(7, CFG) ->
         verify_verkle:proof(Proof2),
 
     success;
-test(8, CFG) ->
+test(8) ->
     io:fwrite("testing get_verkle:unverified, which is used to look things up from the consensus state, without making a proof.\n"),
     Loc = 1,
     Times = 3,
@@ -513,7 +512,7 @@ test(8, CFG) ->
     %io:fwrite({X}),
 
     success;
-test(9, CFG) ->
+test(9) ->
     %testing storing to the hard disk, and restoring from the hard disk. Like if the node got turned off and back on.
     %there are 2 dumps getting shut down, and one tree.
     %ids_verkle:main (a tree), stem (a dump sup), leaf (a dump sup), bits
@@ -527,10 +526,12 @@ test(9, CFG) ->
     Leaves = [Leaf],
     %Leaves2 = [Leaf2],
 
-    ID = cfg_verkle:id(CFG),
+    %CFG = tree:cfg(?ID),
+    %ID = cfg_verkle:id(CFG),
+    %ID = ?ID,
     %MainID = ids_verkle:main(CFG),
-    LeafID = ids_verkle:leaf(CFG),
-    StemID = ids_verkle:stem(CFG),
+    LeafID = ids_verkle:leaf(),
+    StemID = ids_verkle:stem(),
 
     %store something, and verify it is still there.
     {Loc2, stem, _} = store_verkle:batch(Leaves, Loc),
@@ -551,20 +552,20 @@ test(9, CFG) ->
 
     {{A, _, _}, _} = get_verkle:batch([leaf_verkle:raw_key(Leaf)], Loc2),
     success;
-test(10, CFG) ->
+test(10) ->
     %after running test 9 and restarting the node.
     Key = 27,
     Val = <<3:16>>,
-    ID = cfg_verkle:id(CFG),
     Loc2 = 2,
-    tree2:reload(ID),%dies here...
+    tree2:reload(),%dies here...
     Leaf = leaf_verkle:new(Key, Val, <<0>>),
     {{A, _, _}, _} = get_verkle:batch([leaf_verkle:raw_key(Leaf)], Loc2),
     [_, {Key, {_, Val}}] = A,
     success;
-test(11, CFG) ->
+test(11) ->
     %attempting to store things of different sizes
-    Loc = cfg_verkle:empty(tree:cfg(tree01)),
+    %Loc = cfg_verkle:empty(tree:cfg(?ID)),
+    Loc = tree2:empty(),
     Prove = 2,
     Leaves = [leaf_verkle:new(1, <<1:16>>, <<0>>),
 	      leaf_verkle:new(2, <<2:24>>, <<0>>)],
@@ -598,7 +599,7 @@ stem_many_elements2([0|T]) ->
 stem_many_elements2([_|T]) -> 
     1 + stem_many_elements2(T).
     
-test_batch(Times, ProveMany, CFG) ->
+test_batch(Times, ProveMany) ->
     Loc = 1,
     %Times = 20,
     %ProveMany = 2,
@@ -632,7 +633,6 @@ range(A, A) -> [].
 
 
 load_db(Elements) ->
-    CFG = tree:cfg(?ID),
     Leaves = 
         lists:map(
           fun(N) -> 
@@ -649,7 +649,6 @@ load_db(Elements) ->
         store_verkle:batch(Leaves, 1),
     Loc2.
 proof_test(Loc2, UpdateMany) ->
-    CFG = tree:cfg(?ID),
     Updating0 = range(0, UpdateMany),
     Updating = lists:map(
                  fun(N) ->
@@ -692,13 +691,13 @@ proof_test(Loc2, UpdateMany) ->
 
     
     ProofTree2 = verify_verkle:update(
-               %ProofTree, UpdatedLeaves, CFG),
-               DecompressedTree, UpdatedLeaves, CFG),
+               %ProofTree, UpdatedLeaves),
+               DecompressedTree, UpdatedLeaves),
 
     %storing the new data in the db
     T4 = erlang:timestamp(),
     Loc3 = store_verkle:verified(
-                  Loc2, ProofTree2, CFG),
+                  Loc2, ProofTree2),
     T5 = erlang:timestamp(),
     
     io:fwrite("measured in millionths of a second. 6 decimals. \n"),
@@ -720,34 +719,4 @@ proof_test(Loc2, UpdateMany) ->
 
     success.
     
-clean_ets_test() ->
-    CFG = tree:cfg(?ID),
-    Loc = 1,
-
-    Times = 10,
-    Leaves1 = 
-        lists:map(
-          fun(N) ->
-                  Key = N,
-                  leaf_verkle:new(
-                    Key, <<N:16>>, <<0>>)
-          end, range(1, Times+1)),
-    Leaves2 = 
-        lists:map(
-          fun(N) ->
-                  Key = N,
-                  leaf_verkle:new(
-                    Key, <<(N+1):16>>, <<0>>)
-          end, range(Times div 2, (Times * 3) div 2)),
-
-    {Loc2, stem, _} = store_verkle:batch(
-                        Leaves1, Loc),
-    {Loc3, stem, _} = store_verkle:batch(
-                        Leaves2, Loc2),
-    
-
-    S = stem_verkle:get(Loc3),
-    stem_verkle:hash(S),
-    tree:clean_ets(?ID, Loc3),
-    stem_verkle:get(Loc2).
     

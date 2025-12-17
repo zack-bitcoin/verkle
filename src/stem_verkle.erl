@@ -13,6 +13,7 @@
          onify2/1,
 %	 put_batch/2, 
          serialize/2,
+	 serialize/1,
          root/1, check_root_integrity/1,
 %         delete/2,
 	 empty_trie/1]).
