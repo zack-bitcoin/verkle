@@ -17,8 +17,8 @@ get/3,put/5,
 init(CFG) ->
     process_flag(trap_exit, true),
     %ID = cfg_verkle:id(CFG),
-    Empty2 = stem_verkle:put(stem_verkle:new_empty(CFG), CFG),
-    %Empty = stem_verkle:put(stem_verkle:new_empty(CFG), CFG),
+    Empty2 = stem_verkle:put(stem_verkle:new_empty()),%empty is always stored in 1. we don't need to record this in a database, it can be hardcoded in the software.
+    %Empty = stem_verkle:put(stem_verkle:new_empty()),
     %CFG2 = CFG#cfg{empty = Empty},
     CFG2 = cfg_verkle:set_empty(CFG, Empty2),
     {ok, CFG2}.
@@ -40,7 +40,7 @@ handle_cast(reload, CFG) ->
     dump:reload(A3),
     io:fwrite("dump tree reloaded leaf bits\n"),
     Empty = stem_verkle:put(
-              stem_verkle:new_empty(CFG), CFG),
+              stem_verkle:new_empty()),
     CFG2 = cfg_verkle:set_empty(CFG, Empty),
     {noreply, CFG2};
 handle_cast(_, X) -> {noreply, X}.
@@ -87,7 +87,7 @@ handle_call({clean_ets, Pointer}, _, CFG) ->
 		      dump:update(Pt, Leaf, LID)
 		      end, 0, TempLID),
     
-    Empty = stem_verkle:put(stem_verkle:new_empty(CFG), CFG),
+    Empty = stem_verkle:put(stem_verkle:new_empty()),
     CFG2 = cfg_verkle:set_empty(CFG, Empty),
     {reply, ok, CFG2};
 handle_call({garbage, NewRoot, OldRoot}, _From, CFG) ->%prune new
@@ -121,11 +121,11 @@ handle_call({put, Key, Value, Meta, Root},
 handle_call({put_batch, Leaves, Root}, 
             _From, CFG) ->
     {Hash, NewRoot} = 
-        store_verkle:batch(Leaves, Root, CFG),
+        store_verkle:batch(Leaves, Root),
     {reply, NewRoot, CFG};
 handle_call({get, Key, RootPointer}, _From, CFG) ->
     valid_key(Key),
-    P = leaf_verkle:path_maker(Key, CFG),
+    P = leaf_verkle:path_maker(Key),
     {RootHash, L, Proof} = 
         get_verkle:get(P, RootPointer, CFG),
     L2 = if
@@ -148,10 +148,10 @@ handle_call({new_trie, RootStem}, _From, CFG) ->
     %Stem = stem_verkle:empty_trie(Root, CFG),
     Stem = stem_verkle:update_pointers(
              RootStem, stem_verkle:empty_tuple()),
-    X = stem_verkle:put(Stem, CFG),
+    X = stem_verkle:put(Stem),
     {reply, X, CFG};
 handle_call({root_hash, RootPointer}, _From, CFG) ->
-    S = stem_verkle:get(RootPointer, CFG),
+    S = stem_verkle:get(RootPointer),
     H = stem_verkle:hash(S),
     {reply, H, CFG};
 handle_call(cfg, _From, CFG) ->
@@ -223,7 +223,7 @@ prune(OldRoot, NewRoot, ID) ->%removes old
                     {prune, OldRoot, NewRoot}).
 
 get_all_internal(Root, CFG) ->
-    S = stem_verkle:get(Root, CFG),
+    S = stem_verkle:get(Root),
     P = tuple_to_list(stem_verkle:pointers(S)),
     T = tuple_to_list(stem_verkle:types(S)),
     get_all_internal2(P, T, CFG).
@@ -232,7 +232,7 @@ get_all_internal2([A|AT], [T|TT], CFG) ->
     B = case T of
 	    0 -> [];%empty
 	    1 -> get_all_internal(A, CFG);%a stem
-	    2 -> [leaf_verkle:get(A, CFG)]%a leaf
+	    2 -> [leaf_verkle:get(A)]%a leaf
 	end,
     B++get_all_internal2(AT, TT, CFG).
 clean_ets_internal(Pointer, CFG, SID, LID) ->
@@ -241,7 +241,7 @@ clean_ets_internal(Pointer, CFG, SID, LID) ->
     T = tuple_to_list(stem_verkle:types(S)),
     H = tuple_to_list(stem_verkle:hashes(S)),
     clean_ets_internal2(P, T, H, CFG, SID, LID),
-    SS = stem_verkle:serialize(S, CFG),
+    SS = stem_verkle:serialize(S),
     ets:insert(SID, {Pointer, SS}),
     stem_verkle:hash(S).
    
@@ -255,10 +255,10 @@ clean_ets_internal2(
 	1 -> %another stem
 	    Hash = clean_ets_internal(Pointer, CFG, SID, LID);
 	2 -> %a leaf
-	    Leaf = leaf_verkle:get(Pointer, CFG),
-	    %Hash = leaf_verkle:hash(Leaf, CFG),
-	    Hash = store_verkle:leaf_hash(Leaf, CFG),
-	    SL = leaf_verkle:serialize(Leaf, CFG),
+	    Leaf = leaf_verkle:get(Pointer),
+	    %Hash = leaf_verkle:hash(Leaf),
+	    Hash = store_verkle:leaf_hash(Leaf),
+	    SL = leaf_verkle:serialize(Leaf),
 	    ets:insert(LID, {Pointer, SL})
     end,
     clean_ets_internal2(PT, TT, HT, CFG, SID, LID).

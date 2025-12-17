@@ -12,7 +12,10 @@ test() ->
          2,
          3,
          4,
-         5
+         5,
+	 6,
+	 7,
+	 8
         ],
     test_helper(V, CFG).
 test(N) ->
@@ -41,7 +44,7 @@ test(1, CFG) ->
                   Key0 = Times + 1 - N,
                   %<<Key:256>> = <<(-Key0):256>>,
                   Key = 1000000000 - (Key0*256),
-                  leaf_verkle:new(Key, <<N:16>>, <<0>>, CFG)
+                  leaf_verkle:new(Key, <<N:16>>, <<0>>)
           %end, Many),
           end, range(1, Times+1)),
     %Many = lists:map(fun(#leaf{key = K}) -> K end,
@@ -52,7 +55,7 @@ test(1, CFG) ->
     T1 = erlang:timestamp(),
     %io:write({Loc}),
     {NewLoc, stem, _} = 
-        store_verkle:batch(Leaves, Loc, CFG),
+        store_verkle:batch(Leaves, Loc),
     T2 = erlang:timestamp(),
     io:fwrite("make proof\n"),
     %Keys = [<<5:256>>|Many],
@@ -60,20 +63,20 @@ test(1, CFG) ->
     %Keys = [hd(Many), hd(tl(Many))],
     {Keys, _} = lists:split(Prove, Many),
     {Proof, _} = 
-        get_verkle:batch(Keys, NewLoc, CFG),
+        get_verkle:batch(Keys, NewLoc),
     T3 = erlang:timestamp(),
     io:fwrite("make fast proof\n"),
     {FastProof, _} = 
-        get_verkle:batch(Keys, NewLoc, CFG, fast),
+        get_verkle:batch(Keys, NewLoc, fast),
 
     T4 = erlang:timestamp(),
     io:fwrite("verify proof\n"),
-    Root = stem_verkle:root(stem_verkle:get(NewLoc, CFG)),
+    Root = stem_verkle:root(stem_verkle:get(NewLoc)),
     {true, Leaves2, _} = 
-        verify_verkle:proof(Proof, CFG),
+        verify_verkle:proof(Proof),
     T5 = erlang:timestamp(),
     {true, Leaves2, _} = 
-        verify_verkle:proof(FastProof, CFG),
+        verify_verkle:proof(FastProof),
     T6 = erlang:timestamp(),
     %io:fwrite({lists:reverse(Leaves2)}),
     %io:fwrite({length(Leaves2), length(Keys)}),
@@ -108,26 +111,26 @@ test(2, CFG) ->
                   %<<Key:256>> = <<(-Key0):256>>,
                   Key = 1000000000 - (128 * N),
                   %#leaf{key = Key, value = <<N:16>>}
-                  leaf_verkle:new(Key, <<N:16>>, <<0>>, CFG)
+                  leaf_verkle:new(Key, <<N:16>>, <<0>>)
           end, range(1, Times+1)),
     %Many = lists:map(fun(#leaf{key = K}) -> K end,
     Many = lists:map(fun(Leaf) -> 
                      leaf_verkle:raw_key(Leaf) end,
                      Leaves),
     {NewLoc, stem, _} = 
-        store_verkle:batch(Leaves, Loc, CFG),
+        store_verkle:batch(Leaves, Loc),
     {{ProofTree, Commit, Opening}, _} = 
         get_verkle:batch([<<5:256>>,<<6:256>>|Many], 
-                   NewLoc, CFG),
+                   NewLoc),
     {true, _, DecompressedTree} = 
         verify_verkle:proof(
-          {ProofTree, Commit, Opening}, CFG),
+          {ProofTree, Commit, Opening}),
     %io:fwrite(ProofTree),
     Leaf01 = hd(Leaves),
     Leaf02 = hd(tl(Leaves)),
     DeleteKey = leaf_verkle:raw_key(Leaf02),
     Leaf1 = Leaf01#leaf{value = <<0,0>>, meta = <<2>>},%editing existing leaf.
-    Leaf2 = leaf_verkle:new(5, <<0,1>>, <<2>>, CFG),%creating a new leaf.
+    Leaf2 = leaf_verkle:new(5, <<0,1>>, <<2>>),%creating a new leaf.
     Leaf3 = {DeleteKey, 0},
     %io:fwrite({Leaf1, Leaf2}),
     %Leaf2 = {Leaf02#leaf.key, 0},
@@ -142,9 +145,9 @@ test(2, CFG) ->
 
     %in this part we are storing the new data directly. This is so we can get a root hash, and verify that updating the proof worked correctly.
     {Loc3, _, _} = 
-        store_verkle:batch(Leaves2, 1, CFG),
+        store_verkle:batch(Leaves2, 1),
     io:fwrite("test trie stored\n"),
-    RootStem = stem_verkle:get(Loc3, CFG),
+    RootStem = stem_verkle:get(Loc3),
     %io:fwrite(DecompressedTree),
 
     %notice that this proof is based on NewLoc, from before the leaves were stored. 
@@ -157,40 +160,40 @@ test(2, CFG) ->
     NewRoot2 = hd(ProofTree2),
     Loc2 = store_verkle:verified(
                   NewLoc, ProofTree2, CFG),
-    RootStem4 = stem_verkle:get(Loc2, CFG),
+    RootStem4 = stem_verkle:get(Loc2),
 
-    HP3 = stem_verkle:hash(stem_verkle:get(Loc2, CFG)),
-    HP4 = stem_verkle:hash(stem_verkle:get(Loc3, CFG)),
-    CheckStem2 = stem_verkle:get(Loc2, CFG),
-    CheckStem3 = stem_verkle:get(Loc3, CFG),
+    HP3 = stem_verkle:hash(stem_verkle:get(Loc2)),
+    HP4 = stem_verkle:hash(stem_verkle:get(Loc3)),
+    CheckStem2 = stem_verkle:get(Loc2),
+    CheckStem3 = stem_verkle:get(Loc3),
     true = element(5, CheckStem3) == element(5, CheckStem2),
     true = ed:e_eq(element(2, CheckStem2), element(2, CheckStem3)),
 %    io:fwrite({HP3 == HP4, 
 %               lists:reverse(tuple_to_list(element(5, CheckStem2))),
 %               lists:reverse(tuple_to_list(element(5, CheckStem3))),
-%               stem_verkle:get(Loc2, CFG), 
-%               stem_verkle:get(Loc3, CFG)}),
+%               stem_verkle:get(Loc2), 
+%               stem_verkle:get(Loc3)}),
     HP3 = HP4,
    
     %5 is the new leaf.
     {{Proof1, Commit1, Opening1}, _} = 
-        get_verkle:batch([<<5:256>>, DeleteKey, <<6:256>>], Loc3, CFG),
-    Root1 = stem_verkle:root(stem_verkle:get(Loc3, CFG)),
+        get_verkle:batch([<<5:256>>, DeleteKey, <<6:256>>], Loc3),
+    Root1 = stem_verkle:root(stem_verkle:get(Loc3)),
     %io:fwrite({size(Root1), size(hd(Proof1))}),
     {true, FLeaves0, _} = 
         verify_verkle:proof(
           %Root1,
-          {Proof1, Commit1, Opening1}, CFG),
+          {Proof1, Commit1, Opening1}),
 
     %io:fwrite(FLeaves0),
                                  
     {{Proof2, Commit2, Opening2}, _} = 
-        get_verkle:batch([<<5:256>>], Loc2, CFG),
-    Root2 = stem_verkle:root(stem_verkle:get(Loc2, CFG)),
+        get_verkle:batch([<<5:256>>], Loc2),
+    Root2 = stem_verkle:root(stem_verkle:get(Loc2)),
     {true, _FLeaves, _} = 
         verify_verkle:proof(
           %Root2,
-          {Proof2, Commit2, Opening2}, CFG),
+          {Proof2, Commit2, Opening2}),
     HP1 = stem_verkle:hash_point(ed:decompress_point(hd(Proof1))),
     HP2 = stem_verkle:hash_point(ed:decompress_point(hd(Proof2))),
     HP1 = HP2,
@@ -198,18 +201,18 @@ test(2, CFG) ->
     %this is for the leaf being edited.
     {{Proof3, _, _}, _} = 
         get_verkle:batch([leaf_verkle:raw_key(Leaf1)], 
-                   Loc3, CFG),
+                   Loc3),
     {{Proof4, _, _}, Meta2} = 
         get_verkle:batch([leaf_verkle:raw_key(Leaf1)], 
-                   Loc2, CFG),
+                   Loc2),
 %    io:fwrite(dict:find(leaf_verkle:raw_key(Leaf1),
 %                        Meta2)),%returns <<0>>, should be <<2>>.
 
     %this is for the leaf being deleted.
     {{Proof5, _, _}, _} = 
-        get_verkle:batch([DeleteKey], Loc3, CFG),
+        get_verkle:batch([DeleteKey], Loc3),
     {{Proof6, _, _}, _} = 
-        get_verkle:batch([DeleteKey], Loc2, CFG),
+        get_verkle:batch([DeleteKey], Loc2),
 
     %io:fwrite(Proof5),
     HP1 = stem_verkle:hash_point(ed:decompress_point(hd(Proof1))),
@@ -251,7 +254,7 @@ test(3, CFG) ->
           fun(N) -> 
                   Key = crypto:strong_rand_bytes(32),
                   %Key = sha256:doit(<<N:256>>),
-                  leaf_verkle:new(Key, <<N:16>>, <<0>>, CFG)
+                  leaf_verkle:new(Key, <<N:16>>, <<0>>)
                   %Key0 = StartingElements + 1 - N,
                   %Key = 100000000000000000000000000000000000000000000000000000000000000000000000000000 - (Key0 * 111),
                   %leaf_verkle:new(Key, <<N:16>>, <<>>, CFG)
@@ -265,7 +268,7 @@ test(3, CFG) ->
     UpdatedLeaves = 
         lists:map(
           fun(N) -> 
-                  leaf_verkle:new(N, <<2, 7>>, <<0>>, CFG)
+                  leaf_verkle:new(N, <<2, 7>>, <<0>>)
 %                  #leaf{key = N, 
 %                        value = <<2,7>>}
                   
@@ -277,11 +280,11 @@ test(3, CFG) ->
     %loading the db 
     T0 = erlang:timestamp(),
     {Loc2, _, _} = 
-        store_verkle:batch(Leaves, Loc, CFG),
+        store_verkle:batch(Leaves, Loc),
     %making the verkle proof
     T1 = erlang:timestamp(),
     {{ProofTree, Commit, Opening}, _} = 
-        get_verkle:batch(Updating, Loc2, CFG),
+        get_verkle:batch(Updating, Loc2),
     %verifying the verkle proof
     T2 = erlang:timestamp(),
 
@@ -291,7 +294,7 @@ test(3, CFG) ->
 
     {true, _, DecompressedTree} = 
         verify_verkle:proof(
-          {ProofTree, Commit, Opening}, CFG),
+          {ProofTree, Commit, Opening}),
 
     %fprof:trace([stop]),
     %fprof:profile(),
@@ -345,8 +348,8 @@ test(23, CFG) ->
                   %#leaf{key = Key, 
                   %      value = <<N:16>>}
                   N2 = sha256:doit(<<N:256>>),
-                  %leaf_verkle:new(Key, <<N:16>>, <<0>>, CFG)
-                  leaf_verkle:new(N2, <<N:16>>, <<0>>, CFG)
+                  %leaf_verkle:new(Key, <<N:16>>, <<0>>)
+                  leaf_verkle:new(N2, <<N:16>>, <<0>>)
           end, range(1, StartingElements+1)),
     Keys = lists:map(fun(Leaf) -> 
                      leaf_verkle:raw_key(Leaf) end,
@@ -356,18 +359,18 @@ test(23, CFG) ->
                             end, Keys),
     
     {Loc2, _, _} = 
-        store_verkle:batch(Leaves, Loc, CFG),
+        store_verkle:batch(Leaves, Loc),
     {{ProofTree, Commit, Opening}, _} = 
-        get_verkle:batch(Keys, Loc2, CFG),
+        get_verkle:batch(Keys, Loc2),
     {true, Leaves2} = 
         verify_verkle:proof(
-          {ProofTree, Commit, Opening}, CFG),
+          {ProofTree, Commit, Opening}),
     %io:fwrite({Leaves2, LeafDeletes}),
     ProofTree2 = verify_verkle:update(
                ProofTree, LeafDeletes, CFG),
     Loc3 = store_verkle:verified(Loc2, ProofTree2, CFG),
     
-    %io:fwrite(get_verkle:batch(Keys, Loc3, CFG)),
+    %io:fwrite(get_verkle:batch(Keys, Loc3)),
     
     success;
 test(4, CFG) ->
@@ -375,26 +378,26 @@ test(4, CFG) ->
     Loc = 1,
     Key = 27,
     UnusedKey = 11,
-    Leaf1 = leaf_verkle:new(Key, <<27:16>>, <<0>>, CFG),
-    Leaf2 = leaf_verkle:new(Key, <<29:16>>, <<0>>, CFG),
-    {Loc2, stem, _} = store_verkle:batch([Leaf1], Loc, CFG),
+    Leaf1 = leaf_verkle:new(Key, <<27:16>>, <<0>>),
+    Leaf2 = leaf_verkle:new(Key, <<29:16>>, <<0>>),
+    {Loc2, stem, _} = store_verkle:batch([Leaf1], Loc),
     {{ProofTree, Commit, Opening}, _} = 
         get_verkle:batch([<<Key:256>>],
-                   Loc2, CFG),
+                   Loc2),
     {true, _, DecompressedTree} = 
         verify_verkle:proof(
-          {ProofTree, Commit, Opening}, CFG),
+          {ProofTree, Commit, Opening}),
     ProofTree2 = 
         verify_verkle:update(DecompressedTree, [Leaf2], CFG),
     RootHash2 = stem_verkle:hash_point(hd(ProofTree2)),
 
-    {Loc4, stem, _} = store_verkle:batch([Leaf2], Loc, CFG),
-    RootHash1 = stem_verkle:hash(stem_verkle:get(Loc4, CFG)),
+    {Loc4, stem, _} = store_verkle:batch([Leaf2], Loc),
+    RootHash1 = stem_verkle:hash(stem_verkle:get(Loc4)),
 
     RootHash2 = RootHash1,
 
     Loc5 = store_verkle:verified(Loc2, ProofTree2, CFG),
-    RootHash1 = stem_verkle:hash(stem_verkle:get(Loc5, CFG)),
+    RootHash1 = stem_verkle:hash(stem_verkle:get(Loc5)),
 
     success;
 test(5, CFG) ->
@@ -407,25 +410,25 @@ test(6, CFG) ->
     %try updating a proof by inserting 2 elements into the same empty slot of a stem. todo.
     Loc = 1,
     Leaf1 = leaf_verkle:new(
-              1, <<2:16>>, <<0>>, CFG),
+              1, <<2:16>>, <<0>>),
     Leaf2 = leaf_verkle:new(
-              2, <<2:16>>, <<0>>, CFG),
+              2, <<2:16>>, <<0>>),
     Leaf3 = leaf_verkle:new(
-              258, <<2:16>>, <<0>>, CFG),
+              258, <<2:16>>, <<0>>),
     Leaf4 = leaf_verkle:new(
-              3, <<2:16>>, <<0>>, CFG),
+              3, <<2:16>>, <<0>>),
     Leaves = [Leaf1, Leaf2, Leaf3, Leaf4],
     Keys = lists:map(
              fun(L) ->
                      leaf_verkle:raw_key(L) end,
              Leaves),
 %    {Loc2, stem, _} = 
-%        store_verkle:batch(Leaves, Loc, CFG),
+%        store_verkle:batch(Leaves, Loc),
     {{ProofTree, Commit, Opening}, _} =
-        get_verkle:batch(Keys, Loc, CFG),
+        get_verkle:batch(Keys, Loc),
     {true, _, ProofTree2} = 
         verify_verkle:proof(
-          {ProofTree, Commit, Opening}, CFG),
+          {ProofTree, Commit, Opening}),
     Leaf1b = Leaf1#leaf{value = <<0,0>>, meta = <<2>>},
     Leaf2b = Leaf2#leaf{value = <<0,1>>, meta = <<3>>},
     Leaf3b = Leaf3#leaf{value = <<0,4>>, meta = <<3>>},
@@ -443,34 +446,34 @@ test(7, CFG) ->
 %    Leaf1 = leaf_verkle:new(
 %              1, <<2:16>>, <<0>>, CFG),
     Leaf2 = leaf_verkle:new(
-              2, <<2:16>>, <<3>>, CFG),
+              2, <<2:16>>, <<3>>),
 %    Leaf3 = leaf_verkle:new(
 %              258+3, <<2:16>>, <<0>>, CFG),
 %    Leaf4 = leaf_verkle:new(
 %              3, <<2:16>>, <<0>>, CFG),
     Leaf5 = leaf_verkle:new(
-              258, <<2:16>>, <<4>>, CFG),
+              258, <<2:16>>, <<4>>),
 %    Leaf6 = leaf_verkle:new(
 %              770, <<2:16>>, <<0>>, CFG),
     Leaves = [Leaf2],
-    {Loc2, stem, _} = store_verkle:batch(Leaves, Loc, CFG),
+    {Loc2, stem, _} = store_verkle:batch(Leaves, Loc),
     Leaves2 = lists:map(
                 fun(L) -> L#leaf{value = <<3:16>>} 
                 end, Leaves++[Leaf5]),
     {Loc4, stem, _} = 
-        store_verkle:batch(Leaves2, Loc, CFG),
-    Root2Loc = element(3, stem_verkle:pointers(stem_verkle:get(Loc4, CFG))),
-    Root2Hash = stem_verkle:hash(stem_verkle:get(Root2Loc, CFG)),
-    RootHash = stem_verkle:hash(stem_verkle:get(Loc4, CFG)),
+        store_verkle:batch(Leaves2, Loc),
+    Root2Loc = element(3, stem_verkle:pointers(stem_verkle:get(Loc4))),
+    Root2Hash = stem_verkle:hash(stem_verkle:get(Root2Loc)),
+    RootHash = stem_verkle:hash(stem_verkle:get(Loc4)),
     Keys = lists:map(
              fun(L) ->
                      leaf_verkle:raw_key(L) end,
              Leaves2),
     {{ProofTree, Commit, Opening}, _} =
-        get_verkle:batch(Keys, Loc2, CFG),
+        get_verkle:batch(Keys, Loc2),
     {true, Leaves3, ProofTree2} = 
         verify_verkle:proof(
-          {ProofTree, Commit, Opening}, CFG),
+          {ProofTree, Commit, Opening}),
     %true = length(Keys) == length(Leaves3),
     ProofTree3 = verify_verkle:update(
                    ProofTree2, Leaves2, CFG),
@@ -478,12 +481,12 @@ test(7, CFG) ->
     %Root2Hash = element(2, element(2, hd(hd(tl(ProofTree3))))),
     Loc3 = store_verkle:verified(
              Loc2, ProofTree3, CFG),%crashes here.
-    RootHash = stem_verkle:hash(stem_verkle:get(Loc3, CFG)),
+    RootHash = stem_verkle:hash(stem_verkle:get(Loc3)),
 
     {Proof2, _As2} = 
-        get_verkle:batch(Keys, Loc3, CFG),
+        get_verkle:batch(Keys, Loc3),
     {true, _, _} = 
-        verify_verkle:proof(Proof2, CFG),
+        verify_verkle:proof(Proof2),
 
     success;
 test(8, CFG) ->
@@ -494,7 +497,7 @@ test(8, CFG) ->
         lists:map(
           fun(N) ->
                   leaf_verkle:new(
-                    N*256, <<N:16>>, <<0>>, CFG)
+                    N*256, <<N:16>>, <<0>>)
           end, range(1, Times+1)),
     RawKeys = 
         lists:map(
@@ -502,10 +505,10 @@ test(8, CFG) ->
                   leaf_verkle:raw_key(L) 
           end, Leaves),
     {NewLoc, stem, _} = 
-        store_verkle:batch(Leaves, Loc, CFG),
+        store_verkle:batch(Leaves, Loc),
     
 
-    X = get_verkle:unverified([sha256:doit(1)|RawKeys], NewLoc, CFG),
+    X = get_verkle:unverified([sha256:doit(<<>>)|RawKeys], NewLoc),
 
     %io:fwrite({X}),
 
@@ -519,7 +522,7 @@ test(9, CFG) ->
     Key = 27,
     Val = <<3:16>>,
     %Val2 = <<4:16>>,
-    Leaf = leaf_verkle:new(Key, Val, <<0>>, CFG),
+    Leaf = leaf_verkle:new(Key, Val, <<0>>),
     %Leaf2 = leaf_verkle:new(Key, Val2, <<0>>, CFG),
     Leaves = [Leaf],
     %Leaves2 = [Leaf2],
@@ -530,23 +533,23 @@ test(9, CFG) ->
     StemID = ids_verkle:stem(CFG),
 
     %store something, and verify it is still there.
-    {Loc2, stem, _} = store_verkle:batch(Leaves, Loc, CFG),
+    {Loc2, stem, _} = store_verkle:batch(Leaves, Loc),
     2 = Loc2,
-    {{A, _, _}, _} = get_verkle:batch([leaf_verkle:raw_key(Leaf)], Loc2, CFG),
+    {{A, _, _}, _} = get_verkle:batch([leaf_verkle:raw_key(Leaf)], Loc2),
     [_, {Key, {_, Val}}] = A,
 
     io:fwrite("test 9 about to quick save\n"),
-    tree:quick_save(ID),
+    tree2:quick_save(),
     dump:delete_all(LeafID),
     dump:delete_all(StemID),
     timer:sleep(100),
 
     1 = dump:top(StemID),
     1 = dump:top(LeafID),
-    tree:reload_ets(ID),
+    tree2:reload(),
     timer:sleep(100),
 
-    {{A, _, _}, _} = get_verkle:batch([leaf_verkle:raw_key(Leaf)], Loc2, CFG),
+    {{A, _, _}, _} = get_verkle:batch([leaf_verkle:raw_key(Leaf)], Loc2),
     success;
 test(10, CFG) ->
     %after running test 9 and restarting the node.
@@ -554,10 +557,32 @@ test(10, CFG) ->
     Val = <<3:16>>,
     ID = cfg_verkle:id(CFG),
     Loc2 = 2,
-    tree:reload_ets(ID),%dies here...
-    Leaf = leaf_verkle:new(Key, Val, <<0>>, CFG),
-    {{A, _, _}, _} = get_verkle:batch([leaf_verkle:raw_key(Leaf)], Loc2, CFG),
+    tree2:reload(ID),%dies here...
+    Leaf = leaf_verkle:new(Key, Val, <<0>>),
+    {{A, _, _}, _} = get_verkle:batch([leaf_verkle:raw_key(Leaf)], Loc2),
     [_, {Key, {_, Val}}] = A,
+    success;
+test(11, CFG) ->
+    %attempting to store things of different sizes
+    Loc = cfg_verkle:empty(tree:cfg(tree01)),
+    Prove = 2,
+    Leaves = [leaf_verkle:new(1, <<1:16>>, <<0>>),
+	      leaf_verkle:new(2, <<2:24>>, <<0>>)],
+    Many = lists:map(fun(Leaf) -> 
+                             leaf_verkle:raw_key(Leaf) 
+                     end, Leaves),
+    {NewLoc, stem, _} = 
+        store_verkle:batch(Leaves, Loc),
+    {Keys, _} = lists:split(Prove, Many),
+    {Proof, _} = 
+        get_verkle:batch(Keys, NewLoc),
+    {FastProof, _} = 
+        get_verkle:batch(Keys, NewLoc, fast),
+    Root = stem_verkle:root(stem_verkle:get(NewLoc)),
+    {true, Leaves2, _} = 
+        verify_verkle:proof(Proof),
+    {true, Leaves2, _} = 
+        verify_verkle:proof(FastProof),
     success.
     
 
@@ -583,21 +608,21 @@ test_batch(Times, ProveMany, CFG) ->
                   Key0 = Times + 1 - N,
                   %Key = 1000000000 - (Key0*256),
                   Key = 1000000000 - (Key0),
-                  leaf_verkle:new(Key, <<N:16>>, <<0>>, CFG)
+                  leaf_verkle:new(Key, <<N:16>>, <<0>>)
           end, range(1, Times+1)),
     Keys = lists:map(fun(Leaf) -> 
                              leaf_verkle:raw_key(Leaf) 
                      end, Leaves),
     {NewLoc, stem, _} = 
-        store_verkle:batch(Leaves, Loc, CFG),
+        store_verkle:batch(Leaves, Loc),
 
     {First, _} = lists:split(ProveMany, Keys),
     {Proof, _} = get_verkle:batch(
-                   First, NewLoc, CFG, small),
+                   First, NewLoc, small),
     SP = get_verkle:serialize_proof(Proof),
     Proof = get_verkle:deserialize_proof(SP),
     {true, _, _} = verify_verkle:proof(
-                     Proof, CFG),
+                     Proof),
     %io:fwrite(Proof),
     {size(SP), SP}.
 
@@ -618,10 +643,10 @@ load_db(Elements) ->
                   %      value = <<N:16>>}
                   N2 = sha256:doit(<<N:256>>),
                   %N2 = crypto:strong_rand_bytes(32),
-                  leaf_verkle:new(N2, <<N:16>>, <<0>>, CFG)
+                  leaf_verkle:new(N2, <<N:16>>, <<0>>)
           end, range(1, Elements+1)),
     {Loc2, _, _} = 
-        store_verkle:batch(Leaves, 1, CFG),
+        store_verkle:batch(Leaves, 1),
     Loc2.
 proof_test(Loc2, UpdateMany) ->
     CFG = tree:cfg(?ID),
@@ -633,10 +658,10 @@ proof_test(Loc2, UpdateMany) ->
     UpdatedLeaves = 
         lists:map(
           fun(N) ->
-                  leaf_verkle:new(N, <<2, 7>>, <<0>>, CFG)
+                  leaf_verkle:new(N, <<2, 7>>, <<0>>)
           end, Updating),
     Leaf5 = leaf_verkle:new(5000000000000000000000, 
-                     <<0,0>>, <<0>>, CFG),
+                     <<0,0>>, <<0>>),
     <<LGK:256>> = 
         sha256:doit(<<(UpdateMany + 1):256>>),
     LeafGone = {LGK, 0},
@@ -644,7 +669,7 @@ proof_test(Loc2, UpdateMany) ->
     %making the verkle proof
     T1 = erlang:timestamp(),
     {{ProofTree, Commit, Opening}, _} = 
-        get_verkle:batch(Updating, Loc2, CFG),
+        get_verkle:batch(Updating, Loc2),
 
     io:fwrite("verifying the proof\n"),
     %{ok, _PID} = fprof:start(),
@@ -654,7 +679,7 @@ proof_test(Loc2, UpdateMany) ->
     T2 = erlang:timestamp(),
     {true, _, DecompressedTree} = 
         verify_verkle:proof(
-          {ProofTree, Commit, Opening}, CFG),
+          {ProofTree, Commit, Opening}),
 
 
     %fprof:trace([stop]),
@@ -705,24 +730,24 @@ clean_ets_test() ->
           fun(N) ->
                   Key = N,
                   leaf_verkle:new(
-                    Key, <<N:16>>, <<0>>, CFG)
+                    Key, <<N:16>>, <<0>>)
           end, range(1, Times+1)),
     Leaves2 = 
         lists:map(
           fun(N) ->
                   Key = N,
                   leaf_verkle:new(
-                    Key, <<(N+1):16>>, <<0>>, CFG)
+                    Key, <<(N+1):16>>, <<0>>)
           end, range(Times div 2, (Times * 3) div 2)),
 
     {Loc2, stem, _} = store_verkle:batch(
-                        Leaves1, Loc, CFG),
+                        Leaves1, Loc),
     {Loc3, stem, _} = store_verkle:batch(
-                        Leaves2, Loc2, CFG),
+                        Leaves2, Loc2),
     
 
-    S = stem_verkle:get(Loc3, CFG),
+    S = stem_verkle:get(Loc3),
     stem_verkle:hash(S),
     tree:clean_ets(?ID, Loc3),
-    stem_verkle:get(Loc2, CFG).
+    stem_verkle:get(Loc2).
     

@@ -1,14 +1,15 @@
 -module(verkle_sup).
 -behaviour(supervisor).
--export([start_link/7,init/1,stop/1]).
+-export([start_link/5,init/1,stop/1]).
 -define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
 -include("constants.hrl").
-start_link(KeyLength, Size, ID, Amount, Meta, Mode, Location) -> 
+start_link(KeyLength, Size, ID, Meta, Location) -> 
+    %[32, 32, amoveo, 0, 8, mode?, location]
     %keylength is the number of bytes to encode the path that you follow on the verkle.
     HashSize = 32,
     CFG = cfg_verkle:new(KeyLength, Size, ID, 
-                  Meta, HashSize, Mode),
-    supervisor:start_link({global, cfg_verkle:id(CFG)}, ?MODULE, [CFG, Amount, Mode, Location]).
+                  Meta, HashSize, hd),
+    supervisor:start_link({global, cfg_verkle:id(CFG)}, ?MODULE, [CFG, Location]).
 stop(ID) -> 
     CFG = tree:cfg(ID),
     supervisor:terminate_child({global, ID}, ids_verkle:main(CFG)),
@@ -18,7 +19,7 @@ stop(ID) ->
     supervisor:terminate_child({global, ID}, ids_verkle:leaf(CFG)),
     halt().
 
-init([CFG, Amount, Mode, Location]) ->
+init([CFG, Location]) ->
     A5 = ids_verkle:main(CFG),
     A6 = ids_verkle:parameters(CFG),
     Children = [

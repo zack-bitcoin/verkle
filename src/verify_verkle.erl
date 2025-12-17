@@ -1,5 +1,5 @@
 -module(verify_verkle).
--export([proof/2, update/3, remove_empty/1,
+-export([proof/1, update/3, remove_empty/1,
          test/0
         ]).
 -include("constants.hrl").
@@ -219,9 +219,9 @@ update_merge([[{K, 0}]|Leaves],
              Depth, CFG, MEP, R, Diffs, N) ->
     %deleting a leaf.
     %io:fwrite("deleting a leaf"),
-    OldLeaf = leaf_verkle:new(OldK, OldV, 0, CFG),
+    OldLeaf = leaf_verkle:new(OldK, OldV),
     %OldLeaf = leaf_verkle:new(OldK, OldV, Meta, CFG),
-    OldN = store_verkle:leaf_hash(OldLeaf, CFG),
+    OldN = store_verkle:leaf_hash(OldLeaf),
     update_merge(Leaves, Subtrees, Depth, CFG, MEP,
                  [{N, 0}|R], 
                  [fr:neg(OldN)|Diffs], N+1);
@@ -233,7 +233,7 @@ update_merge([LH|Leaves],
     %there is already a leaf here.
     %NewLeaf = leaf_verkle:new(Key, Value, 0, CFG),
     %FL = leaf_verkle:new(Key, Value, Meta, CFG),
-    FL = leaf_verkle:new(Key, Value, 0, CFG),
+    FL = leaf_verkle:new(Key, Value),
                      
     B = leaf_in_list(FL, LH),
     B2 = (1 == length(LH)),
@@ -242,10 +242,8 @@ update_merge([LH|Leaves],
             %updating a leaf.
             %io:fwrite(LH),
             Leaf2 = hd(LH),
-            OldN = store_verkle:leaf_hash(
-                     FL, CFG),
-            NewN = store_verkle:leaf_hash(
-                     Leaf2, CFG),
+            OldN = store_verkle:leaf_hash(FL),
+            NewN = store_verkle:leaf_hash(Leaf2),
             LeafDiff = 
                 if
                     OldN == NewN -> 
@@ -269,8 +267,8 @@ update_merge([LH|Leaves],
         B -> 
             %io:fwrite("adding leaves to a spot where there was a leaf, and changing the existing leaf\n"),
             %todo. we need to somehow subtract this leaf's diff before adding the new stem or leaves.
-            OldN = store_verkle:leaf_hash(FL, CFG),
-            %EmptyStem = stem_verkle:new_empty(CFG),
+            OldN = store_verkle:leaf_hash(FL),
+            %EmptyStem = stem_verkle:new_empty(),
             {Point, Tree2} = 
                 update_batch2(LH, all_empties(),
                               Depth+1, CFG, MEP),
@@ -307,7 +305,7 @@ update_merge([LH|Leaves],
   when (length(LH) == 1) ->
     %io:fwrite("add a leaf to empty spot.\n"),
     Leaf = hd(LH),
-    LeafDiff = store_verkle:leaf_hash(Leaf, CFG),
+    LeafDiff = store_verkle:leaf_hash(Leaf),
     update_merge(
       Leaves, Subtrees, Depth, CFG, MEP,
       [[{N, {leaf_verkle:raw_key(Leaf),
@@ -407,7 +405,7 @@ decompress_proof(Open, Tree0, CommitG0)
     {Tree, Open, Root1, CommitG}.
     
 
-proof({Tree0, CommitG0, Open0}, CFG) ->
+proof({Tree0, CommitG0, Open0}) ->
     {Tree, Open, Root1, CommitG} = 
        decompress_proof(Open0, Tree0, CommitG0), 
 
@@ -419,13 +417,10 @@ proof({Tree0, CommitG0, Open0}, CFG) ->
     %multiproof:verify(Proof = {CommitG, Commits, Open_G_E}, Zs, Ys, ?p)
     %Zs are elements of the domain where we look up stuff.
     %Ys are values stored in pedersen commits. either hashes of leaves, or hashes of stems.
-    %io:fwrite({Tree, Commits0}),
-    
     %[root, [{1, p1}, [{0, L1},{1, L2}], [{3, p2},{0,L3}]]]
     %io:fwrite("verify get parameters \n"),
     [Root|Rest] = Tree,
     Domain = parameters:domain(),
-    %B = fq:eq(Root1, Root),
     B = ed:a_eq(Root1, Root),
     if
         not(B) -> 
@@ -434,10 +429,7 @@ proof({Tree0, CommitG0, Open0}, CFG) ->
         true ->
             %io:fwrite("verify unfold \n"),
             benchmark:now(),
-            %io:fwrite(Rest),
-            %1=2,
-            %rest is [{0, pt},[{186, pt},{115, l}], [{187, pt}, {115, l}],[{188, pt}, {115, l}]]
-            Tree2 = unfold(Root, Rest, [], CFG),
+            Tree2 = unfold(Root, Rest, []),
             %io:fwrite("verify split 3 parts \n"),
             benchmark:now(),
             {Commits, Zs0, Ys} = 
@@ -510,35 +502,34 @@ leaves2(X, SubPath, D) ->
     
               
 
-unfold(Root, {Index, 0}, T, CFG) ->%empty case
+unfold(Root, {Index, 0}, T) ->%empty case
     lists:reverse([{Root, Index, <<0:256>>}|T]);
 %unfold(Root, {Index, {Key, B, Meta}}, T, CFG) %leaf case
-unfold(Root, {Index, {Key, B}}, T, CFG) %leaf case
+unfold(Root, {Index, {Key, B}}, T) %leaf case
   when is_binary(B) ->
     %Leaf = #leaf{key = Key, value = B},
     %io:fwrite("verify unfold leaf\n"),
     %Leaf = leaf_verkle:new(Key, B, Meta, CFG),
-    Leaf = leaf_verkle:new(Key, B, 0, CFG),
-    <<L:256>> = store_verkle:leaf_hash(Leaf, CFG),
+    Leaf = leaf_verkle:new(Key, B),
+    <<L:256>> = store_verkle:leaf_hash(Leaf),
     lists:reverse([{Root, Index, <<L:256>>}|T]);
-unfold(Root, [{Index, X}|R], T, CFG) %stem case
+unfold(Root, [{Index, X}|R], T) %stem case
   when (is_binary(X) and (size(X) == (32*4)))
    ->
     <<H:256>> = stem_verkle:hash_point(X),
-    unfold(X, R, [{Root, Index, <<H:256>>}|T], CFG);
-unfold(Root, [H|J], T, CFG) ->
-    unfold(Root, H, T, CFG)
-        ++ unfold(Root, J, [], CFG);
-unfold(_, [], _, _) -> [];
-unfold(_, {0, X}, _, _) -> 
+    unfold(X, R, [{Root, Index, <<H:256>>}|T]);
+unfold(Root, [H|J], T) ->
+    unfold(Root, H, T)
+        ++ unfold(Root, J, []);
+unfold(_, [], _) -> [];
+unfold(_, {0, X}, _) -> 
     io:fwrite({size(X), X}).
 
 
 
 test() ->
-    CFG = tree:cfg(tree01),
-    Leaves = [leaf_verkle:new(999999872, <<0,0>>, 0, CFG),
-              leaf_verkle:new(999999744, <<0,0>>, 0, CFG)],
+    Leaves = [leaf_verkle:new(999999872, <<0,0>>),
+              leaf_verkle:new(999999744, <<0,0>>)],
     Leaves2 = store_verkle:clump_by_path(
                 0, Leaves),
     %todo. each should have the same number of leaves.

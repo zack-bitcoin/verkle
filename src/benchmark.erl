@@ -32,7 +32,6 @@ doit(1) ->
     
 
     verkle_app:start(normal, []),
-    CFG = tree:cfg(?ID),
     Loc = 2,
     Times = 5000,
     %Times = 3,
@@ -48,7 +47,7 @@ doit(1) ->
                   %Key0 = 1234567*N,
                   <<Key0:256>> = 
                       crypto:strong_rand_bytes(32),
-                  leaf_verkle:new(Key0, <<N:16>>, 0, CFG)
+                  leaf_verkle:new(Key0, <<N:16>>)
                       %#leaf{key = Key0, value = <<N:16>>}%random version
                   %#leaf{key = N, value = <<N:16>>}%sequential version
           %end, Many),
@@ -63,16 +62,16 @@ doit(1) ->
     io:fwrite("load up the batch database\n"),
     T1 = erlang:timestamp(),
     {NewLoc, stem, _} = 
-        store_verkle:batch(Leaves, Loc, CFG),
+        store_verkle:batch(Leaves, Loc),
     T2 = erlang:timestamp(),
     io:fwrite("make proof\n"),
     Proof = 
-        get_verkle:batch(Many, NewLoc, CFG),
+        get_verkle:batch(Many, NewLoc),
     T3 = erlang:timestamp(),
     io:fwrite("verify proof\n"),
-    Root = stem_verkle:root(stem_verkle:get(NewLoc, CFG)),
+    Root = stem_verkle:root(stem_verkle:get(NewLoc)),
     {true, Leaves2} = 
-        verify_verkle:proof(Root, Proof, CFG),
+        verify_verkle:proof(Root, Proof),
     T4 = erlang:timestamp(),
     true = (length(Leaves2) == length(Many)),
     io:fwrite("measured in millionths of a second. 6 decimals. \n"),
@@ -90,7 +89,6 @@ doit(2) ->
 %{{load_tree,53 830 000},
 % {make_proof,24 460 000},
 % {verify,4 350 000}}
-    CFG = tree:cfg(?ID),
     Loc = 1,
     Times = 20000,
     %Times = 100,
@@ -107,7 +105,7 @@ doit(2) ->
                   <<Key0:256>> = 
                       crypto:strong_rand_bytes(32),
                   %#leaf{key = Key0, value = <<N:16>>}%random version
-                  leaf_verkle:new(N, <<N:16>>, 0, CFG)
+                  leaf_verkle:new(N, <<N:16>>)
                       %#leaf{key = N, value = <<N:16>>}%sequential version
           %end, Many),
           end, range(1, Times+1)),
@@ -122,19 +120,19 @@ doit(2) ->
     io:fwrite("load up the batch database\n"),
     T1 = erlang:timestamp(),
     {NewLoc, stem, _} = 
-        store_verkle:batch(Leaves, Loc, CFG),
+        store_verkle:batch(Leaves, Loc),
     T2 = erlang:timestamp(),
     io:fwrite("make proof\n"),
     Proof = 
-        get_verkle:batch(Many, NewLoc, CFG),
+        get_verkle:batch(Many, NewLoc),
     T3 = erlang:timestamp(),
     io:fwrite("verify proof\n"),
-    Root = stem_verkle:root(stem_verkle:get(NewLoc, CFG)),
+    Root = stem_verkle:root(stem_verkle:get(NewLoc)),
 %    io:fwrite({NewLoc, 
-%               stem_verkle:get(NewLoc, CFG),
+%               stem_verkle:get(NewLoc),
 %               base64:encode(Root)}),
     {true, Leaves2} = 
-        verify_verkle:proof(Root, Proof, CFG),
+        verify_verkle:proof(Root, Proof),
     T4 = erlang:timestamp(),
     true = (length(Leaves2) == length(Many)),
     io:fwrite("measured in millionths of a second. 6 decimals. \n"),

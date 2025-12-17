@@ -1,21 +1,21 @@
 %The purpose of this file is to define stems as a data structure in ram, and give some simple functions to operate on them.
 
 -module(stem_verkle).
--export([test/1,get/2,put/2,put/3,type/2,
+-export([test/1,get/1,put/2,put/1,type/2,
          hash/1,hash_point/1,hash_points/1,
          pointers/1,
 	 types/1,hashes/1,pointer/2,%new/5,%add/5,
-	 new_empty/1,%recover/6, 
-         empty_hashes/1, 
+	 new_empty/0,%recover/6, 
+         empty_hashes/0, 
 	 update_pointers/2, empty_tuple/0,
 	 make/3, make/2, 
          %update/3, 
-         onify2/2,
+         onify2/1,
 %	 put_batch/2, 
          serialize/2,
          root/1, check_root_integrity/1,
 %         delete/2,
-	 empty_trie/2]).
+	 empty_trie/1]).
 %-include("constants.hrl").
 %-export_type([stem/0,types/0,empty_t/0,stem_t/0,leaf_t/0,pointers/0,empty_p/0,hashes/0,hash/0,empty_hash/0,stem_p/0,nibble/0]).
 -define(sanity, false).
@@ -37,33 +37,33 @@ empty_tuple(Y) ->
 many(_, 0) -> [];
 many(X, N) when (N > 0) -> 
     [X|many(X, N-1)].
-new_empty(CFG) -> 
-    #stem{hashes = empty_hashes(CFG),
+new_empty() -> 
+    #stem{hashes = empty_hashes(),
          types = empty_tuple(),
          pointers = empty_tuple(0),
          root = ed:extended_zero()}.
 %unused_recover(M, T, P, H, Hashes, CFG) ->
-%    Types = onify2(Hashes, CFG),
-    %Types = list_to_tuple(onify(tuple_to_list(Hashes), CFG)),
+%    Types = onify2(Hashes),
+    %Types = list_to_tuple(onify(tuple_to_list(Hashes))),
 %    S = #stem{hashes = Hashes, types = Types},
 %    unused_add(S, M, T, P, H).
-onify2(H, CFG) ->
-    list_to_tuple(onify(tuple_to_list(H), CFG)).
-onify([], _) -> [];
-onify([H|T], CFG) ->
-    HS = cfg_verkle:hash_size(CFG)*8,
-    <<X:HS>> = H,
+onify2(H) ->
+    list_to_tuple(onify(tuple_to_list(H))).
+onify([]) -> [];
+onify([H|T]) ->
+    %HS = cfg_verkle:hash_size(CFG)*8,
+    <<X:256>> = H,
     case X of
-	0 -> [0|onify(T, CFG)];
-	_ -> [1|onify(T, CFG)]
+	0 -> [0|onify(T)];
+	_ -> [1|onify(T)]
     end.
 	    
 %onify([<<0:_>>|T]) -> [0|onify(T)];
 %onify([_|T]) -> [1|onify(T)].
 make(Hashes, ID) ->
-    CFG = tree:cfg(ID),
-    Types = onify2(Hashes, CFG),
-    Pointers = empty_tuple({0,0}),
+    Types = onify2(Hashes),
+    %Pointers = empty_tuple({0,0}),
+    Pointers = empty_tuple(),
     make(Types, Pointers, Hashes).
 make(Types, Pointers, Hashes) ->
     #stem{types = Types,
@@ -72,7 +72,7 @@ make(Types, Pointers, Hashes) ->
 %unused_new(N, T, P, H, CFG) ->
     %N is the nibble being pointed to.
     %T is the type, P is the pointer, H is the Hash
-%    S = new_empty(CFG),
+%    S = new_empty(),
 %    unused_add(S, N, T, P, H).
 pointers(R) -> R#stem.pointers.
 update_pointers(Stem, NP) ->
@@ -85,7 +85,7 @@ pointer(N, R) ->
 type(N, R) ->
     T = types(R),
     element(N, T).
-serialize(S, CompressedRoot, _CFG) ->
+serialize(S, CompressedRoot) ->
     if
         ?sanity ->
             check_root_integrity(S);
@@ -103,7 +103,7 @@ serialize(S, CompressedRoot, _CFG) ->
                    tuple_to_list(T), 
                    []),
     <<R1:512, X/binary>>.
-serialize(S, _CFG) ->
+serialize(S) ->
     if
         ?sanity ->
             %check_root_integrity(S);
@@ -140,7 +140,7 @@ serialize2([P|PT], [H|HT], [T|TT], R) ->
     N = <<T, P:48, H/binary>>,
     serialize2(PT, HT, TT, [N|R]).
 
-deserialize(<<R1:512, B/binary>>, _CFG) -> 
+deserialize(<<R1:512, B/binary>>) -> 
     case ed:is_on_curve(<<R1:512>>) of
         true -> ok;
         false -> 
@@ -171,7 +171,7 @@ deserialize2(_, _, _, B) ->
     io:fwrite(size(B)),
     1=2.
 
-empty_hashes(_CFG) ->
+empty_hashes() ->
     Y = many(<<0:256>>, ?nwidth),
     list_to_tuple(Y).
 
@@ -212,20 +212,21 @@ check_root_integrity(Stem) ->
             erlang:error(root_lacks_integrity);
         true -> ok
     end.
-put(Stem, CompressedRoot, CFG) ->
+put(Stem, CompressedRoot) ->
     %compressed root is in affine format. 64 bytes.
-    S = serialize(Stem, CompressedRoot, CFG),
+    S = serialize(Stem, CompressedRoot),
     tree2:store(S).
-put(Stem, CFG) ->
-    S = serialize(Stem, CFG),
+put(Stem) ->
+    S = serialize(Stem),
     tree2:store(S).
-get(Pointer, CFG) -> 
+get(Pointer) -> 
     true = is_integer(Pointer),
     {ok, S} = tree2:read(Pointer),
-    deserialize(S, CFG).
-empty_trie(Root, CFG) ->
-    Stem = get(Root, CFG),
-    update_pointers(Stem, empty_tuple({0,0})).
+    deserialize(S).
+empty_trie(Root) ->
+    Stem = stem_verkle:get(Root),
+    %update_pointers(Stem, empty_tuple({0,0})).
+    update_pointers(Stem, empty_tuple()).
 equal(S, T) ->
     [R2, R3] = ed:normalize(
                  [S#stem.root, T#stem.root]),
@@ -243,12 +244,11 @@ test(1) ->
     P = list_to_tuple(many(5, ?nwidth)),
     T = list_to_tuple(many(1, ?nwidth)),
     io:fwrite("before start\n"),
-    CFG = tree:cfg(tree01),
 %596 total, average 37.25
-    H = empty_hashes(CFG),
+    H = empty_hashes(),
     S = #stem{types = T, pointers = P, hashes = H},
-    S2 = serialize(S, CFG),
-    Sb = deserialize(S2, CFG),
+    S2 = serialize(S),
+    Sb = deserialize(S2),
     %io:fwrite({size(?p)}),%9
     <<A:(8*128)>> = S#stem.root,
     <<B:(8*128)>> = Sb#stem.root,
@@ -261,8 +261,8 @@ test(1) ->
     %Stem = unused_add(S, 3, 1, 5, Hash),
     %hash(Stem),
     %testing reading and writing to the hard drive.
-    Pointer = stem_verkle:put(S, CFG),
-    Stem2b = get(Pointer, CFG),
+    Pointer = stem_verkle:put(S),
+    Stem2b = stem_verkle:get(Pointer),
     io:fwrite("next equal\n"),
     true = equal(Stem2b, S),
     success;
