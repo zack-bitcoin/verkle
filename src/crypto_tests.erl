@@ -1,4 +1,4 @@
--module(unit_tests).
+-module(crypto_tests).
 -export([doit/1]).
 
 doit(0) ->

@@ -5,8 +5,8 @@
 -include("constants.hrl").
 
 test() ->
+    success = crypto_tests:doit(0),
     V = [
-         %23,
          1,
          2,
          3,
@@ -17,10 +17,6 @@ test() ->
 	 8
         ],
     test_helper(V).
-%test(N) ->
-    %CFG = tree:cfg(?ID),
-    %test_helper([N], CFG).
-%    test(N).
 test_helper([]) -> success;
 test_helper([N|T]) -> 
     io:fwrite("test "),
@@ -567,8 +563,8 @@ test(11) ->
     %Loc = cfg_verkle:empty(tree:cfg(?ID)),
     Loc = tree2:empty(),
     Prove = 2,
-    Leaves = [leaf_verkle:new(1, <<1:16>>, <<0>>),
-	      leaf_verkle:new(2, <<2:24>>, <<0>>)],
+    Leaves = [leaf_verkle:new(<<1:256>>, <<1:16>>, <<0>>),
+	      leaf_verkle:new(<<2:256>>, <<2:24>>, <<0>>)],
     Many = lists:map(fun(Leaf) -> 
                              leaf_verkle:raw_key(Leaf) 
                      end, Leaves),
@@ -584,6 +580,7 @@ test(11) ->
         verify_verkle:proof(Proof),
     {true, Leaves2, _} = 
         verify_verkle:proof(FastProof),
+    io:fwrite({Leaves, Leaves2}),
     success.
     
 

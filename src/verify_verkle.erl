@@ -463,23 +463,6 @@ proof({Tree0, CommitG0, Open0}) ->
 
     %[{1, p1}, [{0, L1},{1, L2}], [{3, p2},{0,L3}]]
 
-leaves({Y, X = 0}) -> [{Y, X}];%unused
-leaves(X = {_, B}) when is_binary(B) -> [];
-%leaves({_, X = {I, B, M}}) 
-leaves({_, X = {I, B}}) 
-  when is_binary(B) and 
-       is_binary(I) and 
-%       is_binary(M) and
-       (size(I) == 32) -> 
-    %1=2,
-    [X];
-leaves([H|T]) ->
-    leaves(H) ++ leaves(T);
-leaves([]) ->  [];
-leaves(X) ->  
-    %leaf getter error.
-    io:fwrite({X}).
-
 leaves2([], _SubPath, _) -> [];
 leaves2([{N, B}|T], SubPath, D) 
   when is_binary(B) ->
@@ -495,9 +478,6 @@ leaves2([{N, 0}], SubPath, D) ->
 leaves2(X, SubPath, D) -> 
     io:fwrite({X, SubPath, D}),
     1=2.
-
-
-    
 
     
               

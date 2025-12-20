@@ -100,70 +100,56 @@ The test database is `trie01`.
 Using the software
 ============
 
-To create a new database.
-
-`verkle_sup:start_link(KeyLength, Size, ID, Amount, Meta, Mode, Location).`
 
 The verkle tree is a database that stores key-value pairs. Keylength is the number of bytes in a key. Size is the number of bytes in a value. ID is the id of this database, so you can have more than one of these databases at the same time.
 
-Amount is only used in RAM mode. in RAM mode we need to allocate 1 bit for each thing that can be stored, so "Amount" is the maximum number of things that can be stored.
-
-Meta is how many extra bytes you can store with each key-value pair. These extra bytes are meta data that doesn't impact the verkle root of the tree.
-
-Mode needs to be either `ram` or `hd`. This is where you can choose if you want the database to be stored in ram or on the hard drive.
-
-Location is the file where you want to store the database. The ram version also gets stored in a file when you turn off the software. So the database is still there when you turn it on again.
-
-For example: `verkle_sup:start_link(32, 32, trie02, 1000000, 0, hd, "").`
+Each element stored in the verkle tree can also store some meta data that is not a part of the consensus state.
 
 
 To store data in your database.
 You want to store some key-value pairs. First, each key-value pair needs to be packaged into a leaf.
 
-`Leaf = leaf:new(Key, Value, Meta, CFG).`
+`Leaf = leaf_verkle:new(Key, Value, Meta).`
 
 Key, Value, and Meta are binaries.
-CFG is configuration data for your database. You can find your CFG like this: `CFG = trie:cfg(ID).` where ID is the id of the database you want to use.
 
-for example: `Leaf = leaf:new(<<1:256>>, <<2:256>>, 0, trie:cfg(trie02)).`
+for example: `Leaf = leaf_verkle:new(<<1:256>>, <<2:256>>, 0).`
 
-Once you have a list of leaves, you can store them in the database like this:
+Once you have a list of leaves, you can store them in the database like the following:
 
-`{Loc2, _, _} = store:batch(Leaves, Loc, CFG).`
+`{Loc2, _, _} = store_verkle:batch([Leaf], 1).`
 
 Loc is the pointer to your current database. The number 1 is a pointer to your database when it is empty. Loc2 is a pointer to your database once it is filled with data.
 
-for example: `{Loc2, _, _} = store:batch([Leaf], 1, trie:cfg(trie02)).`
 
 Now lets make a proof of some of the data from the database.
 
-`SmallProof = get:batch(Keys, Loc2, CFG, small).`
+`SmallProof = get_verkle:batch([<<1:256>>], Loc2, small).`
 
-Where Keys is a list of the keys of the leaves that you want to prove.
+Where Keys is a list of the keys of the leaves that you want to prove. This is a `small` proof, that means we use the bullet proof technique to compress the final size of the proof. This is what block producers do to help keep the size of blocks small. You can also make `fast` proofs, that are a little bigger, but much faster to create.
 
-for example: `get:batch([<<1:256>>], Loc2, CFG, small).`
+if you want to make the fast version of the proof:
 
-And if you want to make the fast version of the proof:
-
-`FastProof = get:batch(Keys, Loc2, CFG, fast).`
+`FastProof = get_verkle:batch([<<1:256>>], Loc2, fast).`
 
 Now lets verify the proofs.
 
-`{true, Leaves, _} = verify:proof(Proof, CFG).`
+`{true, Leaves, _} = verify:proof(SmallProof, CFG).`
+`{true, Leaves, _} = verify:proof(FastProof, CFG).`
 
-When you verify the proof, it returns a list of all the leaves that this proof proves. The same format works for both small proofs and fast proofs.
+When you verify the proof, it returns a list of all the leaves that this proof proves. 
 
 
 Tests that the software works.
 ============
 
-To do all integration tests: `test_trie:test().`
+To do integration tests: `test_verkle:test().`
 
-If you know which integration test you want to do: `test_trie:test(3).`
+There is a benchmark tool: `benchmark:doit().`
 
-replace the `3` with the number of the test you wan to do.
+The cryptography stuff is tested with: `crypto_tests:doit(0).`
 
-Many modules have their own unit tests. They are located at the bottom of the page in the same module that they are testing. You can run all of the unit tests like this: `unit_tests:doit(0).`
+Many modules have their own unit tests. They are located at the bottom of the page in the same module that they are testing.
 
 Speed comparison.
 ===========

@@ -6,16 +6,7 @@
 %% Application callbacks
 -export([start/2, stop/1]).
 
-%start(_StartType, _StartArgs) ->
 start(normal, []) ->
-    Size = 2,
-    %Max = 20000000000,
-    %KeyLength = 5,%in bytes
-    KeyLength = ?nwidth div ?nindex,%in bytes
-    Amount = 1000000,
-    %Mode = ram,
-    Mode = hd,
-    Meta = 1,
     verkle_sup:start_link().
 
 stop(_State) ->
