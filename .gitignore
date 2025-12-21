@@ -23,3 +23,6 @@ rebar3.crashdump
 rebar.lock
 database
 fprof.trace
+tree01
+trie01
+*top

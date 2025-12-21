@@ -11,12 +11,12 @@ start_link(Name) ->
     %ID = tree01,
     supervisor:start_link({global, Name}, ?MODULE, [Name]).
 stop(ID) -> 
-    supervisor:terminate_child({global, ID}, ids_verkle:main()),
-    dump_sup:stop(ids_verkle:stem()),
-    supervisor:terminate_child({global, ID}, ids_verkle:stem()),
-    dump_sup:stop(ids_verkle:leaf()),
-    supervisor:terminate_child({global, ID}, ids_verkle:leaf()),
-    halt().
+    supervisor:terminate_child({global, ID}, ids_verkle:main(ID)),
+    %dump_sup:stop(ids_verkle:stem(ID)),
+    %supervisor:terminate_child({global, ID}, ids_verkle:stem(ID)),
+    %dump_sup:stop(ids_verkle:leaf()),
+    %supervisor:terminate_child({global, ID}, ids_verkle:leaf(ID)),
+    ok.
 
 init([Name]) ->
     A5 = ids_verkle:main(Name),

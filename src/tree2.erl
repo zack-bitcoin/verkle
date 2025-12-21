@@ -12,6 +12,7 @@ init(Name) ->
     process_flag(trap_exit, true),
     {ok, F} = file:open(Name, [write, read, raw, binary]),
     Top = read_top_from_file(Name),
+    io:fwrite("tree2 read top as: " ++ integer_to_list(Top) ++ "\n"),
     Top2 = if
 	       (Top == 1) -> 
 		   Bytes = stem_verkle:serialize(stem_verkle:new_empty()),
@@ -31,7 +32,7 @@ start_link(Name) -> %keylength, or M is the size outputed by hash:doit(_).
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 terminate(_, D) -> 
     file:close(D#d.file),
-    file:write(top_file(D#d.name), term_to_binary(D#d.top)),
+    file:write_file(top_file(D#d.name), term_to_binary(D#d.top)),
     io:format("tree2 died!"), ok.
 handle_info(_, X) -> {noreply, X}.
 handle_cast(reload, X) -> 
