@@ -100,6 +100,9 @@ The test database is `trie01`.
 Using the software
 ============
 
+To create a new database.
+
+`verkle_sup:start_link(ID).`
 
 The verkle tree is a database that stores key-value pairs. Keylength is the number of bytes in a key. Size is the number of bytes in a value. ID is the id of this database, so you can have more than one of these databases at the same time.
 
@@ -117,20 +120,20 @@ for example: `Leaf = leaf_verkle:new(<<1:256>>, <<2:256>>, 0).`
 
 Once you have a list of leaves, you can store them in the database like the following:
 
-`{Loc2, _, _} = store_verkle:batch([Leaf], 1).`
+`{Loc2, _, _} = store_verkle:batch([Leaf], 1, ID).`
 
 Loc is the pointer to your current database. The number 1 is a pointer to your database when it is empty. Loc2 is a pointer to your database once it is filled with data.
 
 
 Now lets make a proof of some of the data from the database.
 
-`SmallProof = get_verkle:batch([<<1:256>>], Loc2, small).`
+`SmallProof = get_verkle:batch([<<1:256>>], Loc2, ID, small).`
 
 Where Keys is a list of the keys of the leaves that you want to prove. This is a `small` proof, that means we use the bullet proof technique to compress the final size of the proof. This is what block producers do to help keep the size of blocks small. You can also make `fast` proofs, that are a little bigger, but much faster to create.
 
 if you want to make the fast version of the proof:
 
-`FastProof = get_verkle:batch([<<1:256>>], Loc2, fast).`
+`FastProof = get_verkle:batch([<<1:256>>], Loc2, ID, fast).`
 
 Now lets verify the proofs.
 

@@ -1,6 +1,6 @@
 -module(leaf_verkle).
 -export([new/3, new/2,
-         key/1, value/1, meta/1, path/2, path_maker/1, hash/1, put/1, get/1, 
+         key/1, value/1, meta/1, path/2, path_maker/1, hash/1, put/2, get/2, 
 	 serialize/1, deserialize/1,
          raw_key/1,
 	 test/1]).
@@ -74,10 +74,10 @@ meta(X) -> X#leaf.meta.
 %serialize_leaves([], _) -> [];
 %serialize_leaves([{N, L}| T], CFG) ->
 %    [{N, serialize(L)}|serialize_leaves(T, CFG)].
-put(Leaf) ->
-    tree2:store(serialize(Leaf)).
-get(Pointer) ->
-    {ok, L} = tree2:read(Pointer),
+put(Leaf, ID) ->
+    tree2:store(serialize(Leaf), ID).
+get(Pointer, ID) ->
+    {ok, L} = tree2:read(Pointer, ID),
     deserialize(L).
 hash(L) ->   
     %HS = cfg_verkle:hash_size(CFG)*8,

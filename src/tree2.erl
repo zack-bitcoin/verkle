@@ -1,8 +1,8 @@
 -module(tree2).
 -behaviour(gen_server).
 -export([start_link/1,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2, 
-         read/1, store/1, test/0, root_hash/1, empty/0,
-         reset/0, quick_save/0, reload/0]).
+         read/2, store/2, test/0, root_hash/1, empty/0,
+         reset/1, quick_save/1, reload/1]).
 
 %Stores variables sized bytes onto the hard drive. returns the position in the file where the data is stored. 
 
@@ -24,8 +24,10 @@ init(Name) ->
 		   Top
 	   end,
     {ok, #d{name = Name, file = F, top = Top2}}.
-start_link([Name]) -> %keylength, or M is the size outputed by hash:doit(_). 
-    gen_server:start_link({local, ?MODULE}, ?MODULE, Name, []).
+start_link(Name) -> %keylength, or M is the size outputed by hash:doit(_). 
+    %gen_server:start_link({local, ?MODULE}, ?MODULE, Name, []).
+    A5 = ids_verkle:main(Name),
+    gen_server:start_link({global, A5}, ?MODULE, Name, []).
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 terminate(_, D) -> 
     file:close(D#d.file),
@@ -65,9 +67,10 @@ handle_call(quick_save, _From, X) ->
 handle_call(_, _From, X) -> {reply, X, X}.
 
 top_file(Name) ->
-    Name ++ "top".
+    atom_to_list(Name) ++ "top".
 read_top_from_file(Name) ->
-    case file:read_file(Name++"top") of
+    TF = top_file(Name),
+    case file:read_file(TF) of
         {ok, <<>>} -> 1;
         {ok, Out} -> binary_to_term(Out);
         {error, enoent} -> 
@@ -83,27 +86,34 @@ root_hash(Pointer) ->
     S = stem_verkle:get(Pointer),
     stem_verkle:hash(S).
    
-store(Bytes) -> 
-    gen_server:call(?MODULE, {store, Bytes}).
+store(Bytes, ID) -> 
+    %gen_server:call(?MODULE, {store, Bytes}).
+    gen_server:call({global, ids_verkle:main_id(ID)}, {store, Bytes}).
 
-read(P) ->
-    gen_server:call(?MODULE, {read, P}).
+read(P, ID) ->
+    %gen_server:call(?MODULE, {read, P}).
+    gen_server:call({global, ids_verkle:main_id(ID)}, {read, P}).
 
-reset() ->
-    gen_server:cast(?MODULE, reset).
+reset(ID) ->
+    %gen_server:cast(?MODULE, reset).
+    gen_server:cast({global, ids_verkle:main_id(ID)}, reset).
 
-quick_save() ->
-    gen_server:call(?MODULE, quick_save).
+quick_save(ID) ->
+    %gen_server:call(?MODULE, quick_save).
+    gen_server:call({global, ids_verkle:main_id(ID)}, quick_save).
 
-reload() ->
-    gen_server:call(?MODULE, reload).
+reload(ID) ->
+    %gen_server:call(?MODULE, reload).
+    gen_server:call({global, ids_verkle:main_id(ID)}, reload).
 
 empty() -> 1.
 
 
+
 test() ->
-    reset(),
+    ID = tree01,
+    reset(ID),
     D = <<"Test Data">>,
-    P = store(D),
-    {ok, D} = read(P),
+    P = store(D, ID),
+    {ok, D} = read(P, ID),
     success.

@@ -1,6 +1,6 @@
 -module(get_verkle).
 -export([
-batch/3, batch/2, 
+batch/3, batch/4, 
 paths2tree/1,
 index2domain2/1,
 %get/3, same_end/3, 
@@ -9,7 +9,7 @@ keys2paths/1,
 withdraw_points/1, withdraw_points2/1,
 compressed_points_list/1,
 serialize_proof/1, deserialize_proof/1,
-unverified/2]).
+unverified/3]).
 -include("constants.hrl").
 
 -define(pipe, false).
@@ -32,8 +32,8 @@ remove_stems_from_straight_branches(L) ->
     lists:map(fun(X) -> lists:last(hd(X)) end, L).
 
 %returns the consensus state and meta values for each leaf. Does not create any proof.
-unverified(Keys, Root) ->
-    RootStem0 = stem_verkle:get(Root),
+unverified(Keys, Root, ID) ->
+    RootStem0 = stem_verkle:get(Root, ID),
     RootStem = RootStem0#stem{
                  hashes = 
                        tuple_to_list(
@@ -43,7 +43,7 @@ unverified(Keys, Root) ->
                        Paths0),
     Tree3 = lists:map(fun(P) ->
                               Tree = paths2tree([P]),
-                              Tree2 = points_values(Tree, RootStem)
+                              Tree2 = points_values(Tree, RootStem, ID)
                       end, Paths),
     Leaves0 = remove_stems_from_straight_branches(Tree3),
     %true = (length(Leaves0) == length(Keys)),
@@ -69,12 +69,12 @@ depth_order(Keys) ->
     
 
 %returns a verkle proof, and a dictionary of meta data from each leaf.
-batch(Keys, Root) ->
-    batch(Keys, Root, small).
+batch(Keys, Root, ID) ->
+    batch(Keys, Root, ID, small).
 
-batch(Keys, Root, Type) ->
+batch(Keys, Root, ID, Type) ->
     true = ((Type == small) or (Type == fast)),
-    RootStem0 = stem_verkle:get(Root),
+    RootStem0 = stem_verkle:get(Root, ID),
     RootStem = RootStem0#stem{
                  hashes = 
                        tuple_to_list(
@@ -93,7 +93,7 @@ batch(Keys, Root, Type) ->
     %list of lists means or. list of integers means and.
     %io:fwrite("get lookup stems and leaves\n"),% 25%
     benchmark:now(),
-    Tree2 = points_values(Tree, RootStem),
+    Tree2 = points_values(Tree, RootStem, ID),
     %io:fwrite({RootStem}),
 
     %obtains the stems and leaves by reading from the database.
@@ -627,7 +627,7 @@ starts_same_split2(_, Rest, Sames) ->
 
 
 %we are looking up the elliptic points from the database to incude with the proof. 
-points_values([<<Loc:?nindex>>|R], Root) ->
+points_values([<<Loc:?nindex>>|R], Root, ID) ->
     % Root is a #stem{}
     Type = stem_verkle:type(Loc+1, Root),
     P = stem_verkle:pointer(Loc+1, Root),
@@ -638,24 +638,24 @@ points_values([<<Loc:?nindex>>|R], Root) ->
                 [V, 0];
         1 -> %stem
                 %io:fwrite("point values stem\n"),
-                S0 = stem_verkle:get(P),
+                S0 = stem_verkle:get(P, ID),
                 S = S0#stem{
                       hashes = tuple_to_list(
                                  S0#stem.hashes)
                      },
-                [V|points_values(R, S)];
+                [V|points_values(R, S, ID)];
                 %V;
         2 -> %leaf
                 %io:fwrite("point values leaf\n"),
-                L = leaf_verkle:get(P),
+                L = leaf_verkle:get(P, ID),
                 [V, L]
     end,
     E;
-points_values([H|T], Root) ->
+points_values([H|T], Root, ID) ->
     %io:fwrite("point values branching \n"),
-    [points_values(H, Root)|
-     points_values(T, Root)];
-points_values([], _) -> [].
+    [points_values(H, Root, ID)|
+     points_values(T, Root, ID)];
+points_values([], _, _) -> [].
 
 is_in(X, [X|_]) -> true;
 is_in(_, []) -> false;

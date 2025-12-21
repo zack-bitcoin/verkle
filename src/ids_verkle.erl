@@ -1,8 +1,12 @@
 -module(ids_verkle).
--export([main_id/1, leaf/0, main/0, stem/0, parameters/0]).
+-export([main_id/1, leaf/1, main/1, stem/1, parameters/1]).
 
-leaf() -> verkle_leafs.
-stem() -> verkle_stems.
-main() -> main_id(ok).
-main_id(_ID) -> verkle_main.
-parameters() -> verkle_parameters.
+leaf(ID) -> 
+    list_to_atom(atom_to_list(ID) ++ "_verkle_leafs").
+stem(ID) -> 
+    list_to_atom(atom_to_list(ID) ++ "_verkle_stems").
+main(ID) -> main_id(ID).
+main_id(ID) -> 
+    list_to_atom(atom_to_list(ID) ++ "_verkle_main").
+parameters(ID) ->
+    list_to_atom(atom_to_list(ID) ++ "_verkle_parameters").

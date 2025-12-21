@@ -1,7 +1,7 @@
 %The purpose of this file is to define stems as a data structure in ram, and give some simple functions to operate on them.
 
 -module(stem_verkle).
--export([test/1,get/1,put/2,put/1,type/2,
+-export([test/1,get/2,put/2,put/3,type/2,
          hash/1,hash_point/1,hash_points/1,
          pointers/1,
 	 types/1,hashes/1,pointer/2,%new/5,%add/5,
@@ -19,6 +19,7 @@
 	 empty_trie/1]).
 %-include("constants.hrl").
 %-export_type([stem/0,types/0,empty_t/0,stem_t/0,leaf_t/0,pointers/0,empty_p/0,hashes/0,hash/0,empty_hash/0,stem_p/0,nibble/0]).
+-define(ID, tree01).
 -define(sanity, false).
 -record(stem, { root = ed:extended_zero()
                 , types
@@ -213,16 +214,16 @@ check_root_integrity(Stem) ->
             erlang:error(root_lacks_integrity);
         true -> ok
     end.
-put(Stem, CompressedRoot) ->
+put(Stem, ID, CompressedRoot) ->
     %compressed root is in affine format. 64 bytes.
     S = serialize(Stem, CompressedRoot),
-    tree2:store(S).
-put(Stem) ->
+    tree2:store(S, ID).
+put(Stem, ID) ->
     S = serialize(Stem),
-    tree2:store(S).
-get(Pointer) -> 
+    tree2:store(S, ID).
+get(Pointer, ID) -> 
     true = is_integer(Pointer),
-    {ok, S} = tree2:read(Pointer),
+    {ok, S} = tree2:read(Pointer, ID),
     deserialize(S).
 empty_trie(Root) ->
     Stem = stem_verkle:get(Root),
@@ -262,8 +263,8 @@ test(1) ->
     %Stem = unused_add(S, 3, 1, 5, Hash),
     %hash(Stem),
     %testing reading and writing to the hard drive.
-    Pointer = stem_verkle:put(S),
-    Stem2b = stem_verkle:get(Pointer),
+    Pointer = stem_verkle:put(S, ?ID),
+    Stem2b = stem_verkle:get(Pointer, ?ID),
     io:fwrite("next equal\n"),
     true = equal(Stem2b, S),
     success;

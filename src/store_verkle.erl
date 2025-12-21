@@ -1,16 +1,16 @@
 -module(store_verkle).
--export([batch/2,
+-export([batch/3,
          test/1,
          leaf_hash/1,
          clump_by_path/2,
-         verified/2
+         verified/3
         ]).
 -include("constants.hrl").
 -define(sanity, false).
 -define(stem_size, 16704).
 %-define(stem_size, 11328).
 
-batch(Leaves0, RP) ->%returns {location, stem/leaf, #stem{}/#leaf{}}
+batch(Leaves0, RP, ID) ->%returns {location, stem/leaf, #stem{}/#leaf{}}
     %put them in an ordered list.
     %io:fwrite("store sorting 0\n"),
     % 2%
@@ -18,30 +18,30 @@ batch(Leaves0, RP) ->%returns {location, stem/leaf, #stem{}/#leaf{}}
     %io:fwrite("store parameters 1\n"),
     MEP = parameters:multi_exp(),
     %io:fwrite("store storing 1\n"),
-    batch(Leaves, RP, stem, 0, MEP).
+    batch(Leaves, RP, stem, 0, MEP, ID).
 
-batch([], 0, _, _, _) ->
+batch([], 0, _, _, _, _) ->
     %type 0 is empty
     {0, 0, empty};
-batch([], P, leaf, _, _) ->
+batch([], P, leaf, _, _, _) ->
     %don't read the leaf here, because we aren't changing it.
     {P, leaf, leaf_not_recorded};
-batch([], P, stem, _, _) ->
+batch([], P, stem, _, _, _) ->
     %don't read the stem here, because we aren't changing it.
     {P, stem, stem_not_recorded};
-batch([Leaf], 0, 0, _, _) ->
+batch([Leaf], 0, 0, _, _, ID) ->
     %io:fwrite("storing a leaf in a previously empty spot.\n"),
-    Loc = leaf_verkle:put(Leaf),
+    Loc = leaf_verkle:put(Leaf, ID),
     {Loc, leaf, Leaf};
-batch(Leaves0, 0, 0, Depth, MEP) ->
+batch(Leaves0, 0, 0, Depth, MEP, ID) ->
     %io:fwrite("storing multiple leaves in a previously empty spot.\n"),
     batch(Leaves0, 
           %{1, ?stem_size}, %1 is always an empty stem.
 	  1,%1 is always an empty stem
-          stem, Depth, MEP);
-batch([Leaf0], RP, leaf, Depth, MEP) ->
+          stem, Depth, MEP, ID);
+batch([Leaf0], RP, leaf, Depth, MEP, ID) ->
     %io:fwrite("storing a leaf where there is already a leaf.\n"),
-    RootLeaf = leaf_verkle:get(RP),
+    RootLeaf = leaf_verkle:get(RP, ID),
     RootKey = leaf_verkle:key(RootLeaf),
     Key2 = leaf_verkle:key(Leaf0),
     B = Key2 == RootKey,
@@ -52,16 +52,16 @@ batch([Leaf0], RP, leaf, Depth, MEP) ->
             %1=2,
             {RP, leaf, RootLeaf};
         B -> 
-            Loc = leaf_verkle:put(Leaf0),
+            Loc = leaf_verkle:put(Leaf0, ID),
             {Loc, leaf, Leaf0};
         true ->
             %batch([Leaf0, RootLeaf], {1, ?stem_size}, stem,
             batch([Leaf0, RootLeaf], 1, stem,
-                  Depth, MEP)
+                  Depth, MEP, ID)
     end;
-batch(Leaves0, RP, leaf, Depth, MEP) ->
+batch(Leaves0, RP, leaf, Depth, MEP, ID) ->
     %io:fwrite("storing leaves where there is already a leaf.\n"),
-    RootLeaf = leaf_verkle:get(RP),
+    RootLeaf = leaf_verkle:get(RP, ID),
     RootKey = leaf_verkle:key(RootLeaf),
     Keys = lists:map(fun(X) -> leaf_verkle:key(X) 
                      end, Leaves0),
@@ -72,8 +72,8 @@ batch(Leaves0, RP, leaf, Depth, MEP) ->
               end,
     %batch(Leaves2, {1, ?stem_size}, stem, 
     batch(Leaves2, 1, stem, 
-          Depth, MEP);
-batch(Leaves, RP, stem, Depth, MEP) ->
+          Depth, MEP, ID);
+batch(Leaves, RP, stem, Depth, MEP, ID) ->
     %cut the list into sub lists that get included in each sub-branch.
     % %6
     Leaves2 = clump_by_path(
@@ -83,7 +83,7 @@ batch(Leaves, RP, stem, Depth, MEP) ->
 %    {RP1, RP2} = RP,
 %    true = is_integer(RP1),
 %    true = is_integer(RP2),
-    RootStem = stem_verkle:get(RP),
+    RootStem = stem_verkle:get(RP, ID),
     #stem{
            hashes = Hashes,
            pointers = Pointers,
@@ -106,7 +106,7 @@ batch(Leaves, RP, stem, Depth, MEP) ->
                         end,
                    {P2, Type, Tree} = 
                        batch(Leaves3, P,
-                             T2, Depth+1, MEP),
+                             T2, Depth+1, MEP, ID),
                    H2 = hash_thing(%  3%
                           P2, Type, Tree, H),
                    Sub = fr:sub(H2, H),
@@ -151,15 +151,15 @@ batch(Leaves, RP, stem, Depth, MEP) ->
           types = list_to_tuple(Types2),
           root = NewRoot
          },
-    Loc = stem_verkle:put(NewStem, Affine), 
+    Loc = stem_verkle:put(NewStem, ID, Affine), 
     {Loc, stem, NewStem}.
 
 %after you verify that a verkle proof is correct, and you update that verkle proof with the new data, you can use this function to store the new data into the database.
-verified(Loc, ProofTree) ->
+verified(Loc, ProofTree, ID) ->
     %io:fwrite("verified start\n"),
-    RootStem = stem_verkle:get(Loc),
+    RootStem = stem_verkle:get(Loc, ID),
     
-    RootStem2 = verified2(tl(ProofTree), RootStem),
+    RootStem2 = verified2(tl(ProofTree), RootStem, ID),
     RootStem3 = 
         RootStem2#stem{root = hd(ProofTree)},
     if
@@ -167,41 +167,42 @@ verified(Loc, ProofTree) ->
             stem_verkle:check_root_integrity(RootStem3);
         true -> ok
     end,
-    Loc2 = stem_verkle:put(RootStem3),
+    Loc2 = stem_verkle:put(RootStem3, ID),
     Loc2.
     
 
 verified2([], %this is a lists in lists tree of the things that have changed in the consensus state. We are storing these changes.
-          Stem) -> %this is the current Stem stored on the hard drive. it has pointers to other stems or leaves
+          Stem, %this is the current Stem stored on the hard drive. it has pointers to other stems or leaves
+	  _) -> 
     %io:fwrite("verified2 finished\n"),
     %there is nothing left to change.
     Stem;
 %verified2([{N, 0}], Stem) -> 
 %    verified3(N, Stem, 0, 0, <<0:256>>);
-verified2([[{N, 0}]|T], Stem) -> 
+verified2([[{N, 0}]|T], Stem, ID) -> 
     %there is a spot that was deleted from the stem.
     %io:fwrite("verified2 delete a spot 0\n"),
     Stem2 = verified3(N, Stem, 0, 0, <<0:256>>),
-    verified2(T, Stem2);
-verified2([{N, 0}|T], Stem) -> 
+    verified2(T, Stem2, ID);
+verified2([{N, 0}|T], Stem, ID) -> 
     %there is a spot that was deleted from the stem.
     %io:fwrite("verified2 delete a spot 1\n"),
     Stem2 = verified3(N, Stem, 0, 0, <<0:256>>),
-    verified2(T, Stem2);
+    verified2(T, Stem2, ID);
 verified2([[{N, {Key, Value, Meta}}]|T], 
-          Stem) -> 
+          Stem, ID) -> 
     %a leaf was updated, so we need to store the new version.
     %io:fwrite("verified2 update a leaf\n"),
     %io:fwrite(integer_to_list(N)),
     %io:fwrite("\n"),
     Leaf = leaf_verkle:new(Key, Value, Meta),
-    Loc = leaf_verkle:put(Leaf),
+    Loc = leaf_verkle:put(Leaf, ID),
     Stem2 = verified3(
               N, Stem, 2, Loc, 
               leaf_hash(Leaf)),
-    verified2(T, Stem2);
+    verified2(T, Stem2, ID);
 verified2([[{N, {Key, Value}}]|T], 
-          Stem) -> 
+          Stem, ID) -> 
     %io:fwrite("verified2 leaf unchanged\n"),
     %a leaf was unchanged.
     %Leaf = leaf_verkle:new(Key, Value, Meta, CFG),
@@ -211,28 +212,28 @@ verified2([[{N, {Key, Value}}]|T],
     %          N, Stem, 2, Loc, 
     %          leaf_hash(Leaf, CFG)),
     %verified2(T, Stem2, CFG);
-    verified2(T, Stem);
-verified2([[{N, B = <<_:1024>>}|T1]|T2], Stem) ->
+    verified2(T, Stem, ID);
+verified2([[{N, B = <<_:1024>>}|T1]|T2], Stem, ID) ->
     Hash = stem_verkle:hash_point(B),
-    verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem);
-verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem) 
+    verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, ID);
+verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, ID) 
   when is_binary(B) -> 
     %io:fwrite("verified2 stem\n"),
     ChildStem = 
         case element(N+1, Stem#stem.types) of
             1 ->%so we need to add the T1 elements to the child stem at position N+1
                 %io:fwrite("adding elements to a cihld stem\n"),
-                ChildStem0 = verified2(T1, stem_verkle:get(element(N+1, Stem#stem.pointers))),
+                ChildStem0 = verified2(T1, stem_verkle:get(element(N+1, Stem#stem.pointers), ID), ID),
                 ChildStem0#stem{root = B};
             0 ->%so we are creating a new stem for the T1 elements in place of this empty spot at position N+1.
                 %io:fwrite("there was an empty spot, possibly creating a stem at that spot\n"),
                 S = stem_verkle:new_empty(),
-                ChildStem0 = verified2(T1, S),
+                ChildStem0 = verified2(T1, S, ID),
                 ChildStem0#stem{root = B};
             2 ->%there was a leaf at position N+1. we are creating a new stem, and we need to merge the list of T1 elements with that extra leaf, and store them all in the new stem.
                 %io:fwrite("there was a leaf, possibly creating a stem at that spot\n"),
                 S = stem_verkle:new_empty(),
-                S2 = verified2(T1, S),
+                S2 = verified2(T1, S, ID),
                 S2#stem{root = B}
         end,
     if
@@ -240,10 +241,10 @@ verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem)
             stem_verkle:check_root_integrity(ChildStem);
         true -> ok
     end,
-    Loc = stem_verkle:put(ChildStem),
+    Loc = stem_verkle:put(ChildStem, ID),
     false = (Hash == uncalculated),
     Stem2 = verified3(N, Stem, 1, Loc, Hash),
-    verified2(T2, Stem2).
+    verified2(T2, Stem2, ID).
 
 
 verified3(N, Stem, Type, Loc, Hash) ->
