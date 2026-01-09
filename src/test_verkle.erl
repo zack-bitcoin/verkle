@@ -579,7 +579,13 @@ test(11) ->
     {true, Leaves2, _} = 
         verify_verkle:proof(FastProof),
     io:fwrite({Leaves, Leaves2}),
-    success.
+    success;
+test(12) ->
+%<<197,21,80,246,39,74,0,118,112,184,174,239,10,210,210,
+%  245,114,89,7,228,8,149,100,126,249,17,130,235,66,...>>
+    Leaf= leaf_verkle:new(27, <<2:16>>, <<0>>),
+    leaf_verkle:hash(Leaf).
+
     
 
  
