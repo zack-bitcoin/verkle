@@ -1,17 +1,19 @@
 -module(tree2).
 -behaviour(gen_server).
--export([start_link/1,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2, 
+-export([start_link/2,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2, 
          read/2, store/2, test/0, root_hash/1, empty/0,
          reset/1, quick_save/1, reload/1]).
 
 %Stores variables sized bytes onto the hard drive. returns the position in the file where the data is stored. 
 
--record(d, {name, file, top}).
+-record(d, {name, location, top, file}).
 
-init(Name) ->
+init({Name, Location}) ->
     process_flag(trap_exit, true),
-    {ok, F} = file:open(Name, [write, read, raw, binary]),
-    Top = read_top_from_file(Name),
+    %L = Location ++ "data/"++atom_to_list(Name)++".db",
+    L = name2file(Name, Location),
+    {ok, F} = file:open(L, [write, read, raw, binary]),
+    Top = read_top_from_file(Name, Location),
     io:fwrite("tree2 read top as: " ++ integer_to_list(Top) ++ "\n"),
     Top2 = if
 	       (Top == 1) -> 
@@ -24,22 +26,22 @@ init(Name) ->
 	       true ->
 		   Top
 	   end,
-    {ok, #d{name = Name, file = F, top = Top2}}.
-start_link(Name) -> %keylength, or M is the size outputed by hash:doit(_). 
+    {ok, #d{name = Name, loc = Location, top = Top2, file = F}}.
+start_link(Name, Location) -> %keylength, or M is the size outputed by hash:doit(_). 
     %gen_server:start_link({local, ?MODULE}, ?MODULE, Name, []).
     A5 = ids_verkle:main(Name),
-    gen_server:start_link({global, A5}, ?MODULE, Name, []).
+    gen_server:start_link({global, A5}, ?MODULE, {Name, Location}, []).
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 terminate(_, D) -> 
     file:close(D#d.file),
-    file:write_file(top_file(D#d.name), term_to_binary(D#d.top)),
+    file:write_file(top_file(D#d.name, D#d.location), term_to_binary(D#d.top)),
     io:format("tree2 died!"), ok.
 handle_info(_, X) -> {noreply, X}.
 handle_cast(reload, X) -> 
-    #d{name = Name, file = F0} = X,
+    #d{name = Name, file = F0, loc = Location} = X,
     file:close(F0),
     {ok, F} = file:open(Name, [write, read, raw, binary]),
-    Top = read_top_from_file(Name),
+    Top = read_top_from_file(Name, Location),
     X2 = X#d{file = F, name = Name, top = Top},
     {noreply, X2};
 handle_cast(reset, X) -> 
@@ -67,10 +69,13 @@ handle_call(quick_save, _From, X) ->
     {reply, ok, X};
 handle_call(_, _From, X) -> {reply, X, X}.
 
-top_file(Name) ->
-    atom_to_list(Name) ++ "top".
-read_top_from_file(Name) ->
-    TF = top_file(Name),
+name2file(Name, Location) ->
+    Location ++ "data/"++atom_to_list(Name)++".db".
+top_file(Name, Location) ->
+    %atom_to_list(Name) ++ "top".
+    Location ++ "data/"++atom_to_list(Name)++"_top.db".
+read_top_from_file(Name, Location) ->
+    TF = top_file(Name, Location),
     case file:read_file(TF) of
         {ok, <<>>} -> 1;
         {ok, Out} -> binary_to_term(Out);
@@ -81,12 +86,11 @@ read_top_from_file(Name) ->
             io:fwrite(Reason),
             1=2
     end.
-    
 
 root_hash(Pointer) ->
     S = stem_verkle:get(Pointer),
     stem_verkle:hash(S).
-   
+ 
 store(Bytes, ID) -> 
     %gen_server:call(?MODULE, {store, Bytes}).
     gen_server:call({global, ids_verkle:main_id(ID)}, {store, Bytes}).
