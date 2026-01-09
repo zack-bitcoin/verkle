@@ -12,6 +12,9 @@ init({Name, Location}) ->
     process_flag(trap_exit, true),
     %L = Location ++ "data/"++atom_to_list(Name)++".db",
     L = name2file(Name, Location),
+    io:fwrite("starting tree 2 location is "),
+    io:fwrite(L),
+    io:fwrite("\n"),
     {ok, F} = file:open(L, [write, read, raw, binary]),
     Top = read_top_from_file(Name, Location),
     io:fwrite("tree2 read top as: " ++ integer_to_list(Top) ++ "\n"),
@@ -26,7 +29,7 @@ init({Name, Location}) ->
 	       true ->
 		   Top
 	   end,
-    {ok, #d{name = Name, loc = Location, top = Top2, file = F}}.
+    {ok, #d{name = Name, location = Location, top = Top2, file = F}}.
 start_link(Name, Location) -> %keylength, or M is the size outputed by hash:doit(_). 
     %gen_server:start_link({local, ?MODULE}, ?MODULE, Name, []).
     A5 = ids_verkle:main(Name),
@@ -38,7 +41,7 @@ terminate(_, D) ->
     io:format("tree2 died!"), ok.
 handle_info(_, X) -> {noreply, X}.
 handle_cast(reload, X) -> 
-    #d{name = Name, file = F0, loc = Location} = X,
+    #d{name = Name, file = F0, location = Location} = X,
     file:close(F0),
     {ok, F} = file:open(Name, [write, read, raw, binary]),
     Top = read_top_from_file(Name, Location),
@@ -65,7 +68,7 @@ handle_call({store, Bytes}, _From,
 handle_call(file, _From, X) -> 
     {reply, X#d.file, X};
 handle_call(quick_save, _From, X) -> 
-    file:write(top_file(X#d.name), term_to_binary(X#d.top)),
+    file:write(top_file(X#d.name, X#d.location), term_to_binary(X#d.top)),
     {reply, ok, X};
 handle_call(_, _From, X) -> {reply, X, X}.
 

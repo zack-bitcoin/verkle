@@ -7,7 +7,7 @@
 -export([start/2, stop/1]).
 
 start(normal, []) ->
-    verkle_sup:start_link(tree01, ".").
+    verkle_sup:start_link(tree01, "./").
 
 stop(_State) ->
     ok.
