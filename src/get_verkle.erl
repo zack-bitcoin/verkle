@@ -444,7 +444,7 @@ strip_meta([H|T], D) ->
     {T2, D3} = strip_meta(T, D2),
     {[H2|T2], D3};
 strip_meta({Key, Value, Meta}, D) -> 
-    {{Key, Value}, dict:store(Key, Meta, D)};
+    {{Key, Value}, dict:store(Key, Value, D)};
 strip_meta(T, D) when is_tuple(T) ->
     L = tuple_to_list(T),
     {L2, D2} = strip_meta(L, D),
