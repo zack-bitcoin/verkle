@@ -42,7 +42,7 @@ terminate(_, D) ->
 handle_info(_, X) -> {noreply, X}.
 handle_cast(reload, X) -> 
     #d{name = Name, file = F0, location = Location} = X,
-    file:close(F0),
+    %file:close(F0),
     L = name2file(Name, Location),
     {ok, F} = file:open(L, [write, read, raw, binary]),
     Top = read_top_from_file(Name, Location),
