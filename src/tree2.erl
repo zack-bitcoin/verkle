@@ -43,9 +43,10 @@ handle_info(_, X) -> {noreply, X}.
 handle_cast(reload, X) -> 
     #d{name = Name, file = F0, location = Location} = X,
     file:close(F0),
-    {ok, F} = file:open(Name, [write, read, raw, binary]),
+    L = name2file(Name, Location),
+    {ok, F} = file:open(L, [write, read, raw, binary]),
     Top = read_top_from_file(Name, Location),
-    X2 = X#d{file = F, name = Name, top = Top},
+    X2 = X#d{file = F, top = Top},
     {noreply, X2};
 handle_cast(reset, X) -> 
     {noreply, X#d{top = 1}};
