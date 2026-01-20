@@ -70,7 +70,8 @@ handle_call(file, _From, X) ->
 handle_call(quick_save, _From, X) -> 
     TF = top_file(X#d.name, X#d.location),
     io:fwrite("tree2 is quick saving to file " ++ TF ++ "\n"),
-    file:write(TF, term_to_binary(X#d.top)),
+    %file:write(TF, term_to_binary(X#d.top)),
+    file:write_file(TF, term_to_binary(X#d.top)),
     {reply, ok, X};
 handle_call(_, _From, X) -> {reply, X, X}.
 
