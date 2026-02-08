@@ -442,6 +442,7 @@ proof({Tree0, CommitG0, Open0}) ->
             %io:fwrite("verify multiproof \n"),
             benchmark:now(),
             %io:fwrite({Zs, Ys}),
+	    io:fwrite({{CommitG, Open}, Commits, Zs, Ys}),
             B2 = multiproof:verify(
                    {CommitG, Open}, 
                    Commits, Zs, Ys),
