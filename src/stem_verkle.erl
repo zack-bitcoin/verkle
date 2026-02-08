@@ -8,6 +8,7 @@
 	 new_empty/0,%recover/6, 
          empty_hashes/0, 
 	 update_pointers/2, empty_tuple/0,
+	 empty_tuple/1,
 	 make/3, make/2, 
          %update/3, 
          onify2/1,
