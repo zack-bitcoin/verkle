@@ -89,6 +89,7 @@ batch(Leaves, RP, stem, Depth, CFG, MEP) ->
                         element(I, Types)}
              end, range(1, size(Hashes))),
     %io:fwrite({HPT1, Leaves2}),
+
     RHPT = lists:zipwith(
            fun(Leaves3, {H, P, T}) -> 
                    T2 = case T of

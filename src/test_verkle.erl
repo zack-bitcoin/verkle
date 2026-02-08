@@ -558,7 +558,13 @@ test(10, CFG) ->
     Leaf = leaf_verkle:new(Key, Val, <<0>>, CFG),
     {{A, _, _}, _} = get_verkle:batch([leaf_verkle:raw_key(Leaf)], Loc2, CFG),
     [_, {Key, {_, Val}}] = A,
-    success.
+    success;
+test(12, CFG) ->    
+%<<172,221,133,201,250,208,161,169,95,117,122,65,227,98,22,
+%  25,43,79,144,95,181,131,52,75,214,158,105,101,31,...>>
+    Leaf= leaf_verkle:new(27, <<2:16>>, <<0>>, CFG),
+    leaf_verkle:hash(Leaf, CFG).
+
     
 
  

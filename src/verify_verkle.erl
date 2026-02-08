@@ -425,7 +425,6 @@ proof({Tree0, CommitG0, Open0}, CFG) ->
     %io:fwrite("verify get parameters \n"),
     [Root|Rest] = Tree,
     Domain = parameters:domain(),
-    %B = fq:eq(Root1, Root),
     B = ed:a_eq(Root1, Root),
     if
         not(B) -> 
@@ -450,6 +449,7 @@ proof({Tree0, CommitG0, Open0}, CFG) ->
             %io:fwrite("verify multiproof \n"),
             benchmark:now(),
             %io:fwrite({Zs, Ys}),
+	    io:fwrite({{CommitG, Open}, Commits, Zs, Ys}),
             B2 = multiproof:verify(
                    {CommitG, Open}, 
                    Commits, Zs, Ys),
