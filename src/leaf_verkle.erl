@@ -87,10 +87,10 @@ hash(L) ->
 	<<_:256>> ->
             sha256:doit(<<(L#leaf.key)/binary, V/binary>>);
 	_ ->
-	    1=2,
+	    %1=2,
 	    %P = cfg_verkle:path(CFG) * 8,
-	    %V2 = sha256:doit(V),
-            sha256:doit(<<(L#leaf.key)/binary, V/binary>>)
+	    V2 = sha256:doit(V),
+            sha256:doit(<<(L#leaf.key)/binary, V2/binary>>)
     end.
 test(1) ->
 %    CFG = tree:cfg(tree01),
