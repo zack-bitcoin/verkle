@@ -81,7 +81,7 @@ get(Pointer, ID) ->
     deserialize(L).
 hash(L) ->   
     %HS = cfg_verkle:hash_size(CFG)*8,
-    V = L#leaf.value
+    V = L#leaf.value,
     case V of
 	empty -> <<0:256>>;
 	<<_:256>> ->
