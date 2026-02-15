@@ -81,12 +81,16 @@ get(Pointer, ID) ->
     deserialize(L).
 hash(L) ->   
     %HS = cfg_verkle:hash_size(CFG)*8,
-    case L#leaf.value of
+    V = L#leaf.value
+    case V of
 	empty -> <<0:256>>;
-	V ->
+	<<_:256>> ->
+            sha256:doit(<<(L#leaf.key)/binary, V/binary>>);
+	_ ->
+	    1=2,
 	    %P = cfg_verkle:path(CFG) * 8,
-	    V2 = sha256:doit(V),
-            sha256:doit(<<(L#leaf.key)/binary, V2/binary>>)
+	    %V2 = sha256:doit(V),
+            sha256:doit(<<(L#leaf.key)/binary, V/binary>>)
     end.
 test(1) ->
 %    CFG = tree:cfg(tree01),
