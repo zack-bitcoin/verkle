@@ -12,12 +12,12 @@ init({Name, Location}) ->
     process_flag(trap_exit, true),
     %L = Location ++ "data/"++atom_to_list(Name)++".db",
     L = name2file(Name, Location),
-    io:fwrite("starting tree 2 location is "),
-    io:fwrite(L),
-    io:fwrite("\n"),
+    %io:fwrite("starting tree 2 location is "),
+    %io:fwrite(L),
+    %io:fwrite("\n"),
     {ok, F} = file:open(L, [write, read, raw, binary]),
     Top = read_top_from_file(Name, Location),
-    io:fwrite("tree2 read top as: " ++ integer_to_list(Top) ++ "\n"),
+    %io:fwrite("tree2 read top as: " ++ integer_to_list(Top) ++ "\n"),
     Bytes = stem_verkle:serialize(stem_verkle:new_empty()),
     S = size(Bytes),
     Bytes2 = <<S:16, Bytes/binary>>,
@@ -46,7 +46,7 @@ handle_cast(reload, X) ->
     L = name2file(Name, Location),
     {ok, F} = file:open(L, [write, read, raw, binary]),
     Top = read_top_from_file(Name, Location),
-    io:fwrite("tree2 reloaded. top is " ++ integer_to_list(Top) ++ "\n"),
+    %io:fwrite("tree2 reloaded. top is " ++ integer_to_list(Top) ++ "\n"),
     X2 = X#d{file = F, top = Top},
     {noreply, X2};
 handle_cast(reset, X) -> 
@@ -70,10 +70,9 @@ handle_call(file, _From, X) ->
     {reply, X#d.file, X};
 handle_call(quick_save, _From, X) -> 
     TF = top_file(X#d.name, X#d.location),
-    io:fwrite("tree2 is quick saving to file " ++ TF ++ "\n"),
+    %io:fwrite("tree2 is quick saving to file " ++ TF ++ "\n"),
     %file:write(TF, term_to_binary(X#d.top)),
     file:write_file(TF, term_to_binary(X#d.top)),
-    file:datasync(X#d.file),
     file:close(X#d.file),
     L = name2file(X#d.name, X#d.location),
     {ok, F} = file:open(L, [write, read, raw, binary]),
@@ -109,7 +108,7 @@ store(Bytes, ID) ->
 
 read(P, ID) ->
     %gen_server:call(?MODULE, {read, P}).
-    io:fwrite("tree2 read pointer " ++ integer_to_list(P) ++ " id is: " ++ atom_to_list(ID) ++ "\n"),
+    %io:fwrite("tree2 read pointer " ++ integer_to_list(P) ++ " id is: " ++ atom_to_list(ID) ++ "\n"),
     gen_server:call({global, ids_verkle:main_id(ID)}, {read, P}).
 
 reset(ID) ->
