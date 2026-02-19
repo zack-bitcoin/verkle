@@ -18,11 +18,11 @@ init({Name, Location}) ->
     {ok, F} = file:open(L, [write, read, raw, binary]),
     Top = read_top_from_file(Name, Location),
     io:fwrite("tree2 read top as: " ++ integer_to_list(Top) ++ "\n"),
+    Bytes = stem_verkle:serialize(stem_verkle:new_empty()),
+    S = size(Bytes),
+    Bytes2 = <<S:16, Bytes/binary>>,
     Top2 = if
 	       (Top == 1) -> 
-		   Bytes = stem_verkle:serialize(stem_verkle:new_empty()),
-		   S = size(Bytes),
-		   Bytes2 = <<S:16, Bytes/binary>>,
 		   file:pwrite(F, Top, Bytes2),
 		   NewTop = Top + S+2,
 		   NewTop;
@@ -73,7 +73,7 @@ handle_call(quick_save, _From, X) ->
     io:fwrite("tree2 is quick saving to file " ++ TF ++ "\n"),
     %file:write(TF, term_to_binary(X#d.top)),
     file:write_file(TF, term_to_binary(X#d.top)),
-    %file:datasync(X#d.file),
+    file:datasync(X#d.file),
     file:close(X#d.file),
     L = name2file(X#d.name, X#d.location),
     {ok, F} = file:open(L, [write, read, raw, binary]),
