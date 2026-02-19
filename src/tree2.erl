@@ -73,11 +73,11 @@ handle_call(quick_save, _From, X) ->
     io:fwrite("tree2 is quick saving to file " ++ TF ++ "\n"),
     %file:write(TF, term_to_binary(X#d.top)),
     file:write_file(TF, term_to_binary(X#d.top)),
-    file:close(X#d.file),
-    L = name2file(X#d.name, X#d.location),
-    {ok, F} = file:open(L, [write, read, raw, binary]),
-    X2 = X#d{file = F},
-    {reply, ok, X2};
+    %file:close(X#d.file),
+    %L = name2file(X#d.name, X#d.location),
+    %{ok, F} = file:open(L, [write, read, raw, binary]),
+    %X2 = X#d{file = F},
+    {reply, ok, X};
 handle_call(_, _From, X) -> {reply, X, X}.
 
 name2file(Name, Location) ->
