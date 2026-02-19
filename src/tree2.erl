@@ -109,7 +109,7 @@ store(Bytes, ID) ->
 
 read(P, ID) ->
     %gen_server:call(?MODULE, {read, P}).
-    io:fwrite("tree2 read pointer " ++ integer_to_list(P) ++ " id is: " ++ ID ++ "\n"),
+    io:fwrite("tree2 read pointer " ++ atom_to_list(P) ++ " id is: " ++ ID ++ "\n"),
     gen_server:call({global, ids_verkle:main_id(ID)}, {read, P}).
 
 reset(ID) ->
