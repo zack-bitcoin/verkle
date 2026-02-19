@@ -46,6 +46,7 @@ handle_cast(reload, X) ->
     L = name2file(Name, Location),
     {ok, F} = file:open(L, [write, read, raw, binary]),
     Top = read_top_from_file(Name, Location),
+    io:fwrite("tree2 reloaded. top is " ++ integer_to_list(Top) ++ "\n"),
     X2 = X#d{file = F, top = Top},
     {noreply, X2};
 handle_cast(reset, X) -> 
@@ -55,7 +56,7 @@ handle_cast(_, X) ->
 handle_call({read, Pointer}, _From, 
             X = #d{file = File}) -> 
     true = is_integer(Pointer),
-    %io:fwrite("tree2 read pointer " ++ integer_to_list(Pointer) ++ "\n"),
+    io:fwrite("tree2 read pointer " ++ integer_to_list(Pointer) ++ "\n"),
     {ok, <<Size:16>>} = file:pread(File, Pointer, 2),
     R = file:pread(File, Pointer+2, Size),
     {reply, R, X};
