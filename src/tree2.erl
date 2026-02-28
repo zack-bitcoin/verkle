@@ -117,7 +117,7 @@ quick_save(ID) ->
     gen_server:call({global, ids_verkle:main_id(ID)}, quick_save).
 
 reload(ID) ->
-    gen_server:call({global, ids_verkle:main_id(ID)}, reload).
+    gen_server:cast({global, ids_verkle:main_id(ID)}, reload).
 
 empty() -> 1.
 
