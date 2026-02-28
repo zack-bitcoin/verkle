@@ -44,6 +44,7 @@ handle_cast(reload, X) ->
     #d{name = Name, file = F0, location = Location} = X,
     %file:close(F0),
     L = name2file(Name, Location),
+    io:fwrite("tree2 is reloading from " ++ L),
     {ok, F} = file:open(L, [write, read, raw, binary]),
     Top = read_top_from_file(Name, Location),
     %io:fwrite("tree2 reloaded. top is " ++ integer_to_list(Top) ++ "\n"),
@@ -103,24 +104,19 @@ root_hash(Pointer, ID) ->
     stem_verkle:hash(S).
  
 store(Bytes, ID) -> 
-    %gen_server:call(?MODULE, {store, Bytes}).
     gen_server:call({global, ids_verkle:main_id(ID)}, {store, Bytes}).
 
 read(P, ID) ->
-    %gen_server:call(?MODULE, {read, P}).
     %io:fwrite("tree2 read pointer " ++ integer_to_list(P) ++ " id is: " ++ atom_to_list(ID) ++ "\n"),
     gen_server:call({global, ids_verkle:main_id(ID)}, {read, P}).
 
 reset(ID) ->
-    %gen_server:cast(?MODULE, reset).
     gen_server:cast({global, ids_verkle:main_id(ID)}, reset).
 
 quick_save(ID) ->
-    %gen_server:call(?MODULE, quick_save).
     gen_server:call({global, ids_verkle:main_id(ID)}, quick_save).
 
 reload(ID) ->
-    %gen_server:call(?MODULE, reload).
     gen_server:call({global, ids_verkle:main_id(ID)}, reload).
 
 empty() -> 1.
