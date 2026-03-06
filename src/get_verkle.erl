@@ -247,7 +247,7 @@ batch(Keys, Root, ID, Type) ->
                    small -> list_to_tuple(Opening2);
                    fast -> Opening2
                end,
-    {Tree6, Meta} = strip_meta(Tree5, dict:new()),
+    {Tree6, Meta} = strip_meta(Tree5, dict:new(), ID),
     %todo. return meta data from the leaves.
     [Root2, First|Rest] = Tree6,
     Tree7 = if
@@ -438,20 +438,21 @@ deserialize_proof(<<Commit:256, A:256, B:256, C:256, D:256, L17:(256*17), TreeBi
     Opening = {<<A:256>>, <<B:256>>, L3, <<C:256>>, <<D:256>>},
     {Tree, <<Commit:256>>, Opening}.
 
-strip_meta([], D) -> {[], D};
-strip_meta([H|T], D) -> 
-    {H2, D2} = strip_meta(H, D),
-    {T2, D3} = strip_meta(T, D2),
+strip_meta([], D, _) -> {[], D};
+strip_meta([H|T], D, ID) -> 
+    {H2, D2} = strip_meta(H, D, ID),
+    {T2, D3} = strip_meta(T, D2, ID),
     {[H2|T2], D3};
-strip_meta({Key, Value, Meta}, D) -> 
-    {{Key, Value}, dict:store(Key, {Meta, Value}, D)};
-strip_meta(T, D) when is_tuple(T) ->
+strip_meta({Key, Value, Meta}, D, ID) -> 
+    %{{Key, Value}, dict:store(Key, {Meta, Value}, D)};
+    {{Key, Value}, dict:store(Key, leaf_verkle:get(Meta, ID), D)};
+strip_meta(T, D, ID) when is_tuple(T) ->
     L = tuple_to_list(T),
-    {L2, D2} = strip_meta(L, D),
+    {L2, D2} = strip_meta(L, D, ID),
     T2 = list_to_tuple(L2),
     {T2, D2};
-strip_meta(B, D) when is_binary(B) -> {B, D};
-strip_meta(I, D) when is_integer(I) -> {I, D}.
+strip_meta(B, D, _) when is_binary(B) -> {B, D};
+strip_meta(I, D, _) when is_integer(I) -> {I, D}.
 
 
 points_list(<<E:1024>>) -> [<<E:1024>>];
