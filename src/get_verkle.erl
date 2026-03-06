@@ -648,7 +648,9 @@ points_values([<<Loc:?nindex>>|R], Root, ID) ->
         2 -> %leaf
                 %io:fwrite("point values leaf\n"),
                 L = leaf_verkle:get(P, ID),
-                [V, L]
+		L2 = L#leaf{value = sha256:doit(L#leaf.value)},
+                %[V, L]
+                [V, L2]
     end,
     E;
 points_values([H|T], Root, ID) ->
