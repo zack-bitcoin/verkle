@@ -533,10 +533,10 @@ static inline void e_mul_long2
   for(int i = 3; i >= 0; i--){
     //printf("\n");
     for(int j = 63; j >= 0; j--){
-      int bool = kth_bit(b[i], j);
+      int ben = kth_bit(b[i], j);
       e_double2(x2, y2, z2, t2,
                 x2, y2, z2, t2, J, K);
-      if(bool){
+      if(ben){
         e_add2(x2, y2, z2, t2,
                x, y, z, t,
                x2, y2, z2, t2);
@@ -567,10 +567,10 @@ static inline void e_mul_long_fast2
   for(int i = 3; i >= 0; i--){
     //printf("\n");
     for(int j = 63; j >= 0; j--){
-      int bool = kth_bit(b[i], j);
+      int ben = kth_bit(b[i], j);
       e_double2(x2, y2, z2, t2,
                 x2, y2, z2, t2, J, K);
-      if(bool){
+      if(ben){
         e_add2_fast(x2, y2, z2, t2,
                x, y, z, t,
                x2, y2, z2, t2);

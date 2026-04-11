@@ -1,6 +1,6 @@
 {application, verkle,
  [
-  {description, ""},
+  {description, "cryptographic database"},
   {vsn, "1"},
   {registered, []},
   {applications, [
