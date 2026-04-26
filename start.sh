@@ -9,9 +9,11 @@
 
 # balanced version
 
-gcc -O2 -march=native -funroll-loops -fomit-frame-pointer -flto -fPIC -shared -o ebin/fr.so src/crypto/fr.c -I $ERL_ROOT/user/include/
+mkdir ebin
 
-gcc -O2 -march=native -funroll-loops -fomit-frame-pointer -flto -fPIC -shared -o ebin/ed25519.so src/crypto/ed25519.c -I $ERL_ROOT/user/include/
+gcc -O2 -march=native -funroll-loops -fomit-frame-pointer -flto -fPIC -shared -o ebin/fr.so src/crypto/fr.c -I $ERL_ROOT/user/include/ -I /usr/lib/erlang/erts-16.3.1/include/
+
+gcc -O2 -march=native -funroll-loops -fomit-frame-pointer -flto -fPIC -shared -o ebin/ed25519.so src/crypto/ed25519.c -I $ERL_ROOT/user/include/ -I /usr/lib/erlang/erts-16.3.1/include/
 
 # fast compile version
 #gcc -fPIC -shared -o ebin/fq.so src/crypto/fq.c -I $ERL_ROOT/usr/include/
@@ -29,4 +31,4 @@ gcc -O2 -march=native -funroll-loops -fomit-frame-pointer -flto -fPIC -shared -o
 
 #erl -pa ebin deps/*/ebin/ -eval "application:start(verkle)"
 mkdir data
-erl -pa ebin ebin/* ebin _build/default/lib/*/ebin/ -eval "application:ensure_all_started(verkle)."
+erl -pa ebin _build/default/lib/*/ebin/ -eval "application:ensure_all_started(verkle)."
