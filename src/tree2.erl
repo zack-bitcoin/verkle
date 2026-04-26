@@ -56,7 +56,6 @@ handle_cast(_, X) ->
     {noreply, X}.
 handle_call({read, Pointer}, _From, 
             X = #d{file = File}) -> 
-    true = is_integer(Pointer),
     {ok, <<Size:16>>} = file:pread(File, Pointer, 2),
     R = file:pread(File, Pointer+2, Size),
     {reply, R, X};
@@ -108,6 +107,7 @@ store(Bytes, ID) ->
 
 read(P, ID) ->
     %io:fwrite("tree2 read pointer " ++ integer_to_list(P) ++ " id is: " ++ atom_to_list(ID) ++ "\n"),
+    true = is_integer(P),
     gen_server:call({global, ids_verkle:main_id(ID)}, {read, P}).
 
 reset(ID) ->
