@@ -1,3 +1,5 @@
+#!/bin/awk -f
+
 BEGIN {
     system("mkdir -p ebin")
     system("ls /usr/lib/erlang/ | cat | awk 'match($0, /erts/) {print($0)}' > erts_version")
