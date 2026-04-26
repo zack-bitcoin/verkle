@@ -51,7 +51,7 @@ unverified(Keys, Root, ID) ->
 			  0 -> ok;
 			  LX ->
 			      true = is_binary(LX) 
-		      end,
+		      end
 	      end, Leaves0),%sanity
     %true = (length(Leaves0) == length(Keys)),
     Leaves = lists:zipwith(fun(L, K) ->
