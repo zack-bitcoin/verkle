@@ -46,6 +46,7 @@ unverified(Keys, Root, ID) ->
                               Tree2 = points_values(Tree, RootStem, ID)
                       end, Paths),
     Leaves0 = remove_stems_from_straight_branches(Tree3),
+    lists:map(fun(L) -> true = is_binary(L#leaf.meta) end, Leaves0),
     %true = (length(Leaves0) == length(Keys)),
     Leaves = lists:zipwith(fun(L, K) ->
                                    {K, L}
@@ -94,7 +95,7 @@ batch(Keys, Root, ID, Type) ->
     %list of lists means or. list of integers means and.
     %io:fwrite("get lookup stems and leaves\n"),% 25%
     benchmark:now(),
-    Tree2 = points_values(Tree, RootStem, ID),
+    Tree2 = points_values(Tree, RootStem, ID), %todo. maybe these points_values need to be updated. leaf.value -> sha256:doit(leaf.value). meta -> pointer to location.
     %io:fwrite({RootStem}),
 
     %obtains the stems and leaves by reading from the database.
@@ -650,9 +651,9 @@ points_values([<<Loc:?nindex>>|R], Root, ID) ->
         2 -> %leaf
                 %io:fwrite("point values leaf\n"),
                 L = leaf_verkle:get(P, ID),
-		L2 = L#leaf{value = sha256:doit(L#leaf.value), meta = P},
-                %[V, L]
-                [V, L2]
+		%L2 = L#leaf{value = sha256:doit(L#leaf.value), meta = P},
+                [V, L]
+                %[V, L2]
     end,
     E;
 points_values([H|T], Root, ID) ->
