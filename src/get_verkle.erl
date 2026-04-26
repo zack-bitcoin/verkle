@@ -51,6 +51,7 @@ unverified(Keys, Root, ID) ->
                                    {K, L}
                            end, Leaves0, 
                            depth_order(Keys)),
+    lists:map(fun({_, L}) -> true = is_binary(L#leaf.meta) end, Leaves),
     Leaves.
 
 depth_order(Keys) ->
