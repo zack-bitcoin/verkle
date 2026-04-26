@@ -87,7 +87,7 @@ Installation
 
 You need to install erlang first to use this database.
 
-To run the software: ```sh start.sh```
+To run the software: ```awk -f start.awk```
 
 to turn off the software, and save everything
 ```verkle_sup:stop(ID).```

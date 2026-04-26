@@ -21,7 +21,7 @@ deserialize(A) ->
     <<K:16, V:16, M:16, KVM/binary>> = A,
     %<<Key:(8*K), Value:(8*V), Meta:(8*M)>> = KVM,
     <<Key:K/binary, Value:V/binary, Meta:M/binary>> = KVM,
-    
+    true = is_binary(Meta),
     %L = cfg_verkle:value(CFG) * 8,
     %P = cfg_verkle:path(CFG) * 8,
     %MS = cfg_verkle:meta(CFG) * 8,
@@ -33,6 +33,8 @@ deserialize(A) ->
 new(Key, Value) ->
     new(Key, Value, <<>>).
 new(Key, Value, Meta) when is_integer(Key) ->
+    true = is_binary(Meta),
+    true = is_binary(Value),
     new(<<Key:256>>, Value, Meta);
 new(<<Key:256>>, Value, Meta) ->
     true = is_binary(Meta),
