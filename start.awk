@@ -4,6 +4,7 @@ BEGIN {
     getline ERTS_VERSION < "erts_version"
     system("gcc -O2 -march=native -funroll-loops -fomit-frame-pointer -flto -fPIC -shared -o ebin/fr.so src/crypto/fr.c -I $ERL_ROOT/user/include/ -I /usr/lib/erlang/" ERTS_VERSION "/include/")
     system("gcc -O2 -march=native -funroll-loops -fomit-frame-pointer -flto -fPIC -shared -o ebin/ed25519.so src/crypto/ed25519.c -I $ERL_ROOT/user/include/ -I /usr/lib/erlang/" ERTS_VERSION "/include/")
+    system("rm erts_version")
     system("rebar3 get-deps")
     system("rebar3 compile")
     system("mkdir -p data")
