@@ -47,10 +47,10 @@ unverified(Keys, Root, ID) ->
                       end, Paths),
     Leaves0 = remove_stems_from_straight_branches(Tree3),
     lists:map(fun(L) -> 
-		      case L#leaf.meta of
-			  0 -> ok;
-			  LX ->
-			      true = is_binary(LX) 
+		      if
+			  (L == 0) -> ok;
+			  (L#leaf.meta == 0) -> ok;
+			  (is_binary(L#leaf.meta)) -> ok
 		      end
 	      end, Leaves0),%sanity
     %true = (length(Leaves0) == length(Keys)),
