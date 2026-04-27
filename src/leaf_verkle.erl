@@ -1,7 +1,7 @@
 -module(leaf_verkle).
 -export([new/3, new/2,
          key/1, value/1, meta/1, path/2, path_maker/1, hash/1, put/2, get/2, 
-%	 serialize/1, deserialize/1,
+	 serialize/1, deserialize/1,
          raw_key/1,
 	 test/1]).
 -include("constants.hrl").
@@ -86,13 +86,13 @@ hash(L) ->
     V = L#leaf.value,
     case V of
 	empty -> <<0:256>>;
-	<<_:256>> ->
-            sha256:doit(<<(L#leaf.key)/binary, V/binary>>);
 	_ ->
-	    %1=2,
-	    %P = cfg_verkle:path(CFG) * 8,
-	    V2 = sha256:doit(V),
-            sha256:doit(<<(L#leaf.key)/binary, V2/binary>>)
+            sha256:doit(<<(L#leaf.key)/binary, V/binary>>)
+%	<<_:256>> ->
+%            sha256:doit(<<(L#leaf.key)/binary, V/binary>>);
+%	_ ->
+%	    V2 = sha256:doit(V),
+%            sha256:doit(<<(L#leaf.key)/binary, V2/binary>>)
     end.
 test(1) ->
 %    CFG = tree:cfg(tree01),
