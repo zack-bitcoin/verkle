@@ -330,6 +330,10 @@ test(3) ->
     io:fwrite(integer_to_list(timer:now_diff(T5, T4))),
     io:fwrite("\n\n"),
 
+    RootStem = stem_verkle:get(Loc3, ?ID),
+    Hash = stem_verkle:hash_point(RootStem#stem.root),
+    <<HashNum:256>> = Hash,
+    io:fwrite("hash num: " ++ integer_to_list(HashNum) ++ "\n"),
     success;
 test(23) ->
     Loc = 1,
@@ -354,16 +358,18 @@ test(23) ->
                             end, Keys),
     
     {Loc2, _, _} = 
-        store_verkle:batch(Leaves, Loc),
+        store_verkle:batch(Leaves, Loc, ?ID),
     {{ProofTree, Commit, Opening}, _} = 
-        get_verkle:batch(Keys, Loc2),
-    {true, Leaves2} = 
+        get_verkle:batch(Keys, Loc2, ?ID),
+    {true, Leaves2, _} = 
         verify_verkle:proof(
           {ProofTree, Commit, Opening}),
     %io:fwrite({Leaves2, LeafDeletes}),
     ProofTree2 = verify_verkle:update(
                ProofTree, LeafDeletes),
     Loc3 = store_verkle:verified(Loc2, ProofTree2),
+
+    io:fwrite(stem_verkle:get(Loc3, ?ID)),
     
     %io:fwrite(get_verkle:batch(Keys, Loc3)),
     
@@ -584,7 +590,91 @@ test(12) ->
 %<<172,221,133,201,250,208,161,169,95,117,122,65,227,98,22,
 %  25,43,79,144,95,181,131,52,75,214,158,105,101,31,...>>
     Leaf= leaf_verkle:new(27, <<2:16>>, <<0>>),
-    {leaf_verkle:hash(Leaf), Leaf}.
+    {leaf_verkle:hash(Leaf), Leaf};
+test(13) ->
+    Loc = 1,
+    Times = 1000,
+    Leaves = 
+        lists:map(
+          fun(N) -> 
+                  Key = 1000000000 - (128 * N),
+                  leaf_verkle:new(<<Key:256>>, <<N:256>>, <<0>>)
+          end, range(1, Times+1)),
+    UpdatedLeaves =
+	lists:map(
+	  fun(N) ->
+                  Key = 1000000000 - (128 * N) - 1,
+                  leaf_verkle:new(<<Key:256>>, <<N:2566>>, <<0>>)
+          end, range(1, (Times div 2 )+ 1)),
+    Keys = lists:map(fun(Leaf) -> 
+                             leaf_verkle:raw_key(Leaf) 
+                     end, Leaves),
+    Many = lists:map(fun(Leaf) -> 
+                     leaf_verkle:raw_key(Leaf) end,
+                     Leaves),
+    {NewLoc, stem, _} = 
+        store_verkle:batch(Leaves, Loc, ?ID),
+    RootStem = stem_verkle:get(NewLoc, ?ID),
+    Hash = stem_verkle:hash_point(RootStem#stem.root),
+    <<HashNum:256>> = Hash,
+    io:fwrite("hash num: " ++ integer_to_list(HashNum) ++ "\n"),
+    {Proof, _} = get_verkle:batch([hd(Keys)], NewLoc, ?ID, small),
+
+    {true, _, DecompressedTree} = verify_verkle:proof(Proof),
+    ProofTree2 = verify_verkle:update(DecompressedTree, UpdatedLeaves, ?ID),
+    Loc3 = store_verkle:verified(
+                  NewLoc, ProofTree2, ?ID),
+    Stem3 = stem_verkle:get(Loc3, ?ID),
+    Hash3 = stem_verkle:hash_point(Stem3),
+    <<HashNum3:256>> = Hash3,
+    io:fwrite("hash3 num: " ++ integer_to_list(HashNum3) ++ "\n"),
+    {sha256:doit(term_to_binary(Proof)), Proof};
+
+%times=3 hash num: 20401606778999000867977715538379040131880244260188619906506523780267201514752
+%times=1000 hash num: 2227163361272906934714436980190990335138792156566253903278548145380772480771
+%Proof.
+test(14) ->
+    Loc = 1,
+    Times = 1000,
+    Leaves = 
+        lists:map(
+          fun(N) -> 
+                  Key = 1000000000 - (128 * N),
+                  leaf_verkle:new(Key, <<N:256>>, <<0>>)
+          end, range(1, Times+1)),
+    UpdatedLeaves =
+	lists:map(
+	  fun(N) ->
+                  Key = 1000000000 - (128 * N),
+                  leaf_verkle:new(Key, <<(N+1):256>>, <<0>>)
+          end, range(1, (Times div 2 )+ 1)),
+    Keys = lists:map(fun(Leaf) -> 
+                             leaf_verkle:raw_key(Leaf) 
+                     end, Leaves),
+    Keys2 = lists:map(fun(Leaf) -> 
+                             leaf_verkle:raw_key(Leaf) 
+                     end, UpdatedLeaves),
+    Many = Keys,
+    {NewLoc, stem, _} = 
+        store_verkle:batch(Leaves, Loc, ?ID),
+    RootStem = stem_verkle:get(NewLoc, ?ID),
+    Hash = stem_verkle:hash_point(RootStem#stem.root),
+    <<HashNum:256>> = Hash,
+    io:fwrite("hash num: " ++ integer_to_list(HashNum) ++ "\n"),
+    {Proof, _} = get_verkle:batch(Keys, NewLoc, ?ID, small),
+    {true, _, DecompressedTree} = verify_verkle:proof(Proof),
+    ProofTree2 = verify_verkle:update(DecompressedTree, [hd(UpdatedLeaves)]),
+    Loc3 = store_verkle:verified(
+                  NewLoc, ProofTree2, ?ID),
+    Stem3 = stem_verkle:get(Loc3, ?ID),
+    Hash3 = stem_verkle:hash_point(Stem3#stem.root),
+    <<HashNum3:256>> = Hash3,
+    io:fwrite("hash3 num: " ++ integer_to_list(HashNum3) ++ "\n"),
+%hash num: 19559721477387889062616915405534611174061741860320722130316715783687484559108
+%hash3 num: 113687914702220871819562265794425504444352780902960977855529333944980427811589
+    ok.
+
+
 
     
 

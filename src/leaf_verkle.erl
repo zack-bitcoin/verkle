@@ -86,13 +86,13 @@ hash(L) ->
     V = L#leaf.value,
     case V of
 	empty -> <<0:256>>;
-	_ ->
-            sha256:doit(<<(L#leaf.key)/binary, V/binary>>)
-%	<<_:256>> ->
-%            sha256:doit(<<(L#leaf.key)/binary, V/binary>>);
 %	_ ->
-%	    V2 = sha256:doit(V),
-%            sha256:doit(<<(L#leaf.key)/binary, V2/binary>>)
+%            sha256:doit(<<(L#leaf.key)/binary, V/binary>>)
+	<<_:256>> ->
+            sha256:doit(<<(L#leaf.key)/binary, V/binary>>);
+	_ ->
+	    V2 = sha256:doit(V),
+            sha256:doit(<<(L#leaf.key)/binary, V2/binary>>)
     end.
 test(1) ->
 %    CFG = tree:cfg(tree01),
