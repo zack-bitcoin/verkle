@@ -46,14 +46,6 @@ unverified(Keys, Root, ID) ->
                               Tree2 = points_values(Tree, RootStem, ID)
                       end, Paths),
     Leaves0 = remove_stems_from_straight_branches(Tree3),
-    lists:map(fun(L) -> 
-		      if
-			  (L == 0) -> ok;
-			  (L#leaf.meta == 0) -> ok;
-			  (is_binary(L#leaf.meta)) -> ok
-		      end
-	      end, Leaves0),%sanity
-    %true = (length(Leaves0) == length(Keys)),
     Leaves = lists:zipwith(fun(L, K) ->
                                    {K, L}
                            end, Leaves0, 

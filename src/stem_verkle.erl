@@ -91,7 +91,7 @@ type(N, R) ->
 serialize(S, CompressedRoot) ->
     if
         ?sanity ->
-            check_root_integrity(S);
+            success = check_root_integrity(S);
         true -> ok
     end,
     #stem{
@@ -109,7 +109,7 @@ serialize(S, CompressedRoot) ->
 serialize(S) ->
     if
         ?sanity ->
-            %check_root_integrity(S);
+            %success = check_root_integrity(S);
             ok;
         true -> ok
     end,
@@ -155,7 +155,7 @@ deserialize(<<R1:512, B/binary>>) ->
     Result = Y#stem{root = R},
     if
         ?sanity ->
-            check_root_integrity(Result);
+            success = check_root_integrity(Result);
         true -> ok
     end,
     Result.
@@ -181,7 +181,7 @@ empty_hashes() ->
 hash(S) ->
     if
         ?sanity ->
-            check_root_integrity(S);
+            success = check_root_integrity(S);
         true -> ok
     end,
     P = S#stem.root,

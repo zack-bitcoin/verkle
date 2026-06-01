@@ -97,6 +97,7 @@ batch(Leaves, RP, stem, Depth, MEP, ID) ->
                         element(I, Types)}
              end, range(1, size(Hashes))),
     %io:fwrite({HPT1, Leaves2}),
+
     RHPT = lists:zipwith(
            fun(Leaves3, {H, P, T}) -> 
                    T2 = case T of
@@ -162,9 +163,13 @@ verified(Loc, ProofTree, ID) ->
     RootStem2 = verified2(tl(ProofTree), RootStem, ID),
     RootStem3 = 
         RootStem2#stem{root = hd(ProofTree)},
+    case stem_verkle:check_root_integrity(RootStem3) of%todo remove this check once we solve the issue
+        success -> ok;
+        error -> io:fwrite({{good, RootStem#stem.pointers}, {bad, RootStem3#stem.pointers}})
+    end,
     if
         ?sanity ->
-            stem_verkle:check_root_integrity(RootStem3);
+            success = stem_verkle:check_root_integrity(RootStem3);
         true -> ok
     end,
     Loc2 = stem_verkle:put(RootStem3, ID),
@@ -238,7 +243,7 @@ verified2([[{N, {mstem, Hash, B}}|T1]|T2], Stem, ID)
         end,
     if
         ?sanity ->
-            stem_verkle:check_root_integrity(ChildStem);
+            success = stem_verkle:check_root_integrity(ChildStem);
         true -> ok
     end,
     Loc = stem_verkle:put(ChildStem, ID),
