@@ -62,9 +62,9 @@ init(ok) ->
              domain = Domain, dive = DivE, 
              me = ME},
     {ok, DB}.
-start_link(CFG) -> 
+start_link(ID) -> 
     %gen_server:start_link({local, ?MODULE}, ?MODULE, ok, []).
-    gen_server:start_link({global, ids_verkle:parameters(CFG)}, ?MODULE, ok, []).
+    gen_server:start_link({global, ids_verkle:parameters(ID)}, ?MODULE, ok, []).
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 terminate(_, _) -> io:format("died!"), ok.
 handle_info(_, X) -> {noreply, X}.
@@ -103,23 +103,41 @@ handle_call(a, _From,
 handle_call(_, _From, X) -> {reply, X, X}.
 
 a() ->
-    gen_server:call({global, tree01_v_parameters}, a).
+    gen_server:call({global, tree01_verkle_parameters}, a).
 da() ->
-    gen_server:call({global, tree01_v_parameters}, da).
+    gen_server:call({global, tree01_verkle_parameters}, da).
 domain() ->
-    gen_server:call({global, tree01_v_parameters}, domain).
+    gen_server:call({global, tree01_verkle_parameters}, domain).
 read() ->
-    gen_server:call({global, tree01_v_parameters}, ghq).
+    gen_server:call({global, tree01_verkle_parameters}, ghq).
 div_e(M) ->
-    gen_server:call({global, tree01_v_parameters}, {div_e, M}).
+    gen_server:call({global, tree01_verkle_parameters}, {div_e, M}).
 div_e() ->
-    gen_server:call({global, tree01_v_parameters}, div_e).
+    gen_server:call({global, tree01_verkle_parameters}, div_e).
 multi_exp() ->
-    gen_server:call({global, tree01_v_parameters}, multi_exp).
+    gen_server:call({global, tree01_verkle_parameters}, multi_exp).
 multi_exp(G) ->
-    gen_server:call({global, tree01_v_parameters}, {multi_exp, G}).
+    gen_server:call({global, tree01_verkle_parameters}, {multi_exp, G}).
 multi_exp(G, R) ->
-    gen_server:call({global, tree01_v_parameters}, {multi_exp, G, R}).
+    gen_server:call({global, tree01_verkle_parameters}, {multi_exp, G, R}).
+%a() ->
+%    gen_server:call({global, ids_verkle:parameters()}, a).
+%da() ->
+%    gen_server:call({global, ids_verkle:parameters()}, da).
+%domain() ->
+%    gen_server:call({global, ids_verkle:parameters()}, domain).
+%read() ->
+%    gen_server:call({global, ids_verkle:parameters()}, ghq).
+%div_e(M) ->
+%    gen_server:call({global, ids_verkle:parameters()}, {div_e, M}).
+%div_e() ->
+%    gen_server:call({global, ids_verkle:parameters()}, div_e).
+%multi_exp() ->
+%    gen_server:call({global, ids_verkle:parameters()}, multi_exp).
+%multi_exp(G) ->
+%    gen_server:call({global, ids_verkle:parameters()}, {multi_exp, G}).
+%multi_exp(G, R) ->
+%    gen_server:call({global, ids_verkle:parameters()}, {multi_exp, G, R}).
 
 range(X, X) -> [X];
 range(X, Y) when X < Y -> 
@@ -127,7 +145,7 @@ range(X, Y) when X < Y ->
 
 det_point(X) ->
     %deterministicly generated point.
-    <<Y:256>> = hash:doit(<<X:256>>),
+    <<Y:256>> = sha256:doit(<<X:256>>),
     %Z = Y rem fr:prime(),
     ed:gen_point(<<Y:256>>).
 %    Z = Y rem fr:prime(),
@@ -143,23 +161,3 @@ calc_domain(Many) ->
 make_ghq() ->
     ipa:basis(256).
 
-make_ghq_old() ->
-    %p{g, h, q, domain, a, da}
-    Many = 256,
-    %Many = 4,
-    R = range(1, Many),
-    io:fwrite("generating 256 G generator points\n"),
-    G = lists:map(fun(X) ->
-                          io:fwrite(integer_to_list(X)),
-                          io:fwrite("\n"),
-                          det_point(X)
-                  end, R),
-    io:fwrite("generating 256 H generator points\n"),
-    H = lists:map(fun(X) ->
-                          io:fwrite(integer_to_list(X)),
-                          io:fwrite("\n"),
-                          det_point(X+256)
-                  end, R),
-    io:fwrite("generating Q generator point"),
-    Q = det_point(513),
-    {G, H, Q}.

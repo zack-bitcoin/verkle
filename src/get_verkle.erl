@@ -5,21 +5,20 @@ paths2tree/1,
 index2domain2/1,
 %get/3, same_end/3, 
 split3parts/4, 
-keys2paths/2, 
+keys2paths/1, 
 withdraw_points/1, withdraw_points2/1,
 compressed_points_list/1,
 serialize_proof/1, deserialize_proof/1,
-unverified/3,
-test/1]).
+unverified/3]).
 -include("constants.hrl").
 
 -define(pipe, false).
 -define(sanity, false).
 
-keys2paths(Keys, CFG) ->
+keys2paths(Keys) ->
     Paths0 = lists:map(
               fun(<<K:256>>) -> 
-                      leaf_verkle:path_maker(K, CFG) 
+                      leaf_verkle:path_maker(K) 
               end, Keys),
     lists:map(
       fun(Path) ->
@@ -33,21 +32,20 @@ remove_stems_from_straight_branches(L) ->
     lists:map(fun(X) -> lists:last(hd(X)) end, L).
 
 %returns the consensus state and meta values for each leaf. Does not create any proof.
-unverified(Keys, Root, CFG) ->
-    RootStem0 = stem_verkle:get(Root, CFG),
+unverified(Keys, Root, ID) ->
+    RootStem0 = stem_verkle:get(Root, ID),
     RootStem = RootStem0#stem{
                  hashes = 
                        tuple_to_list(
                          RootStem0#stem.hashes)},
-    Paths0 = keys2paths(Keys, CFG),
+    Paths0 = keys2paths(Keys),
     Paths = lists:sort(fun(A, B) -> A < B end, 
                        Paths0),
     Tree3 = lists:map(fun(P) ->
                               Tree = paths2tree([P]),
-                              Tree2 = points_values(Tree, RootStem, CFG)
+                              Tree2 = points_values(Tree, RootStem, ID)
                       end, Paths),
     Leaves0 = remove_stems_from_straight_branches(Tree3),
-    %true = (length(Leaves0) == length(Keys)),%unnecessary.
     Leaves = lists:zipwith(fun(L, K) ->
                                    {K, L}
                            end, Leaves0, 
@@ -70,19 +68,19 @@ depth_order(Keys) ->
     
 
 %returns a verkle proof, and a dictionary of meta data from each leaf.
-batch(Keys, Root, CFG) ->
-    batch(Keys, Root, CFG, small).
+batch(Keys, Root, ID) ->
+    batch(Keys, Root, ID, small).
 
-batch(Keys, Root, CFG, Type) ->
+batch(Keys, Root, ID, Type) ->
     true = ((Type == small) or (Type == fast)),
-    RootStem0 = stem_verkle:get(Root, CFG),
+    RootStem0 = stem_verkle:get(Root, ID),
     RootStem = RootStem0#stem{
                  hashes = 
                        tuple_to_list(
                          RootStem0#stem.hashes)},
     %io:fwrite("get keys2paths\n"),
     benchmark:now(),
-    Paths0 = keys2paths(Keys, CFG),
+    Paths0 = keys2paths(Keys),
     Paths = lists:sort(fun(A, B) -> A < B end, 
                        Paths0),
     %Paths example: [[1,4,3,2],[1,1,1,2],[1,1,1,1],[2,1,1,1]]
@@ -94,8 +92,7 @@ batch(Keys, Root, CFG, Type) ->
     %list of lists means or. list of integers means and.
     %io:fwrite("get lookup stems and leaves\n"),% 25%
     benchmark:now(),
-    Tree2 = points_values(Tree, RootStem, CFG),
-    %io:fwrite({Tree, Tree2}),
+    Tree2 = points_values(Tree, RootStem, ID), %todo. maybe these points_values need to be updated. leaf.value -> sha256:doit(leaf.value). meta -> pointer to location.
     %io:fwrite({RootStem}),
 
     %obtains the stems and leaves by reading from the database.
@@ -249,7 +246,7 @@ batch(Keys, Root, CFG, Type) ->
                    small -> list_to_tuple(Opening2);
                    fast -> Opening2
                end,
-    {Tree6, Meta} = strip_meta(Tree5, dict:new()),
+    {Tree6, Meta} = strip_meta(Tree5, dict:new(), ID),
     %todo. return meta data from the leaves.
     [Root2, First|Rest] = Tree6,
     Tree7 = if
@@ -440,20 +437,21 @@ deserialize_proof(<<Commit:256, A:256, B:256, C:256, D:256, L17:(256*17), TreeBi
     Opening = {<<A:256>>, <<B:256>>, L3, <<C:256>>, <<D:256>>},
     {Tree, <<Commit:256>>, Opening}.
 
-strip_meta([], D) -> {[], D};
-strip_meta([H|T], D) -> 
-    {H2, D2} = strip_meta(H, D),
-    {T2, D3} = strip_meta(T, D2),
+strip_meta([], D, _) -> {[], D};
+strip_meta([H|T], D, ID) -> 
+    {H2, D2} = strip_meta(H, D, ID),
+    {T2, D3} = strip_meta(T, D2, ID),
     {[H2|T2], D3};
-strip_meta({Key, Value, Meta}, D) -> 
-    {{Key, Value}, dict:store(Key, Meta, D)};
-strip_meta(T, D) when is_tuple(T) ->
+strip_meta({Key, Value, Meta}, D, ID) -> 
+    {{Key, Value}, dict:store(Key, {Meta, Value}, D)};
+    %{{Key, Value}, dict:store(Key, leaf_verkle:get(Meta, ID), D)};
+strip_meta(T, D, ID) when is_tuple(T) ->
     L = tuple_to_list(T),
-    {L2, D2} = strip_meta(L, D),
+    {L2, D2} = strip_meta(L, D, ID),
     T2 = list_to_tuple(L2),
     {T2, D2};
-strip_meta(B, D) when is_binary(B) -> {B, D};
-strip_meta(I, D) when is_integer(I) -> {I, D}.
+strip_meta(B, D, _) when is_binary(B) -> {B, D};
+strip_meta(I, D, _) when is_integer(I) -> {I, D}.
 
 
 points_list(<<E:1024>>) -> [<<E:1024>>];
@@ -629,7 +627,7 @@ starts_same_split2(_, Rest, Sames) ->
 
 
 %we are looking up the elliptic points from the database to incude with the proof. 
-points_values([<<Loc:?nindex>>|R], Root, CFG) ->
+points_values([<<Loc:?nindex>>|R], Root, ID) ->
     % Root is a #stem{}
     Type = stem_verkle:type(Loc+1, Root),
     P = stem_verkle:pointer(Loc+1, Root),
@@ -640,33 +638,26 @@ points_values([<<Loc:?nindex>>|R], Root, CFG) ->
                 [V, 0];
         1 -> %stem
                 %io:fwrite("point values stem\n"),
-                S0 = stem_verkle:get(P, CFG),
+                S0 = stem_verkle:get(P, ID),
                 S = S0#stem{
                       hashes = tuple_to_list(
                                  S0#stem.hashes)
                      },
-                [V|points_values(R, S, CFG)];
+                [V|points_values(R, S, ID)];
                 %V;
         2 -> %leaf
                 %io:fwrite("point values leaf\n"),
-                L = leaf_verkle:get(P, CFG),
+                L = leaf_verkle:get(P, ID),
+		%L2 = L#leaf{value = sha256:doit(L#leaf.value), meta = P},
                 [V, L]
+                %[V, L2]
     end,
     E;
-points_values([H|T], Root, CFG) ->
+points_values([H|T], Root, ID) ->
     %io:fwrite("point values branching \n"),
-    [points_values(H, Root, CFG)|
-     points_values(T, Root, CFG)];
+    [points_values(H, Root, ID)|
+     points_values(T, Root, ID)];
 points_values([], _, _) -> [].
-
-same_end(LPath, Path, _CFG) ->
-    S = length(Path)*4,
-    LS = (length(LPath)*4) - S,
-    Path2 = tl_times(LS div 4, LPath),
-    Path2 == Path.
-tl_times(N, L) when N < 1 -> L;
-tl_times(N, L) ->
-    tl_times(N-1, tl(L)).
 
 is_in(X, [X|_]) -> true;
 is_in(_, []) -> false;
@@ -675,11 +666,5 @@ is_in(X, [_|T]) ->
 
 
 
-test(1) ->
-    CFG = tree:cfg(tree01),
-    A = [1,2,3,4,5],
-    B = [3,4,5] ++ A,
-    true = same_end(B, A, CFG),
-    success.
     
 

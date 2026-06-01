@@ -1,5 +1,5 @@
 -module(benchmark).
--export([doit/1, now/0]).
+-export([doit/0, doit/2, now/0]).
 
 -define(ID, tree01).
 -include("constants.hrl").
@@ -21,120 +21,45 @@ now() ->
         true ->
             ok
     end.
+
+doit() ->
+    doit(5000, 100).
+
+doit(InTree, ToProve) ->
+%{{load_tree,1 579 227},{make_proof,1 800 334},{verify,375 556}}
     
-    
-
-doit(1) ->
-
-%{{load_tree,23 866 703},
-% {make_proof,17 454 552},
-% {verify,6 873 304}}
-    
-
-    verkle_app:start(normal, []),
-    CFG = tree:cfg(?ID),
-    Loc = 2,
-    Times = 5000,
-    %Times = 3,
-    %Many = range(1, min(100, Times)),
-    %Many = range(1, Times - 2),
-    %Many = [1,2],
-    io:fwrite("making leaves\n"),
-    Leaves = 
-        lists:map(
-          fun(N) -> 
-                  %Key0 = Times + 1 - N,
-                  %<<Key:256>> = <<(-Key0):256>>,
-                  %Key0 = 1234567*N,
-                  <<Key0:256>> = 
-                      crypto:strong_rand_bytes(32),
-                  leaf_verkle:new(Key0, <<N:16>>, 0, CFG)
-                      %#leaf{key = Key0, value = <<N:16>>}%random version
-                  %#leaf{key = N, value = <<N:16>>}%sequential version
-          %end, Many),
-          end, range(1, Times+1)),
-    io:fwrite("made leaves \n"),
-    Many = lists:map(fun(Leaf) -> 
-                             leaf_verkle:key(Leaf) end,
-                     Leaves),
-    io:fwrite("benchmark for "),
-    io:fwrite(integer_to_list(Times)),
-    io:fwrite(" many elements \n"),
-    io:fwrite("load up the batch database\n"),
-    T1 = erlang:timestamp(),
-    {NewLoc, stem, _} = 
-        store_verkle:batch(Leaves, Loc, CFG),
-    T2 = erlang:timestamp(),
-    io:fwrite("make proof\n"),
-    Proof = 
-        get_verkle:batch(Many, NewLoc, CFG),
-    T3 = erlang:timestamp(),
-    io:fwrite("verify proof\n"),
-    Root = stem_verkle:root(stem_verkle:get(NewLoc, CFG)),
-    {true, Leaves2} = 
-        verify_verkle:proof(Root, Proof, CFG),
-    T4 = erlang:timestamp(),
-    true = (length(Leaves2) == length(Many)),
-    io:fwrite("measured in millionths of a second. 6 decimals. \n"),
-    {{load_tree, timer:now_diff(T2, T1)},
-     {make_proof, 
-      timer:now_diff(T3, T2)},
-     {verify, timer:now_diff(T4, T3)}};
-
-%many, go,    erl,   erl ordered
-%1000  0.050  0.7   0.7
-%10k   0.475  3.51   1.63
-
-doit(2) ->
-    %jubjub version
-%{{load_tree,53 830 000},
-% {make_proof,24 460 000},
-% {verify,4 350 000}}
-    CFG = tree:cfg(?ID),
     Loc = 1,
-    Times = 20000,
-    %Times = 100,
-    %Many = range(1, min(100, Times)),
-    %Many = range(, Times - 2),
-    %Many = [1,2],
+    Times = InTree,
+    Prove = ToProve,
     io:fwrite("making leaves\n"),
     Leaves = 
         lists:map(
           fun(N) -> 
-                  %Key0 = Times + 1 - N,
-                  %<<Key:256>> = <<(-Key0):256>>,
-                  %Key0 = 1234567*N,
                   <<Key0:256>> = 
                       crypto:strong_rand_bytes(32),
-                  %#leaf{key = Key0, value = <<N:16>>}%random version
-                  leaf_verkle:new(N, <<N:16>>, 0, CFG)
-                      %#leaf{key = N, value = <<N:16>>}%sequential version
-          %end, Many),
+                  leaf_verkle:new(Key0, <<N:16>>)
           end, range(1, Times+1)),
     io:fwrite("made leaves \n"),
-    %Many = lists:map(fun(#leaf{key = K}) -> K end,
     Many = lists:map(fun(Leaf) -> 
-                             leaf_verkle:key(Leaf) end,
+                             leaf_verkle:raw_key(Leaf) end,
                      Leaves),
     io:fwrite("benchmark for "),
     io:fwrite(integer_to_list(Times)),
-    io:fwrite(" many elements \n"),
+    io:fwrite(" many elements in the tree, and we are proving " ++ integer_to_list(Prove) ++ " of them\n"),
     io:fwrite("load up the batch database\n"),
     T1 = erlang:timestamp(),
     {NewLoc, stem, _} = 
-        store_verkle:batch(Leaves, Loc, CFG),
+        store_verkle:batch(Leaves, Loc),
     T2 = erlang:timestamp(),
+    {Keys, _} = lists:split(Prove, Many),
     io:fwrite("make proof\n"),
-    Proof = 
-        get_verkle:batch(Many, NewLoc, CFG),
+    {Proof, _} = 
+        get_verkle:batch(Many, NewLoc),
     T3 = erlang:timestamp(),
     io:fwrite("verify proof\n"),
-    Root = stem_verkle:root(stem_verkle:get(NewLoc, CFG)),
-%    io:fwrite({NewLoc, 
-%               stem_verkle:get(NewLoc, CFG),
-%               base64:encode(Root)}),
-    {true, Leaves2} = 
-        verify_verkle:proof(Root, Proof, CFG),
+    Root = stem_verkle:root(stem_verkle:get(NewLoc)),
+    {true, Leaves2, _} = 
+        verify_verkle:proof(Proof),
     T4 = erlang:timestamp(),
     true = (length(Leaves2) == length(Many)),
     io:fwrite("measured in millionths of a second. 6 decimals. \n"),
@@ -142,6 +67,7 @@ doit(2) ->
      {make_proof, 
       timer:now_diff(T3, T2)},
      {verify, timer:now_diff(T4, T3)}}.
+
 
 %get proof overview
 % lookup stems and leaves 25%
