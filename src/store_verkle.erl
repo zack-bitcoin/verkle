@@ -164,12 +164,12 @@ verified(Loc, ProofTree, ID) ->
     RootStem3 = 
         RootStem2#stem{root = hd(ProofTree)},
     case stem_verkle:check_root_integrity(RootStem3) of%todo remove this check once we solve the issue
-        success -> ok;
+        ok -> ok;
         error -> io:fwrite({{good, RootStem#stem.pointers}, {bad, RootStem3#stem.pointers}})
     end,
     if
         ?sanity ->
-            success = stem_verkle:check_root_integrity(RootStem3);
+            ok = stem_verkle:check_root_integrity(RootStem3);
         true -> ok
     end,
     Loc2 = stem_verkle:put(RootStem3, ID),
