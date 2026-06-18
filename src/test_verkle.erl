@@ -31,7 +31,7 @@ test(1) ->
     %compares fast proofs with normal proofs.
     %so this gives an idea of how it is for a light node.
     %Loc = cfg_verkle:empty(tree:cfg(?ID)),
-    Loc = tree2:empty(),
+    Loc = file_bytes:empty(),
     Times = 10000,
     Prove = 3,
     Leaves = 
@@ -540,14 +540,14 @@ test(9) ->
     [_, {Key, {_, Val}}] = A,
 
     io:fwrite("test 9 about to quick save\n"),
-    tree2:quick_save(?ID),
+    file_bytes:quick_save(?ID),
     dump:delete_all(LeafID),
     dump:delete_all(StemID),
     timer:sleep(100),
 
     1 = dump:top(StemID),
     1 = dump:top(LeafID),
-    tree2:reload(?ID),
+    file_bytes:reload(?ID),
     timer:sleep(100),
 
     {{A, _, _}, _} = get_verkle:batch([leaf_verkle:raw_key(Leaf)], Loc2),
@@ -557,7 +557,7 @@ test(10) ->
     Key = 27,
     Val = <<3:16>>,
     Loc2 = 2,
-    tree2:reload(?ID),%dies here...
+    file_bytes:reload(?ID),%dies here...
     Leaf = leaf_verkle:new(Key, Val, <<0>>),
     {{A, _, _}, _} = get_verkle:batch([leaf_verkle:raw_key(Leaf)], Loc2),
     [_, {Key, {_, Val}}] = A,
@@ -565,7 +565,7 @@ test(10) ->
 test(11) ->
     %attempting to store things of different sizes
     %Loc = cfg_verkle:empty(tree:cfg(?ID)),
-    Loc = tree2:empty(),
+    Loc = file_bytes:empty(),
     Prove = 2,
     Leaves = [leaf_verkle:new(<<1:256>>, <<1:16>>, <<0>>),
 	      leaf_verkle:new(<<2:256>>, <<2:24>>, <<0>>)],
