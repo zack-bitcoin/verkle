@@ -159,6 +159,10 @@ batch(Keys, Root, ID, Type) ->
     %256,1,1,1
     %FAs is list of binaries. FZs is binaries. commits is binaries
 
+
+    %This is the point where we need to merge the proof with the global verkle tree's proof.
+
+
     if
         ?sanity -> 
             lists:map(

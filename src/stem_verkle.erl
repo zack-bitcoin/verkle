@@ -218,13 +218,13 @@ check_root_integrity(Stem) ->
 put(Stem, ID, CompressedRoot) ->
     %compressed root is in affine format. 64 bytes.
     S = serialize(Stem, CompressedRoot),
-    tree2:store(S, ID).
+    file_bytes:store(S, ID).
 put(Stem, ID) ->
     S = serialize(Stem),
-    tree2:store(S, ID).
+    file_bytes:store(S, ID).
 get(Pointer, ID) -> 
     true = is_integer(Pointer),
-    {ok, S} = tree2:read(Pointer, ID),
+    {ok, S} = file_bytes:read(Pointer, ID),
     deserialize(S).
 empty_trie(Root) ->
     Stem = stem_verkle:get(Root),

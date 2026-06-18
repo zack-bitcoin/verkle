@@ -77,9 +77,9 @@ meta(X) -> X#leaf.meta.
 %serialize_leaves([{N, L}| T], CFG) ->
 %    [{N, serialize(L)}|serialize_leaves(T, CFG)].
 put(Leaf, ID) ->
-    tree2:store(serialize(Leaf), ID).
+    file_bytes:store(serialize(Leaf), ID).
 get(Pointer, ID) ->
-    {ok, L} = tree2:read(Pointer, ID),
+    {ok, L} = file_bytes:read(Pointer, ID),
     deserialize(L).
 hash(L) ->   
     %HS = cfg_verkle:hash_size(CFG)*8,
