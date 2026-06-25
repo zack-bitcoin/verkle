@@ -1,12 +1,13 @@
 -module(get_verkle).
 -export([
 batch/3, batch/4, 
-paths2tree/1,
+%paths2tree/1,
 index2domain2/1,
 %get/3, same_end/3, 
 split3parts/4, 
-keys2paths/1, 
-withdraw_points/1, withdraw_points2/1,
+%keys2paths/1, 
+%withdraw_points/1, 
+%withdraw_points2/1,
 compressed_points_list/1,
 serialize_proof/1, deserialize_proof/1,
 unverified/3]).
@@ -106,27 +107,16 @@ batch(Keys, Root, ID, Type) ->
     benchmark:now(),
     Tree4 = remove_hashes(Tree3),%the hashes in each stem aren't needed to verify the verkle proof, so they are removed.
     
-    %todo, strip the meta data from the leaves.
-
-    %[El, {I, El}, [{I, leaf}], [{I, El}, {I, El}], [{I, El}, [{I, El}], [{I, El}]]]
-    %io:fwrite(fr:decode(ed:compress_point(element(2, hd(hd(tl(Tree4))))))),%bad point!
-
-
     %io:fwrite("get flatten\n"),
     benchmark:now(),
 
     Lookups = flatten(Tree2, []),
-    %io:fwrite({Lookups}),
     %io:fwrite("get split3\n"),
     benchmark:now(),
     {Zs0, Commits, As0} = 
         split3parts(Lookups, [], [], []),
-    %ToPrint4 = fr:decode(hd(hd(tl(As0)))),
-    %<<_:256>> = hd(hd(tl(As0))),
     %confirmed that As are not points, they are hashes.
     %io:fwrite(integer_to_list(ToPrint4)), %This is the version being used when generating the proof. 
-    %io:fwrite("\n"),
-    %io:fwrite(integer_to_list(PHash)), 
     %io:fwrite("get lookup parameters\n"),
     benchmark:now(),
     Domain = parameters:domain(),
@@ -149,8 +139,6 @@ batch(Keys, Root, ID, Type) ->
     %io:fwrite("param 3\n"),% 8%
     Domain = parameters:domain(),
     %io:fwrite("param done\n"),% 8%
-    %io:fwrite({As}),
-    %FAs = fr:encode(As),%crashes here.
     FAs = As,
     %io:fwrite("Fas done\n"),% 8%
     FZs = fr:encode(Zs),
@@ -161,7 +149,6 @@ batch(Keys, Root, ID, Type) ->
 
 
     %This is the point where we need to merge the proof with the global verkle tree's proof.
-
 
     if
         ?sanity -> 
@@ -219,23 +206,6 @@ batch(Keys, Root, ID, Type) ->
     %io:fwrite("get done\n"),
     benchmark:now(),
 
-    %sanity checks
-    %Tree5 = verify_verkle:unfold(Root4, Tl4, [], CFG),
-    %tree5 is empty.
-    %{Commitsb, Zs0b, _} = 
-    %    split3parts(Tree5, [], [], []),
-    %io:fwrite({Tree5}),
-    %Ys = lists:zipwith(
-    %       fun(F, Z) ->
-    %               poly:eval_e(Z, F, P#p.domain, 
-    %                           secp256k1:order(
-    %                             P#p.e))
-    %       end, As, Zs),
-    %true = multiproof:verify({CommitG, Opening}, Commits, Zs, Ys, P), 
-
-    %io:fwrite(
-    %{Tree4, CommitG, Opening}),
-    %{Tree, E, {E, E, [E...]}}
     TLO = case Type of
               small -> tuple_to_list(Opening);
               fast -> Opening
@@ -251,7 +221,6 @@ batch(Keys, Root, ID, Type) ->
                    fast -> Opening2
                end,
     {Tree6, Meta} = strip_meta(Tree5, dict:new(), ID),
-    %todo. return meta data from the leaves.
     [Root2, First|Rest] = Tree6,
     Tree7 = if
                 is_list(First) and (Rest == []) ->
@@ -259,13 +228,10 @@ batch(Keys, Root, ID, Type) ->
                 true -> Tree6
             end,
     {{Tree7, CommitG2, Opening3}, Meta}.
-    %{Tree4, CommitG, Opening}.
 
 deserialize_tree(<<Root:256, 0, S2/binary>>) ->
     %io:fwrite("deserialize tree 0\n"),
     {D, Leftover} = deserialize_thing(S2),
-    %[<<Root:256>>|D].
-    %io:fwrite(D),
     Leftover = <<>>,
     if
         is_list(D) ->
@@ -340,14 +306,11 @@ deserialize_times(
     {DT, R2} = deserialize_thing(
                 <<1, I, B:256, N0, R/binary>>),
     {DT2, R3} = deserialize_times(N-1, R2),
-    %{[[{I, <<B:256>>}|DT]|DT2], R3}.
     {[DT|DT2], R3}.
     
 
 
     
-    
-
 serialize_tree([<<Root:256>>, L|Rest]) 
   when is_list(L) ->
     %first stem has more than one child.
@@ -409,7 +372,6 @@ chop_binary(0, <<>>) -> [].
     
     
 serialize_proof({Tree, Commit, Opening}) ->
-    %io:fwrite({size(Commit), Tree, Commit, Opening}),
     {<<A:256>>, <<B:256>>, L3, <<C:256>>, <<D:256>>} = Opening,
     L17 = ordered_fold(L3),
     TreeBin = serialize_tree(Tree),
@@ -464,24 +426,18 @@ points_list({I, <<E:1024>>}) when is_integer(I) ->
     [<<E:1024>>];
 points_list([H|T]) ->% when is_list(H) ->
     points_list(H) ++ points_list(T);
-%points_list([_|T]) ->
-%    points_list(T);
 points_list({I, {_Key, _Value, _Meta}}) 
   when is_integer(I) -> 
     %a leaf.
     [];
 points_list(<<_:256>>) -> [];
 points_list([]) -> [].
-%points_list(_) -> [].
 
 compressed_points_list(X = <<_:256>>) -> 
-%    1=2,
     [X];
 compressed_points_list({I, X = <<_:256>>}) 
   when is_integer(I) -> 
-    %1=2,
     [X];
-%ed:compress_points([X]);
 compressed_points_list([H|T]) -> 
     compressed_points_list(H) ++
         compressed_points_list(T);
@@ -489,8 +445,6 @@ compressed_points_list([]) -> [];
 compressed_points_list({_Key, _Value, _Meta}) -> 
     %a leaf
     [];
-%compressed_points_list(X) -> 
-%    io:fwrite({X, size(X)});
 compressed_points_list(_) -> [].
 
 fill_points(Points, [], Result) -> 
@@ -510,15 +464,12 @@ fill_points(Ps, [T|R], Result) ->
     %remove duplicate elliptic points in the tree structure by moving where they are written more towards the root of the tree.
 withdraw_points(X = [[{_, R}|_]|_]) ->
     T = withdraw_points2(X),
-    %R2 = R, %HERE
     R2 = {-1, R},
     case T of
         [] -> R2;
         _ -> [R2|T]
     end;
-    %[R|withdraw_points2(X)];
 withdraw_points(X = [{_, R}|_]) ->
-    %[R|withdraw_points3(X)].
     [{-1, R}|withdraw_points3(X)].
 withdraw_points2(Xs) ->
     L = lists:map(fun withdraw_points3/1,
@@ -538,13 +489,10 @@ withdraw_points3(X = [{I, _},
     [{I, P}|withdraw_points2(Xs)];
 withdraw_points3([{I, _}, L = #leaf{}]) ->
     [{I, L}];
-%withdraw_points3([{I, _}, {Next, 0}]) ->
 withdraw_points3([{I, _}, 0]) ->
-    %[{I, {Next, 0}}];
     [{I, 0}];
 withdraw_points3([{_, #stem{}}|R]) -> 
     withdraw_points3(R);
-%withdraw_points3([{_, S = #stem{}}]) -> S;
 withdraw_points3([H|T]) when is_list(H) ->
     X = withdraw_points3(H),
     Y = withdraw_points3(T),
@@ -568,9 +516,7 @@ remove_hashes([H|T]) ->
 remove_hashes(X) -> X.
     
 flatten({Index, S = #stem{}}, T) -> 
-    %[{Index, S#stem.root, S#stem.hashes}|T];
     H = S#stem.hashes,
-    %H = binary2int2(tuple_to_list(S#stem.hashes)),
     
     [{Index, S#stem.root, H}|T];
 flatten([H|T], R) -> 
@@ -603,7 +549,6 @@ setup_domain_dict(I, [A|T], D) ->
 paths2tree([]) -> [];
 paths2tree([[]]) -> [];
 paths2tree([Path]) -> [Path];
-%paths2tree([Path]) -> Path;
 paths2tree(Paths) ->
     {Same, Others} = starts_same_split(Paths),
     H = hd(hd(Same)),
@@ -654,7 +599,6 @@ points_values([<<Loc:?nindex>>|R], Root, ID) ->
                 L = leaf_verkle:get(P, ID),
 		%L2 = L#leaf{value = sha256:doit(L#leaf.value), meta = P},
                 [V, L]
-                %[V, L2]
     end,
     E;
 points_values([H|T], Root, ID) ->
@@ -667,8 +611,4 @@ is_in(X, [X|_]) -> true;
 is_in(_, []) -> false;
 is_in(X, [_|T]) -> 
     is_in(X, T).
-
-
-
-    
 

@@ -8,12 +8,10 @@
 -include("constants.hrl").
 -define(sanity, false).
 -define(stem_size, 16704).
-%-define(stem_size, 11328).
 
 batch(Leaves0, RP, ID) ->%returns {location, stem/leaf, #stem{}/#leaf{}}
     %put them in an ordered list.
     %io:fwrite("store sorting 0\n"),
-    % 2%
     Leaves = sort_by_path2(Leaves0),
     %io:fwrite("store parameters 1\n"),
     MEP = parameters:multi_exp(),
@@ -36,7 +34,6 @@ batch([Leaf], 0, 0, _, _, ID) ->
 batch(Leaves0, 0, 0, Depth, MEP, ID) ->
     %io:fwrite("storing multiple leaves in a previously empty spot.\n"),
     batch(Leaves0, 
-          %{1, ?stem_size}, %1 is always an empty stem.
 	  1,%1 is always an empty stem
           stem, Depth, MEP, ID);
 batch([Leaf0], RP, leaf, Depth, MEP, ID) ->
@@ -49,7 +46,6 @@ batch([Leaf0], RP, leaf, Depth, MEP, ID) ->
         leaf_verkle:value(Leaf0),
     if
         B2 and B -> 
-            %1=2,
             {RP, leaf, RootLeaf};
         B -> 
             Loc = leaf_verkle:put(Leaf0, ID),
@@ -80,9 +76,6 @@ batch(Leaves, RP, stem, Depth, MEP, ID) ->
                 Depth, Leaves),
     %depth first recursion over the sub-lists on teh sub-trees to calculate the pointers and hashes for this node.
     true = is_integer(RP),
-%    {RP1, RP2} = RP,
-%    true = is_integer(RP1),
-%    true = is_integer(RP2),
     RootStem = stem_verkle:get(RP, ID),
     #stem{
            hashes = Hashes,
@@ -197,9 +190,6 @@ verified2([{N, 0}|T], Stem, ID) ->
 verified2([[{N, {Key, Value, Meta}}]|T], 
           Stem, ID) -> 
     %a leaf was updated, so we need to store the new version.
-    %io:fwrite("verified2 update a leaf\n"),
-    %io:fwrite(integer_to_list(N)),
-    %io:fwrite("\n"),
     Leaf = leaf_verkle:new(Key, Value, Meta),
     Loc = leaf_verkle:put(Leaf, ID),
     Stem2 = verified3(
@@ -208,15 +198,7 @@ verified2([[{N, {Key, Value, Meta}}]|T],
     verified2(T, Stem2, ID);
 verified2([[{N, {Key, Value}}]|T], 
           Stem, ID) -> 
-    %io:fwrite("verified2 leaf unchanged\n"),
     %a leaf was unchanged.
-    %Leaf = leaf_verkle:new(Key, Value, Meta, CFG),
-    %Leaf = leaf_verkle:new(Key, Value, 0, CFG),
-    %Loc = element(N+1, Stem#stem.pointers),%leave it unchanged
-    %Stem2 = verified3(
-    %          N, Stem, 2, Loc, 
-    %          leaf_hash(Leaf, CFG)),
-    %verified2(T, Stem2, CFG);
     verified2(T, Stem, ID);
 verified2([[{N, B = <<_:1024>>}|T1]|T2], Stem, ID) ->
     Hash = stem_verkle:hash_point(B),
@@ -281,7 +263,6 @@ clump_by_path(D, Leaves) ->
                        case leaf_verkle:raw_key(L) of
 
                            <<_:D8, B:8, _/binary>> ->
-                               %leaf_verkle:raw_key(L),
                                {B, L};
                            _ -> 
                                io:fwrite("failure because it tried to store two leaves with the same key.\n"),
@@ -358,17 +339,9 @@ test(3) ->
                   leaf_verkle:new(Key0, <<N:16>>)
                       %#leaf{key = Key0, value = <<N:16>>}%random version
           end, range(1, Times+1)),
-    %Many = lists:map(fun(#leaf{key = K}) -> K end,
-    %Many = lists:map(fun(Leaf) -> 
-    %                         leaf_verkle:raw_key(Leaf) end,
-    %                 Leaves),
     fprof:trace(start),
     store_verkle:batch(Leaves, Loc),
     fprof:trace(stop),
     fprof:profile(file, "fprof.trace"),
     fprof:analyse().
-    
-
-    
-
     

@@ -1,25 +1,19 @@
 %The purpose of this file is to define stems as a data structure in ram, and give some simple functions to operate on them.
-
 -module(stem_verkle).
 -export([test/1,get/2,put/2,put/3,type/2,
          hash/1,hash_point/1,hash_points/1,
          pointers/1,
-	 types/1,hashes/1,pointer/2,%new/5,%add/5,
-	 new_empty/0,%recover/6, 
+	 types/1,hashes/1,pointer/2,
+	 new_empty/0,
          empty_hashes/0, 
 	 update_pointers/2, empty_tuple/0,
 	 empty_tuple/1,
 	 make/3, make/2, 
-         %update/3, 
          onify2/1,
-%	 put_batch/2, 
          serialize/2,
 	 serialize/1,
          root/1, check_root_integrity/1,
-%         delete/2,
 	 empty_trie/1]).
-%-include("constants.hrl").
-%-export_type([stem/0,types/0,empty_t/0,stem_t/0,leaf_t/0,pointers/0,empty_p/0,hashes/0,hash/0,empty_hash/0,stem_p/0,nibble/0]).
 -define(ID, tree01).
 -define(sanity, false).
 -record(stem, { root = ed:extended_zero()
@@ -45,38 +39,24 @@ new_empty() ->
          types = empty_tuple(),
          pointers = empty_tuple(0),
          root = ed:extended_zero()}.
-%unused_recover(M, T, P, H, Hashes, CFG) ->
-%    Types = onify2(Hashes),
-    %Types = list_to_tuple(onify(tuple_to_list(Hashes))),
-%    S = #stem{hashes = Hashes, types = Types},
-%    unused_add(S, M, T, P, H).
 onify2(H) ->
     list_to_tuple(onify(tuple_to_list(H))).
 onify([]) -> [];
 onify([H|T]) ->
-    %HS = cfg_verkle:hash_size(CFG)*8,
     <<X:256>> = H,
     case X of
 	0 -> [0|onify(T)];
 	_ -> [1|onify(T)]
     end.
 	    
-%onify([<<0:_>>|T]) -> [0|onify(T)];
-%onify([_|T]) -> [1|onify(T)].
 make(Hashes, ID) ->
     Types = onify2(Hashes),
-    %Pointers = empty_tuple({0,0}),
     Pointers = empty_tuple(),
     make(Types, Pointers, Hashes).
 make(Types, Pointers, Hashes) ->
     #stem{types = Types,
 	  pointers = Pointers,
 	  hashes = Hashes}.
-%unused_new(N, T, P, H, CFG) ->
-    %N is the nibble being pointed to.
-    %T is the type, P is the pointer, H is the Hash
-%    S = new_empty(),
-%    unused_add(S, N, T, P, H).
 pointers(R) -> R#stem.pointers.
 update_pointers(Stem, NP) ->
     Stem#stem{pointers = NP}.
@@ -204,14 +184,9 @@ check_root_integrity(Stem) ->
     R = precomputed_multi_exponent:doit(
           Hashes,MEP),
     {Gs, _Hs, _Q} = parameters:read(),
-    %R2 = multi_exponent:doit(Hashes, Gs),
-    %B1 = ed:e_eq(R, R2),
     B2 = ed:e_eq(R, Stem#stem.root),
-    %B3 = ed:e_eq(R2, Stem#stem.root),
     if
-        %not(B1 and B2 and B3) ->
         not(B2) ->
-            %io:fwrite({B1, B2, B3, Stem}),
             erlang:error(root_lacks_integrity);
         true -> ok
     end.
@@ -228,7 +203,6 @@ get(Pointer, ID) ->
     deserialize(S).
 empty_trie(Root) ->
     Stem = stem_verkle:get(Root),
-    %update_pointers(Stem, empty_tuple({0,0})).
     update_pointers(Stem, empty_tuple()).
 equal(S, T) ->
     [R2, R3] = ed:normalize(

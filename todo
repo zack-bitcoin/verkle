@@ -1,15 +1,23 @@
+globe update.
 
 
-* no more fixed sized. use compession to store stems especially.
-* store everything on the same file. length prefix.
+these functions need to be rewritten for the globe format.
+store_verkle:batch
+store_verkle:verified
+store_verkle:leaf_hash
+get_verkle:batch
+get_verkle:unverified
+get_verkle:deserialize_proof
+get_verkle:serialize_proof
+verify_verkle:update
+verify_verkle:proof
 
 
 
 
 
-use the batched version of hash_points.
-* in store:verified.
-* in verify.
+
+
 
 
 

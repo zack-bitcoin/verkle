@@ -1,29 +1,24 @@
 
 
 
--define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
--define(sub(A, B), ((A - B + ?order) rem ?order)).%assumes B less than ?order
--define(neg(A), (?order - A)).%assumes A less than ?order
--define(add(A, B), ((A + B) rem ?order)).
--define(mul(A, B), ((A * B) rem ?order)).
--define(add_mod(C), %assumes C is positive and less than ?order
-        if (C>= ?order ) -> C - ?order;
-           true -> C end).
--define(sub2(A, B), %assumes A and B are positive and less than ?order
-        (if(A>=B) -> (A - B); 
-           true -> (A + ?order - B) end)).
+%-define(order, 115792089237316195423570985008687907852837564279074904382605163141518161494337).
+%-define(sub(A, B), ((A - B + ?order) rem ?order)).%assumes B less than ?order
+%-define(neg(A), (?order - A)).%assumes A less than ?order
+%-define(add(A, B), ((A + B) rem ?order)).
+%-define(mul(A, B), ((A * B) rem ?order)).
+%-define(add_mod(C), %assumes C is positive and less than ?order
+%        if (C>= ?order ) -> C - ?order;
+%           true -> C end).
+%-define(sub2(A, B), %assumes A and B are positive and less than ?order
+%        (if(A>=B) -> (A - B); 
+%           true -> (A + ?order - B) end)).
 
+-record(lot, {value, meta = 0}).
 
 -record(leaf, { key
 	      , value = empty
 	      , meta = 0 %meta is data we want to remember that doesn't get hashed into the merkle tree.
 	      }).
--record(fast_leaf, {key
-               , value = empty
-               , meta = 0
-               , path
-               , hash
-               }).
 
 -record(stem, { root
                 , types
@@ -42,7 +37,7 @@
 %-define(root8, 36188356813700178691818544968121959758909550161426798528723736001201041182661).
 %-define(root64, 82197185704688442490006447828692191331519280365147330290079205072302121668882).
 
--define(root, ?root8).
+%-define(root, ?root8).
 
 %created in multiproof:make_parameters_jacob/2
 -record(p, {e, b, g, h, q, domain, a, da, ls}).

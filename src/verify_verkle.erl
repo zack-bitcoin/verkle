@@ -1,5 +1,5 @@
 -module(verify_verkle).
--export([proof/1, update/2, remove_empty/1,
+-export([proof/1, update/2, %remove_empty/1,
          test/0
         ]).
 -include("constants.hrl").
@@ -26,7 +26,6 @@ update(PL = [OldRoot|ProofTree], Leaves) ->
                       0, MEP),
     NewRoot = case Diff of
                   0 -> OldRoot;
-                  %_ -> fq:e_add(Diff, OldRoot)
                   _ -> 
                       %io:fwrite({size(Diff), size(OldRoot)}),%{128, 32}
                       ed:e_add(Diff, OldRoot)
@@ -92,15 +91,12 @@ insert_stem_hashes2(
 insert_stem_hashes2(
   ECs, [{I, {mstem, uncalculated, E}}|T], 
   Result) ->
-    %{C, ECs2} = get_remove(E, ECs, []),
     {ok, C} = dict:find(E, ECs),
     insert_stem_hashes2(
       ECs, T, [{I, {mstem, C, E}}|Result]);
 insert_stem_hashes2(ECs, [H|T], Result) ->
     {ECs2, H2} = insert_stem_hashes2(ECs, H, []),
     insert_stem_hashes2(ECs2, T, [H2|Result]);
-    %insert_stem_hashes2(ECs2, T, H2 ++ Result);
-%insert_stem_hashes2(ECs, Tree = {_I, {_K, _V, _M}}, 
 insert_stem_hashes2(ECs, Tree = {_I, {_K, _V}}, 
                     []) ->
     {ECs, Tree};
@@ -115,30 +111,6 @@ insert_stem_hashes2(ECs, Tree = {I, 0}, []) ->
 insert_stem_hashes2(_, Tree, _) ->
     io:fwrite("verify corrupted tree\n"),
     io:fwrite(Tree).
-    
-
-
-insert_stem_hashes([], T) -> T;
-insert_stem_hashes(_, []) -> [];
-insert_stem_hashes(ECs, [{I, {mstem, uncalculated, E}}|T]) ->
-    {C, ECs2} = get_remove(E, ECs, []),
-    [{I, {mstem, C, E}}|
-     insert_stem_hashes(ECs2, T)];
-insert_stem_hashes(ECs, [H|T]) ->
-    [insert_stem_hashes(ECs, H)|
-     insert_stem_hashes(ECs, T)];
-insert_stem_hashes(_, X) -> X.
-
-get_remove(Key, [{Key, Value}|L], Rest) ->
-    {Value, L ++ Rest};
-get_remove(Key, [H|L], Rest) ->
-    get_remove(Key, L, [H|Rest]).
-
-    
-            
-
-
-    
 
 calc_subs(Diffs, []) ->
     Diffs;
@@ -199,10 +171,8 @@ update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees],
     {Point, Tree2} = 
         update_batch2(LH, S1, Depth+1, MEP),
     OldN = stem_verkle:hash_point(B),
-    %NewPoint0 = fq:e_add(B, Point),
     NewPoint0 = ed:e_add(B, Point),
     {NewPoint, Diff, Hash} = 
-        %case (fq:eq(NewPoint0, fq:e_zero())) of
         case (ed:e_eq(NewPoint0, ed:extended_zero())) of
             true -> {NewPoint0, <<0:256>>, <<0:256>>};
             false ->
@@ -214,13 +184,11 @@ update_merge([LH|Leaves], [[{N, B}|S1]|Subtrees],
                  [[{N, {mstem, Hash, NewPoint}}|Tree2]|R], 
                  [Diff|Diffs], N+1);
 update_merge([[{K, 0}]|Leaves], 
-             %[[{N, {OldK, OldV, Meta}}]|Subtrees],
              [[{N, {OldK, OldV}}]|Subtrees],
              Depth, MEP, R, Diffs, N) ->
     %deleting a leaf.
     %io:fwrite("deleting a leaf"),
     OldLeaf = leaf_verkle:new(OldK, OldV),
-    %OldLeaf = leaf_verkle:new(OldK, OldV, Meta, CFG),
     OldN = store_verkle:leaf_hash(OldLeaf),
     update_merge(Leaves, Subtrees, Depth, MEP,
                  [{N, 0}|R], 
@@ -231,10 +199,7 @@ update_merge([LH|Leaves],
              Depth, MEP, R, Diffs, N) ->
     %io:fwrite("add one or more leaves to a spot with an existing leaf\n"),
     %there is already a leaf here.
-    %NewLeaf = leaf_verkle:new(Key, Value, 0, CFG),
-    %FL = leaf_verkle:new(Key, Value, Meta, CFG),
     FL = leaf_verkle:new(Key, Value),
-                     
     B = leaf_in_list(FL, LH),
     B2 = (1 == length(LH)),
     if
@@ -250,25 +215,20 @@ update_merge([LH|Leaves],
                         %leaf unchanged.
                         %io:fwrite("Leaf unchanged\n"),
                         <<0:256>>;
-                        %fr:encode(0);
                     true ->
                         %io:fwrite("updating leaf diff calculation.\n"),
                         fr:sub(NewN, OldN)
                 end,
             update_merge(
               Leaves, Subtrees, Depth,  
-              %MEP, [[{N, {leaf_verkle:key(Leaf2),
               MEP, [[{N, {leaf_verkle:raw_key(Leaf2),
                           leaf_verkle:value(Leaf2),
                           leaf_verkle:meta(Leaf2)}}]|
-                   %}}]|
                     R],
               [LeafDiff|Diffs], N+1);
         B -> 
             %io:fwrite("adding leaves to a spot where there was a leaf, and changing the existing leaf\n"),
-            %todo. we need to somehow subtract this leaf's diff before adding the new stem or leaves.
             OldN = store_verkle:leaf_hash(FL),
-            %EmptyStem = stem_verkle:new_empty(),
             {Point, Tree2} = 
                 update_batch2(LH, all_empties(),
 			     Depth+1, MEP),
@@ -279,14 +239,10 @@ update_merge([LH|Leaves],
             update_merge(
               Leaves, Subtrees, Depth, MEP,
               [[{N, {mstem, Hash, NewPoint}}|Tree2]|R], [Diff|Diffs], N+1);
-              %[[{N, 0}]
-              % |Subtrees],
-              %Depth, CFG, MEP, R, Diffs, N);
         true -> 
             %adding leaves to this spot where there was a leaf, without updating our leaf
             %io:fwrite("adding leaves to this spot where there is a leaf, and not changing the existing leaf\n"),
             update_merge(
-              %[[NewLeaf|LH]|Leaves], 
               [[FL|LH]|Leaves], 
               [[{N, 0}]
                |Subtrees],
@@ -362,15 +318,6 @@ leaf_in_list(#leaf{key = K},
 leaf_in_list(Leaf, [_|T]) -> 
     leaf_in_list(Leaf, T).
 
-merge_find_helper(P, D) ->
-    %io:fwrite("merge find helper\n"),
-    case dict:find(P, D) of
-	error -> P;
-	{ok, error} -> 1=2;
-	{ok, P2} ->
-	    merge_find_helper(P2, D)
-    end.
-
 decompress_proof(
   Open0 = {Open1, Open2, OpenL, Open4, Open5}, 
   Tree0, CommitG0) ->
@@ -391,9 +338,6 @@ decompress_proof(
 decompress_proof(Open, Tree0, CommitG0) 
   when is_list(Open)->
     CPL = get_verkle:compressed_points_list(Tree0),
-    %lists:map(fun(X)-> io:fwrite(base64:encode(X)), io:fwrite("\n") end,
-    %                    [CommitG0] ++ CPL),
-    %1=2,
     false = CPL == [],
     [CommitG|Decompressed] = 
         ed:affine2extended(
@@ -457,12 +401,6 @@ proof({Tree0, CommitG0, Open0}) ->
             end
     end.
     
-    %[p2, root, p1, p1, root] %commitments
-    %[0,  3,    1,  0,  1]  %indices
-    %[L3, p2,   L2, L1, p1] %unhashed ys
-
-    %[{1, p1}, [{0, L1},{1, L2}], [{3, p2},{0,L3}]]
-
 leaves2([], _SubPath, _) -> [];
 leaves2([{N, B}|T], SubPath, D) 
   when is_binary(B) ->
@@ -489,7 +427,6 @@ unfold(Root, {Index, {Key, B}}, T) %leaf case
   when is_binary(B) ->
     %Leaf = #leaf{key = Key, value = B},
     %io:fwrite("verify unfold leaf\n"),
-    %Leaf = leaf_verkle:new(Key, B, Meta, CFG),
     Leaf = leaf_verkle:new(Key, B),
     <<L:256>> = store_verkle:leaf_hash(Leaf),
     lists:reverse([{Root, Index, <<L:256>>}|T]);
@@ -504,7 +441,6 @@ unfold(Root, [H|J], T) ->
 unfold(_, [], _) -> [];
 unfold(_, {0, X}, _) -> 
     io:fwrite({size(X), X}).
-
 
 
 test() ->

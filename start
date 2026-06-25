@@ -1,9 +1,14 @@
 #!/bin/awk -f
 
 BEGIN {
+    rebar_file = "rebar3"
+    if((getline unused < rebar_file) < 1) {
+	system("./get_rebar")
+    }
     system("mkdir -p ebin")
     system("ls /usr/lib/erlang/ | cat | awk 'match($0, /erts/) {print($0)}' > erts_version")
     getline ERTS_VERSION < "erts_version"
+    print("erts is " ERTS_VERSION)
     system("gcc -O2 -march=native -funroll-loops -fomit-frame-pointer -flto -fPIC -shared -o ebin/fr.so src/crypto/fr.c -I $ERL_ROOT/user/include/ -I /usr/lib/erlang/" ERTS_VERSION "/include/")
     system("gcc -O2 -march=native -funroll-loops -fomit-frame-pointer -flto -fPIC -shared -o ebin/ed25519.so src/crypto/ed25519.c -I $ERL_ROOT/user/include/ -I /usr/lib/erlang/" ERTS_VERSION "/include/")
     system("rm erts_version")

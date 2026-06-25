@@ -6,8 +6,6 @@ Pedersen-commitment based verkle trees using the ed25519 elliptic curve.
 learn about verkle trees here:
 https://vitalik.ca/general/2021/06/18/verkle.html
 
-Techniques used in this software:
-
 
 How big are the proofs?
 ==============
@@ -137,10 +135,18 @@ if you want to make the fast version of the proof:
 
 Now lets verify the proofs.
 
-`{true, Leaves, _} = verify:proof(SmallProof, CFG).`
-`{true, Leaves, _} = verify:proof(FastProof, CFG).`
+`{true, Leaves, DecompressedTree} = verify_verkle:proof(SmallProof, CFG).`
+`{true, Leaves, DecompressedTree} = verify_verkle:proof(FastProof, CFG).`
 
-When you verify the proof, it returns a list of all the leaves that this proof proves. 
+When you verify the proof, it returns a list of all the leaves that this proof proves, and it returns a tree structure of the proof that can be used to calculate the verkle root after processing the block, as follows:
+
+```
+	Leaf2 = leaf_verkle:new(<<1:256>>, <<3:256>>, 0).
+	ProofTree2 = verify_verkle:update(DecompressedTree, [Leaf2]).
+	RootHash = stem_verkle:hash_point(hd(ProofTree2)).
+```
+
+RootHash is the root hash after updating the verkle tree to start Leaf2 in place of Leaf.
 
 
 Tests that the software works.

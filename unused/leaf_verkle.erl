@@ -1,4 +1,4 @@
--modue(leaf_verkle).
+-module(leaf_verkle).
 -export([new/3, new/2,
          key/1, value/1, meta/1, path/2, path_maker/1, hash/1, put/2, get/2, 
 	 serialize/1, deserialize/1,
