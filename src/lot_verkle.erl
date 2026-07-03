@@ -1,5 +1,5 @@
 -module(lot_verkle).
--export([new/3, new/2,
+-export([new/1, new/2,
 	 value/1, meta/1, 
 	 hash/1, put/2, get/2, 
 	 serialize/1, deserialize/1,
@@ -43,7 +43,7 @@ hash(L) ->
     end.
 test(1) ->
 %    CFG = tree:cfg(tree01),
-    X = new(1, <<0:16>>, <<0:16>>),
+    X = new(1, <<0:16>>),
     SX = serialize(X),
     X = deserialize(serialize(X)),
     hash(X),

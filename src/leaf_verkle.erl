@@ -1,4 +1,4 @@
--modue(leaf_verkle).
+-module(leaf_verkle).
 -export([new/3, new/2,
          key/1, value/1, meta/1, path/2, path_maker/1, hash/1, put/2, get/2, 
 	 serialize/1, deserialize/1,
@@ -97,7 +97,7 @@ hash(L) ->
 test(1) ->
 %    CFG = tree:cfg(tree01),
     X = new(1, <<0:16>>, <<0:16>>),
-    SX = serialize(X),
+    _SX = serialize(X),
     X = deserialize(serialize(X)),
     hash(X),
     success.
