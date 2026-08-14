@@ -672,7 +672,40 @@ test(14) ->
     io:fwrite("hash3 num: " ++ integer_to_list(HashNum3) ++ "\n"),
 %hash num: 19559721477387889062616915405534611174061741860320722130316715783687484559108
 %hash3 num: 113687914702220871819562265794425504444352780902960977855529333944980427811589
+    ok;
+test(15) ->
+    %seems like store_verkle:batch/3 and verify_verkle:update/2 are sometimes noncompatible when splitting a stem.
+    Loc = file_bytes:empty(),
+    <<N:256>> = <<0:232, 2, 1, 1>>,
+    <<N2:256>> = <<0:232, 3, 1, 1>>,
+    <<N3:256>> = <<0:232, 4, 1, 1>>,
+    <<N4:256>> = <<0:232, 1, 1, 1>>,
+    Leaf1 = leaf_verkle:new(N, <<1:16>>, <<0>>),
+    Leaf2 = leaf_verkle:new(N2, <<2:16>>, <<0>>),
+    Leaf3 = leaf_verkle:new(N3, <<3:16>>, <<0>>),
+    Leaf4 = leaf_verkle:new(N4, <<4:16>>, <<0>>),
+    Leaves = [Leaf1, Leaf2, Leaf3, Leaf4],
+    Keys = lists:map(fun(Leaf) -> leaf_verkle:raw_key(Leaf) end, Leaves),
+
+    {LocF1, stem, _} = store_verkle:batch(Leaves, Loc, ?ID),
+    RootF1 = stem_verkle:root(stem_verkle:get(LocF1, ?ID)),
+
+    {Loc1, stem, _} = store_verkle:batch([Leaf1, Leaf4], Loc, ?ID),
+    %Root1 = stem_verkle:root(stem_verkle:get(Loc1, ?ID)),
+   
+
+
+    {{ProofTree, Commit, Opening}, _} = 
+        get_verkle:batch(Keys, Loc1, ?ID),
+    {true, _, DecompressedTree} = 
+        verify_verkle:proof(
+          {ProofTree, Commit, Opening}),
+    ProofTree2 = verify_verkle:update(DecompressedTree, [Leaf2, Leaf3]),
+    RootF2 = hd(ProofTree2),
+    
+    true == ed:e_eq(RootF1, RootF2),
     ok.
+
 
 
 

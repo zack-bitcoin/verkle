@@ -15,6 +15,7 @@ batch(Leaves0, RP, ID) ->%returns {location, stem/leaf, #stem{}/#leaf{}}
     %io:fwrite("store sorting 0\n"),
     % 2%
     Leaves = sort_by_path2(Leaves0),
+    %io:fwrite(Leaves),
     %io:fwrite("store parameters 1\n"),
     MEP = parameters:multi_exp(),
     %io:fwrite("store storing 1\n"),

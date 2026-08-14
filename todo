@@ -1,3 +1,6 @@
+is there a non-determinism between store_verkle:batch/3 and verify_verkle:update/2 for the case where we are splitting a stem?
+
+
 
 
 * no more fixed sized. use compession to store stems especially.
