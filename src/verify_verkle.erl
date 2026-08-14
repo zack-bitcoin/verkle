@@ -296,7 +296,7 @@ update_merge([LH|Leaves],
 
 	    update_merge(
 	      Leaves, Subtrees, Depth, MEP, 
-	      [[{N, {mstem, Hash, NewPoint}}|Trees2]|R], [Diff|Diffs], N+1)
+	      [[{N, {mstem, Hash, NewPoint}}|Tree2]|R], [Diff|Diffs], N+1)
 
             %update_merge(
             %  [[FL|LH]|Leaves], 
