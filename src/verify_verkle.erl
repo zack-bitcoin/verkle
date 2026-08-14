@@ -287,12 +287,22 @@ update_merge([LH|Leaves],
             %adding leaves to this spot where there was a leaf, without updating our leaf
             %io:fwrite("adding leaves to this spot where there is a leaf, and not changing the existing leaf\n"),
 	    OldN = store_verkle:leaf_hash(FL),
-            update_merge(
-              %[[NewLeaf|LH]|Leaves], 
-              [[FL|LH]|Leaves], 
-              [[{N, fr:negative(OldN)}]
-               |Subtrees],
-              Depth, MEP, R, Diffs, N)
+            {Point, Tree2} = 
+                update_batch2([FL|LH], all_empties(),
+			     Depth+1, MEP),
+            NewPoint = Point,
+            Diff = {sub, NewPoint, OldN},
+            Hash = uncalculated,
+
+	    update_merge(
+	      Leaves, Subtrees, Depth, MEP, 
+	      [[{N, {mstem, Hash, NewPoint}}|Trees2]|R], [Diff|Diffs], N+1)
+
+            %update_merge(
+            %  [[FL|LH]|Leaves], 
+            %  [[{N, 0}]
+            %   |Subtrees],
+            %  Depth, MEP, R, Diffs, N)
     end;
 update_merge([[]|Leaves],
              [[{N, 0}]|Subtrees],
