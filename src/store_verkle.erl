@@ -31,18 +31,18 @@ batch([], P, stem, _, _, _) ->
     %don't read the stem here, because we aren't changing it.
     {P, stem, stem_not_recorded};
 batch([Leaf], 0, 0, Depth, _, ID) ->
-    io:fwrite("storing a leaf in a previously empty spot. depth:" ++ integer_to_list(Depth) ++ "\n"),
-    io:fwrite("leaf key: " ++ binary_to_list(base64:encode(Leaf#leaf.key)) ++ "\n"),
+    %io:fwrite("storing a leaf in a previously empty spot. depth:" ++ integer_to_list(Depth) ++ "\n"),
+    %io:fwrite("leaf key: " ++ binary_to_list(base64:encode(Leaf#leaf.key)) ++ "\n"),
     Loc = leaf_verkle:put(Leaf, ID),
     {Loc, leaf, Leaf};
 batch(Leaves0, 0, 0, Depth, MEP, ID) ->
-    io:fwrite("batch multiple leaves in a previously empty spot.\n"),
+    %io:fwrite("batch multiple leaves in a previously empty spot.\n"),
     batch(Leaves0, 
           %{1, ?stem_size}, %1 is always an empty stem.
 	  1,%1 is always an empty stem
           stem, Depth, MEP, ID);
 batch([Leaf0], RP, leaf, Depth, MEP, ID) ->
-    io:fwrite("storing a leaf where there is already a leaf... "),
+    %io:fwrite("storing a leaf where there is already a leaf... "),
     RootLeaf = leaf_verkle:get(RP, ID),
     RootKey = leaf_verkle:key(RootLeaf),
     Key2 = leaf_verkle:key(Leaf0),
@@ -52,20 +52,20 @@ batch([Leaf0], RP, leaf, Depth, MEP, ID) ->
     if
         B2 and B -> 
             %1=2,
-	    io:fwrite("leaf unchanged"),
+	    %io:fwrite("leaf unchanged"),
             {RP, leaf, RootLeaf};
         B -> 
-	    io:fwrite("storing updated leaf\n"),
+	    %io:fwrite("storing updated leaf\n"),
             Loc = leaf_verkle:put(Leaf0, ID),
             {Loc, leaf, Leaf0};
         true ->
             %batch([Leaf0, RootLeaf], {1, ?stem_size}, stem,
-	    io:fwrite("adding stem at depth " ++ integer_to_list(Depth) ++ "\n"),
+	    %io:fwrite("adding stem at depth " ++ integer_to_list(Depth) ++ "\n"),
             batch([Leaf0, RootLeaf], 1, stem,
                   Depth, MEP, ID)
     end;
 batch(Leaves0, RP, leaf, Depth, MEP, ID) ->
-    io:fwrite("batch leaves where there is already a leaf.\n"),
+    %io:fwrite("batch leaves where there is already a leaf.\n"),
     RootLeaf = leaf_verkle:get(RP, ID),
     RootKey = leaf_verkle:key(RootLeaf),
     Keys = lists:map(fun(X) -> leaf_verkle:key(X) 
@@ -79,7 +79,7 @@ batch(Leaves0, RP, leaf, Depth, MEP, ID) ->
     batch(Leaves2, 1, stem, 
           Depth, MEP, ID);
 batch(Leaves, RP, stem, Depth, MEP, ID) ->
-    io:fwrite("store_verkle batch0\n"),
+    %io:fwrite("store_verkle batch0\n"),
     %cut the list into sub lists that get included in each sub-branch.
     % %6
     Leaves2 = clump_by_path(
