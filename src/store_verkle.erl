@@ -31,6 +31,7 @@ batch([], P, stem, _, _, _) ->
     {P, stem, stem_not_recorded};
 batch([Leaf], 0, 0, Depth, _, ID) ->
     io:fwrite("storing a leaf in a previously empty spot. depth:" ++ integer_to_list(Depth) ++ "\n"),
+    io:fwrite("leaf key: " ++ binary_to_list(Leaf#leaf.key) ++ "\n"),
     Loc = leaf_verkle:put(Leaf, ID),
     {Loc, leaf, Leaf};
 batch(Leaves0, 0, 0, Depth, MEP, ID) ->
