@@ -121,6 +121,13 @@ batch(Keys, Root, ID, Type) ->
     benchmark:now(),
     {Zs0, Commits, As0} = 
         split3parts(Lookups, [], [], []),
+
+
+
+
+
+
+
     %ToPrint4 = fr:decode(hd(hd(tl(As0)))),
     %<<_:256>> = hd(hd(tl(As0))),
     %confirmed that As are not points, they are hashes.

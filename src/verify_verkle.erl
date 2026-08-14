@@ -178,6 +178,7 @@ update_merge([LH|Leaves],
   when (not(M == N)) ->
     %this part is not recorded in our proof, it cannot be changed.
     %verify that we are not trying to change it.
+    %io:fwrite("verify that we do not change things that aren't a part of the proof.\n"),
     if
         not(LH == []) ->
             io:fwrite("verkle2 error. tried to edit inaccessible state."),

@@ -30,17 +30,17 @@ batch([], P, stem, _, _, _) ->
     %don't read the stem here, because we aren't changing it.
     {P, stem, stem_not_recorded};
 batch([Leaf], 0, 0, _, _, ID) ->
-    %io:fwrite("storing a leaf in a previously empty spot.\n"),
+    io:fwrite("storing a leaf in a previously empty spot.\n"),
     Loc = leaf_verkle:put(Leaf, ID),
     {Loc, leaf, Leaf};
 batch(Leaves0, 0, 0, Depth, MEP, ID) ->
-    %io:fwrite("storing multiple leaves in a previously empty spot.\n"),
+    io:fwrite("storing multiple leaves in a previously empty spot.\n"),
     batch(Leaves0, 
           %{1, ?stem_size}, %1 is always an empty stem.
 	  1,%1 is always an empty stem
           stem, Depth, MEP, ID);
 batch([Leaf0], RP, leaf, Depth, MEP, ID) ->
-    %io:fwrite("storing a leaf where there is already a leaf.\n"),
+    io:fwrite("storing a leaf where there is already a leaf.\n"),
     RootLeaf = leaf_verkle:get(RP, ID),
     RootKey = leaf_verkle:key(RootLeaf),
     Key2 = leaf_verkle:key(Leaf0),
@@ -60,7 +60,7 @@ batch([Leaf0], RP, leaf, Depth, MEP, ID) ->
                   Depth, MEP, ID)
     end;
 batch(Leaves0, RP, leaf, Depth, MEP, ID) ->
-    %io:fwrite("storing leaves where there is already a leaf.\n"),
+    io:fwrite("storing leaves where there is already a leaf.\n"),
     RootLeaf = leaf_verkle:get(RP, ID),
     RootKey = leaf_verkle:key(RootLeaf),
     Keys = lists:map(fun(X) -> leaf_verkle:key(X) 
