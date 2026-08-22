@@ -522,9 +522,9 @@ withdraw_first([{_, R}|_]) ->
 withdraw_first([H|T]) -> 
     withdraw_first(H).
     %remove duplicate elliptic points in the tree structure by moving where they are written more towards the root of the tree.
-withdraw_points(X = [{_, R}|_]) ->
+broke_withdraw_points(X = [{_, R}|_]) ->
     [{-1, R}|withdraw_points3(X)];
-withdraw_points(X) -> %this is a list like [[{N, stem}],[{N, stem}],...] where Ns are are integers between 0 and 255, and each N in the list needs to be biger than the previous
+broke_withdraw_points(X) -> %this is a list like [[{N, stem}],[{N, stem}],...] where Ns are are integers between 0 and 255, and each N in the list needs to be biger than the previous
     R = withdraw_first(X),
     R2 = {-1, R},
     T = withdraw_points2(X),
@@ -535,19 +535,19 @@ withdraw_points(X) -> %this is a list like [[{N, stem}],[{N, stem}],...] where N
 	    
 
 
-old_withdraw_points(X = [[{_, R}|_]|_]) -> %this is a list like [[{N, stem}],[{N, stem}],...] where Ns are are integers between 0 and 255, and each N in the list needs to be biger than the previous
+withdraw_points(X = [[{_, R}|_]|_]) -> %this is a list like [[{N, stem}],[{N, stem}],...] where Ns are are integers between 0 and 255, and each N in the list needs to be biger than the previous
     T = withdraw_points2(X),
     R2 = {-1, R},
     case T of
         [] -> R2;
         _ -> 
-	    io:fwrite("withdraw points weird\n"),
-	    io:fwrite(X),
-	    1=2,
+	    %io:fwrite("withdraw points weird\n"),
+	    %io:fwrite(X),
+	    %1=2,
 	    [R2|T]
     end;
     %[R|withdraw_points2(X)];
-old_withdraw_points(X = [{_, R}|_]) ->
+withdraw_points(X = [{_, R}|_]) ->
     [{-1, R}|withdraw_points3(X)].
 withdraw_points2(Xs) ->
     L = lists:map(fun withdraw_points3/1,
