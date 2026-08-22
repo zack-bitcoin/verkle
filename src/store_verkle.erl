@@ -211,7 +211,7 @@ verified2([[{N, {Key, Value, Meta}}]|T],
               leaf_hash(Leaf)),
     verified2(T, Stem2, ID);
 verified2([{N, {Key, Value, Meta}}|T], 
-          Stem, ID) -> 
+          Stem, ID) when false -> 
     Leaf = leaf_verkle:new(Key, Value, Meta),
     Loc = leaf_verkle:put(Leaf, ID),
     Stem2 = verified3(
@@ -231,7 +231,7 @@ verified2([[{N, {Key, Value}}]|T],
     %verified2(T, Stem2, CFG);
     verified2(T, Stem, ID);
 verified2([{N, {Key, Value}}|T], 
-          Stem, ID) -> 
+          Stem, ID) when false -> 
     verified2(T, Stem, ID);
 verified2([[{N, B = <<_:1024>>}|T1]|T2], Stem, ID) ->
     Hash = stem_verkle:hash_point(B),
