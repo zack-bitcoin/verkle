@@ -196,8 +196,6 @@ verified2([[{N, 0}]|T], Stem, ID) ->
     Stem2 = verified3(N, Stem, 0, 0, <<0:256>>),
     verified2(T, Stem2, ID);
 verified2([{N, 0}|T], Stem, ID) -> 
-    %there is a spot that was deleted from the stem.
-    %io:fwrite("verified2 delete a spot 1\n"),
     Stem2 = verified3(N, Stem, 0, 0, <<0:256>>),
     verified2(T, Stem2, ID);
 verified2([[{N, {Key, Value, Meta}}]|T], 
@@ -206,6 +204,14 @@ verified2([[{N, {Key, Value, Meta}}]|T],
     %io:fwrite("verified2 update a leaf\n"),
     %io:fwrite(integer_to_list(N)),
     %io:fwrite("\n"),
+    Leaf = leaf_verkle:new(Key, Value, Meta),
+    Loc = leaf_verkle:put(Leaf, ID),
+    Stem2 = verified3(
+              N, Stem, 2, Loc, 
+              leaf_hash(Leaf)),
+    verified2(T, Stem2, ID);
+verified2([{N, {Key, Value, Meta}}|T], 
+          Stem, ID) -> 
     Leaf = leaf_verkle:new(Key, Value, Meta),
     Loc = leaf_verkle:put(Leaf, ID),
     Stem2 = verified3(
@@ -223,6 +229,9 @@ verified2([[{N, {Key, Value}}]|T],
     %          N, Stem, 2, Loc, 
     %          leaf_hash(Leaf, CFG)),
     %verified2(T, Stem2, CFG);
+    verified2(T, Stem, ID);
+verified2([{N, {Key, Value}}|T], 
+          Stem, ID) -> 
     verified2(T, Stem, ID);
 verified2([[{N, B = <<_:1024>>}|T1]|T2], Stem, ID) ->
     Hash = stem_verkle:hash_point(B),

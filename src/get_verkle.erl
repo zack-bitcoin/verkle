@@ -100,6 +100,8 @@ batch(Keys, Root, ID, Type) ->
     %list of things is AND, list of lists is OR.
     %io:fwrite("get remove duplicate elliptic points\n"),
     benchmark:now(),
+    %io:fwrite(Tree2),
+    %io:fwrite(length(Tree2)),
     Tree3 = withdraw_points(Tree2),%removing duplicate elliptic points by shifting all the points one step towards the root.
     %looks the same, just changes which elliptic point is written where.
     %io:fwrite("get remove hashes\n"),
@@ -266,6 +268,7 @@ batch(Keys, Root, ID, Type) ->
                 true -> Tree6
             end,
     {{Tree7, CommitG2, Opening3}, Meta}.
+    %{{Tree6, CommitG2, Opening3}, Meta}.
     %{Tree4, CommitG, Opening}.
 
 deserialize_tree(<<Root:256, 0, S2/binary>>) ->
@@ -513,19 +516,38 @@ fill_points([P|PT], [<<_:1024>>|R], Result) ->
 fill_points(Ps, [T|R], Result) ->
     fill_points(Ps, R, [T|Result]).
 
-              
+   
+withdraw_first([{_, R}|_]) ->           
+    R;
+withdraw_first([H|T]) -> 
+    withdraw_first(H).
     %remove duplicate elliptic points in the tree structure by moving where they are written more towards the root of the tree.
-withdraw_points(X = [[{_, R}|_]|_]) ->
+withdraw_points(X = [{_, R}|_]) ->
+    [{-1, R}|withdraw_points3(X)];
+withdraw_points(X) -> %this is a list like [[{N, stem}],[{N, stem}],...] where Ns are are integers between 0 and 255, and each N in the list needs to be biger than the previous
+    R = withdraw_first(X),
+    R2 = {-1, R},
     T = withdraw_points2(X),
-    %R2 = R, %HERE
+    case T of
+	[] -> R2;
+	_ -> [R2|T]
+    end.
+	    
+
+
+old_withdraw_points(X = [[{_, R}|_]|_]) -> %this is a list like [[{N, stem}],[{N, stem}],...] where Ns are are integers between 0 and 255, and each N in the list needs to be biger than the previous
+    T = withdraw_points2(X),
     R2 = {-1, R},
     case T of
         [] -> R2;
-        _ -> [R2|T]
+        _ -> 
+	    io:fwrite("withdraw points weird\n"),
+	    io:fwrite(X),
+	    1=2,
+	    [R2|T]
     end;
     %[R|withdraw_points2(X)];
-withdraw_points(X = [{_, R}|_]) ->
-    %[R|withdraw_points3(X)].
+old_withdraw_points(X = [{_, R}|_]) ->
     [{-1, R}|withdraw_points3(X)].
 withdraw_points2(Xs) ->
     L = lists:map(fun withdraw_points3/1,
@@ -622,6 +644,7 @@ paths2tree(Paths) ->
                 Y -> Y
             end,
     Path1 = [H|Same2],
+    %Path1 = [H|Same2_1],
     Recurse = paths2tree(Others),
     if
         (Others == []) -> Path1;
@@ -647,6 +670,7 @@ points_values([<<Loc:?nindex>>|R], Root, ID) ->
         0 -> %empty
                 %io:fwrite("point values empty\n"),
                 [V, 0];
+                %[[V, 0]];
         1 -> %stem
                 %io:fwrite("point values stem\n"),
                 S0 = stem_verkle:get(P, ID),
@@ -659,9 +683,8 @@ points_values([<<Loc:?nindex>>|R], Root, ID) ->
         2 -> %leaf
                 %io:fwrite("point values leaf\n"),
                 L = leaf_verkle:get(P, ID),
-		%L2 = L#leaf{value = sha256:doit(L#leaf.value), meta = P},
                 [V, L]
-                %[V, L2]
+                %[[V, L]]
     end,
     E;
 points_values([H|T], Root, ID) ->

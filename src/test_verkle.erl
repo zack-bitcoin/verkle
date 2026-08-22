@@ -745,9 +745,11 @@ test_batch(Times, ProveMany) ->
     {Proof, _} = get_verkle:batch(
                    First, NewLoc, ?ID, small),
     SP = get_verkle:serialize_proof(Proof),
-    Proof = get_verkle:deserialize_proof(SP),
+    Proof2 = get_verkle:deserialize_proof(SP),
     {true, _, _} = verify_verkle:proof(
                      Proof),
+    {true, _, _} = verify_verkle:proof(
+                     Proof2),
     %io:fwrite(Proof),
     {size(SP), SP}.
 
